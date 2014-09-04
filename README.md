@@ -33,19 +33,51 @@ WebKit is a class whose instances are views.
 options
 -------
 
-username: 'login',
-password: 'pass',
-cookie: "name=value;", // TODO
-width: 1024,
-height: 768,
-images: false,
-scripts: false || 'sameOrigin' || true // TODO
-dialogs: false,
-css: "html,body {overflow:hidden;}"
-stylesheet: "/path/to/stylesheet.css" // overrides css
-window: false // use offscreen - still requires X display though TODO
-xdisplay: ":0" // set DISPLAY=":0" env TODO
-xvfb: false // spawn Xvfb on given xdisplay DISPLAY TODO
+- username
+- password
+  string, default none
+  HTTP Auth.
+
+- cookies
+  string | [string], default none
+	it preloads the document to be able to set document.cookie, all other
+	requests being disabled, then do the actual load with Cookie header.
+
+- width
+  number, 1024
+- height
+	number, 768
+	the viewport
+
+- allow
+  "all" or "same-origin" or "none" or a RegExp, default "all"
+	allow requests only matching option (except the document request),
+	bypassing 'request' event.
+
+- dialogs
+  boolean, default false
+	allow display of dialogs.
+
+- css
+	string, default none
+	a css string applied as user stylesheet.
+
+- stylesheet
+	string, default none
+	path to some user stylesheet, overrides css option if any.
+
+- display
+	number, default 0
+	the X display needed by gtk X11 backend
+
+- xfb
+	{width: 1024, height: 768, depth: 32}, default false
+	spawn a X backend with these options with number given by 'display',
+	or any higher number available.
+	Requires "headless" module.
+	It is safer to use a daemon monitoring tool for xvfb and just
+	set display option.
+
 
 events
 ------
@@ -66,7 +98,7 @@ All events are on the WebKit instance.
 
 * request
   listener(request, view) where request.uri is read/write.
-	If request.uri is set to null, the request is cancelled.
+	If request.uri is set to null or "", the request is cancelled.
 
 * response
   listener(response, view)
