@@ -3,6 +3,8 @@ node-webkitgtk
 
 Pilot webkitgtk from Node.js with a simple API.
 
+*DEVELOPMENT VERSION*
+
 
 usage
 -----
@@ -186,3 +188,9 @@ On debian, these packages are needed :
 
 libwebkit2gtk-3.0-dev
 libdbus-glib-1-dev
+
+License
+-------
+
+MIT, see LICENSE file
+
