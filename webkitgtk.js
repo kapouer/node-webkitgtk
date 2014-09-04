@@ -91,6 +91,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		opts = {};
 	}
 	if (!cb) cb = noop;
+	this.allow = opts.allow || "all";
 	this.preload(uri, opts, cb);
 	var self = this;
 	(function(next) {
@@ -134,6 +135,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		});
 	});
 	this.uri = uri;
+	return this;
 };
 
 WebKit.prototype.unload = function(cb) {
@@ -203,12 +205,14 @@ WebKit.prototype.run = function(script, cb) {
 			console.log("TODO");
 		}
 	});
+	return this;
 };
 
 function save(rstream, filename, cb) {
 	cb = cb || noop;
 	var wstream = fs.createWriteStream(filename);
 	rstream.pipe(wstream).on('finish', cb).on('error', cb);
+	return this;
 }
 
 WebKit.prototype.png = function() {
@@ -240,6 +244,7 @@ WebKit.prototype.html = function(cb) {
 			view.html(cb);
 		});
 	} else this.run("document.documentElement.outerHTML;", cb);
+	return this;
 };
 
 WebKit.prototype.pdf = function(filepath, opts, cb) {
@@ -256,6 +261,9 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 		self.loop(false);
 		cb(err);
 	});
+	return this;
+};
+
 WebKit.prototype.preload = function(uri, opts, cb) {
 	if (!opts.cookies || this.preloading !== undefined) return;
 	this.preloading = true;
