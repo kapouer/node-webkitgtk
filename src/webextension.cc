@@ -10,8 +10,7 @@ static DBusGConnection* connection;
 static DBusGProxy* proxy;
 
 static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest* request, WebKitURIResponse* redirected_response, gpointer data) {
-	GError* error;
-	error = NULL;
+	GError* error = NULL;
 	const char* uri = webkit_uri_request_get_uri(request);
 	char* newuri;
   if (!dbus_g_proxy_call(proxy, "HandleRequest", &error, G_TYPE_STRING, uri, G_TYPE_INVALID, G_TYPE_STRING, &newuri, G_TYPE_INVALID)) {
@@ -23,7 +22,6 @@ static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest*
 		g_error_free (error);
 		return FALSE;
 	}
-	g_print("newuri '%s'", newuri);
 	if (newuri != NULL && !g_strcmp0(newuri, "")) {
 		return TRUE;
 	} else if (g_strcmp0(uri, newuri)) {
@@ -40,14 +38,19 @@ static void web_page_created_callback(WebKitWebExtension* extension, WebKitWebPa
 
 /*
 static void window_object_cleared_callback(WebKitScriptWorld* world, WebKitWebPage* web_page, WebKitFrame* frame, gpointer user_data) {
-	JSGlobalContextRef jsContext;
-	JSObjectRef        globalObject;
-
-	jsContext = webkit_frame_get_javascript_context_for_script_world(frame, world);
-	globalObject = JSContextGetGlobalObject(jsContext);
-  JSEvaluateScript(jsContext, JSStringCreateWithUTF8CString("document.cookie='wont=work'"), NULL, NULL, 1, NULL);
+	// JSGlobalContextRef jsContext;
+	// JSObjectRef        globalObject;
+//
+	// jsContext = webkit_frame_get_javascript_context_for_script_world(frame, world);
+	// globalObject = JSContextGetGlobalObject(jsContext);
+  // JSEvaluateScript(jsContext, JSStringCreateWithUTF8CString("document.cookie='wont=work'"), NULL, NULL, 1, NULL);
+  // GError* error = NULL;
+  // WebKitDOMDocument* dom = webkit_web_page_get_dom_document(web_page);
+	// webkit_dom_document_set_cookie(dom, "mycookie=myval", &error);
+	// if (error != NULL) g_printerr("Error in dom %s", error->message);
 }
 */
+
 
 extern "C" {
 	G_MODULE_EXPORT void webkit_web_extension_initialize_with_user_data(WebKitWebExtension* extension, const GVariant* constData) {
