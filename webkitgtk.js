@@ -66,12 +66,16 @@ function Request(uri) {
 }
 
 function requestDispatcher(uri) {
+	if (this.preloading && uri != this.webview.uri) {
+		return;
+	}
 	var req = new Request(uri);
 	this.emit('request', req, this);
 	return req.uri;
 }
 
 function responseDispatcher(webResponse) {
+	if (this.preloading) return;
 	this.emit('response', webResponse, this);
 }
 
@@ -87,6 +91,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		opts = {};
 	}
 	if (!cb) cb = noop;
+	this.preload(uri, opts, cb);
 	var self = this;
 	(function(next) {
 		if (opts.stylesheet) {
@@ -103,7 +108,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		self.loop(true);
 		self.webview.load(uri, opts, function(err) {
 			self.loop(false);
-			cb(err, self);
+			if (!self.preloading) cb(err, self);
 			self.run(function(done) {
 				// this function is executed in the window context of the current view - it cannot access local scopes
 				if (/interactive|complete/.test(document.readyState)) done(null, document.readyState);
@@ -111,9 +116,10 @@ WebKit.prototype.load = function(uri, opts, cb) {
 			}, function(err, result) {
 				if (err) console.error(err);
 				self.readyState = result;
-				self.emit('ready', self);
+				var prefix = self.preloading ? "pre" : "";
+				self.emit(prefix + 'ready', self);
 				if (result == "complete") {
-					self.emit('load', self);
+					self.emit(prefix + 'load', self);
 				}	else {
 					self.run(function(done) {
 						if (document.readyState == "complete") done(null, document.readyState);
@@ -121,7 +127,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 					}, function(err, result) {
 						if (err) console.error(err);
 						self.readyState = result;
-						self.emit('load', self);
+						self.emit(prefix + 'load', self);
 					});
 				}
 			});
@@ -249,6 +255,21 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 	this.webview.pdf("file://" + path.resolve(filepath), opts, function(err) {
 		self.loop(false);
 		cb(err);
+	});
+WebKit.prototype.preload = function(uri, opts, cb) {
+	if (!opts.cookies || this.preloading !== undefined) return;
+	this.preloading = true;
+	this.once('preload', function(view) {
+		var cookies = opts.cookies;
+		if (!Array.isArray(cookies)) cookies = [cookies];
+		var script = cookies.map(function(cookie) {
+			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
+		}).join(';') + ';';
+		view.run(script, function(err) {
+			if (err) return cb(err);
+			view.preloading = false;
+			view.load(uri, opts, cb);
+		});
 	});
 };
 
