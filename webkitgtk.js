@@ -1,4 +1,3 @@
-var WebKitGtkBindings = require(__dirname + '/lib/webkitgtk.node');
 var util = require('util');
 var events = require('events');
 var stream = require('stream');
@@ -12,17 +11,46 @@ var RUN_PATH = 2;
 
 function WebKit(uri, opts, cb) {
 	if (!(this instanceof WebKit)) return new WebKit(uri, opts, cb);
-	this.webview = new WebKitGtkBindings({
-		webextension: __dirname + '/lib/ext',
-		requestListener: requestDispatcher.bind(this),
-		responseListener: responseDispatcher.bind(this),
-		uuid: uuid.v4().replace(/-/g, 'Z')
-	});
 	this.looping = 0;
 	this.ticket = 0;
-	if (uri) this.load(uri, opts, cb);
+	var self = this;
+	this.display(opts.display || 0, opts, function(err, display) {
+		if (err) return cb(err);
+		process.env.DISPLAY = ":" + display;
+		var Bindings = require(__dirname + '/lib/webkitgtk.node');
+		self.webview = new Bindings({
+			webextension: __dirname + '/lib/ext',
+			requestListener: requestDispatcher.bind(self),
+			responseListener: responseDispatcher.bind(self),
+			uuid: uuid.v4().replace(/-/g, 'Z')
+		});
+		if (uri) self.load(uri, opts, cb);
+	});
 }
 util.inherits(WebKit, events.EventEmitter);
+
+WebKit.prototype.display = function(display, opts, cb) {
+	var self = this;
+	fs.exists('/tmp/.X' + display + '-lock', function(exists) {
+		if (exists) return cb(null, display);
+		if (display == 0) return cb("Error - do not spawn xvfb on DISPLAY 0");
+		if (opts.xfb) {
+			console.log("Unsafe xfb option is spawning xvfb...");
+			require('headless')({
+				display: {
+					width: opts.xfb.width || 1024,
+					height: opts.xfb.height || 768,
+					depth: opts.xfb.depth || 32
+				}
+			}, display, function(err, child, display) {
+				cb(err, display);
+				if (!err) process.on('exit', function() {
+					child.kill();
+				});
+			});
+		}
+	});
+};
 
 function Request(uri) {
 	this.uri = uri;

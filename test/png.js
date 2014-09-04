@@ -6,6 +6,8 @@ describe("png method", function suite() {
 	it("should save a screenshot to disk", function(done) {
 		this.timeout(10000);
 		WebKit("http://www.neufdeuxtroisa.fr", {
+			display: 98,
+			xfb: true,
 			width:400, height:1000,
 			stylesheet: __dirname + "/../css/png.css"
 		}, function(err) {
