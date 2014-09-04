@@ -95,6 +95,8 @@ private:
   static NAN_METHOD(Run);
   static NAN_METHOD(Png);
   static NAN_METHOD(Print);
+
+  static NAN_GETTER(get_prop);
 };
 
 const GDBusNodeInfo* WebView::introspection_data;

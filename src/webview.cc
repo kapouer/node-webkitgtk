@@ -95,6 +95,8 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
   NODE_SET_PROTOTYPE_METHOD(tpl, "png", WebView::Png);
   NODE_SET_PROTOTYPE_METHOD(tpl, "pdf", WebView::Print);
 
+  ATTR(tpl, "uri", get_prop, NULL);
+
   constructor = Persistent<Function>::New(tpl->GetFunction());
   module->Set(NanNew("exports"), constructor);
 
@@ -554,6 +556,18 @@ NAN_METHOD(WebView::Print) {
   g_signal_connect(op, "finished", G_CALLBACK(WebView::PrintFinished), self);
   webkit_print_operation_print(op);
   NanReturnUndefined();
+}
+
+NAN_GETTER(WebView::get_prop) {
+  NanScope();
+  WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
+  std::string propstr = TOSTR(property);
+
+  if (propstr == "uri") {
+    NanReturnValue(NanNew<String>(self->uri));
+  } else {
+    NanReturnUndefined();
+  }
 }
 
 NAN_METHOD(WebView::Loop) {
