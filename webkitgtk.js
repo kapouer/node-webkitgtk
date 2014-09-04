@@ -11,6 +11,15 @@ var RUN_PATH = 2;
 
 function WebKit(uri, opts, cb) {
 	if (!(this instanceof WebKit)) return new WebKit(uri, opts, cb);
+	if (!cb && typeof opts == "function") {
+		cb = opts;
+		opts = {};
+	}
+	if (typeof uri != "string") {
+		opts = uri;
+		uri = null;
+	}
+	opts = opts || {};
 	this.looping = 0;
 	this.ticket = 0;
 	var self = this;
