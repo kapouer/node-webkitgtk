@@ -4,6 +4,7 @@ var stream = require('stream');
 var fs = require('fs');
 var path = require('path');
 var uuid = require('node-uuid');
+var url = require('url');
 
 var RUN_SYNC = 0;
 var RUN_ASYNC = 1;
@@ -68,6 +69,13 @@ function Request(uri) {
 function requestDispatcher(uri) {
 	if (this.preloading && uri != this.webview.uri) {
 		return;
+	}
+	if (this.allow == "none") {
+		if (uri != this.webview.uri) return;
+	} else if (this.allow == "same-origin") {
+		if (url.parse(uri).host != url.parse(this.webview.uri).host) return;
+	} else if (this.allow instanceof RegExp) {
+		if (!this.allow.test(uri)) return;
 	}
 	var req = new Request(uri);
 	this.emit('request', req, this);
