@@ -1,0 +1,6 @@
+lib/*
+build/*
+dev/*
+node_modules/*
+test/shots/*
+

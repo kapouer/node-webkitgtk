@@ -1,0 +1,17 @@
+/* hide all scrollbars */
+*::-webkit-scrollbar {
+	width:0px !important;
+	height:0px !important;
+}
+
+/* do not animate as far as possible */
+* {
+	-webkit-transition:none !important;
+	transition:none !important;
+	-webkit-transition-property: none !important;
+	transition-property: none !important;
+	-webkit-transform: none !important;
+	transform: none !important;
+	-webkit-animation: none !important;
+	animation: none !important;
+}

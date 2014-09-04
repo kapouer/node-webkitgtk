@@ -1,0 +1,13 @@
+Create a new view, let the node process open (long setTimeout),
+and then one can:
+
+dbus-send --session --print-reply --type=method_call --dest='org.nodejs.WebKitGtk' '/org/nodejs/WebKitGtk' org.nodejs.WebKitGtk.HandleRequest string:"http://www.test.com/test.js"
+
+to check if the dbus server is running well.
+
+
+Calls to g_print() won't be printed to the terminal, but they can be
+searched in strace output: `strace -f node test.js 2> test.trace`.
+
+To enable/disable compilation of the webextension
+node-gyp configure --enable_web_extension=true
