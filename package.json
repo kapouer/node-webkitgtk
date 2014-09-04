@@ -2,7 +2,15 @@
   "name": "webkitgtk",
   "version": "0.0.1",
   "description": "Drive webkitgtk from Node.js",
-  "keywords": ["webkit", "binding", "gtk", "phantom", "snapshot", "screenshot", "pdf"],
+  "keywords": [
+    "webkit",
+    "binding",
+    "gtk",
+    "phantom",
+    "snapshot",
+    "screenshot",
+    "pdf"
+  ],
   "main": "webkitgtk.js",
   "directories": {
     "example": "examples"
