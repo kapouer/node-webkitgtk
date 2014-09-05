@@ -149,6 +149,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 WebKit.prototype.unload = function(cb) {
 	this.load('about:blank', cb);
 	delete this.uri;
+	delete this.readyState;
 };
 
 WebKit.prototype.loop = function(start, block) {
@@ -230,19 +231,25 @@ WebKit.prototype.png = function() {
 	}
 	var passthrough = new stream.PassThrough();
 	passthrough.save = save.bind(this, passthrough);
-	this.loop(true, true);
-	this.webview.png(function(err, buf) {
-		if (err) {
-			self.loop(false);
-			passthrough.emit('error', err);
-		}
-		else if (buf == null) {
-			self.loop(false);
-			passthrough.end();
-		} else {
-			passthrough.write(buf);
-		}
-	});
+	if (!this.readyState || this.readyState == "loading") {
+		this.on('load', function() {
+			self.png().pipe(passthrough);
+		});
+	} else {
+		this.loop(true, true);
+		this.webview.png(function(err, buf) {
+			if (err) {
+				self.loop(false);
+				passthrough.emit('error', err);
+			}
+			else if (buf == null) {
+				self.loop(false);
+				passthrough.end();
+			} else {
+				passthrough.write(buf);
+			}
+		});
+	}
 	return passthrough;
 };
 
@@ -251,7 +258,9 @@ WebKit.prototype.html = function(cb) {
 		this.on('ready', function(view) {
 			view.html(cb);
 		});
-	} else this.run("document.documentElement.outerHTML;", cb);
+	} else {
+		this.run("document.documentElement.outerHTML;", cb);
+	}
 	return this;
 };
 
@@ -263,12 +272,18 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 		opts = {};
 	}
 	if (!cb) cb = noop;
-	this.loop(true, true);
-	var self = this;
-	this.webview.pdf("file://" + path.resolve(filepath), opts, function(err) {
-		self.loop(false);
-		cb(err);
-	});
+	if (!this.readyState || this.readyState == "loading") {
+		this.on('load', function() {
+			self.pdf(filepath, opts, cb);
+		});
+	} else {
+		this.loop(true, true);
+		var self = this;
+		this.webview.pdf("file://" + path.resolve(filepath), opts, function(err) {
+			self.loop(false);
+			cb(err);
+		});
+	}
 	return this;
 };
 
