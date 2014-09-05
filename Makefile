@@ -1,5 +1,4 @@
 lib: ./build
-	mkdir -p lib/ext
 	node-gyp build
 
 ./build:
@@ -7,8 +6,7 @@ lib: ./build
 
 clean:
 	rm -rf ./build
-	rm -f ./lib/*.node
-	rm -f ./lib/ext/*.so
+	rm -rf ./lib
 	rm -f test.trace
 	rm -f test/shots/*
 

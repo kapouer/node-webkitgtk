@@ -63,6 +63,14 @@
         ['OS=="linux"', {
           'actions': [
             {
+              'action_name': 'make_dirs',
+              'inputs': [],
+              'outputs': [
+                'lib/ext'
+              ],
+              'action': ['mkdir', '-p', 'lib/ext']
+            },
+            {
               'action_name': 'move_node',
               'inputs': [
                 '<@(PRODUCT_DIR)/webkitgtk.node'
