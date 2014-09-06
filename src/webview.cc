@@ -16,6 +16,7 @@ static const GDBusInterfaceVTable interface_vtable = {
 };
 
 WebView::WebView(Handle<Object> opts) {
+  NanAdjustExternalMemory(1000000);
   gtk_init(0, NULL);
   state = 0;
 
