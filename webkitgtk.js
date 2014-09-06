@@ -272,13 +272,13 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 		opts = {};
 	}
 	if (!cb) cb = noop;
+	var self = this;
 	if (!this.readyState || this.readyState == "loading") {
 		this.on('load', function() {
 			self.pdf(filepath, opts, cb);
 		});
 	} else {
 		this.loop(true, true);
-		var self = this;
 		this.webview.pdf("file://" + path.resolve(filepath), opts, function(err) {
 			self.loop(false);
 			cb(err);
