@@ -3,7 +3,6 @@ var events = require('events');
 var stream = require('stream');
 var fs = require('fs');
 var path = require('path');
-var uuid = require('node-uuid');
 var url = require('url');
 
 var RUN_SYNC = 0;
@@ -31,8 +30,7 @@ function WebKit(uri, opts, cb) {
 		self.webview = new Bindings({
 			webextension: __dirname + '/lib/ext',
 			requestListener: requestDispatcher.bind(self),
-			responseListener: responseDispatcher.bind(self),
-			uuid: uuid.v4().replace(/-/g, 'Z')
+			responseListener: responseDispatcher.bind(self)
 		});
 		if (uri) self.load(uri, opts, cb);
 	});
