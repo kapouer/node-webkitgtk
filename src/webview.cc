@@ -4,27 +4,36 @@
 #include "webresponse.h"
 #include "dbus.h"
 
-
 using namespace v8;
 
 Persistent<Function> WebView::constructor;
+
+static const GDBusInterfaceVTable interface_vtable = {
+  WebView::handle_method_call,
+  NULL,
+  NULL,
+  NULL
+};
 
 WebView::WebView(Handle<Object> opts) {
   gtk_init(0, NULL);
   state = 0;
 
-  if (opts->Has(H("uuid"))) {
-    NanUtf8String* uuid = new NanUtf8String(opts->Get(H("uuid")));
-    this->dbusPath = g_strconcat(DBUS_OBJECT_WKGTK, "/", **uuid, NULL);
-    delete uuid;
-  } else {
-    g_printerr("Missing uuid option in WebView constructor");
-  }
+  gchar* guid = g_dbus_generate_guid();
+  GDBusServerFlags server_flags = G_DBUS_SERVER_FLAGS_NONE;
+  GError* error = NULL;
+  gchar* address = g_strconcat("unix:path=/tmp/", guid, NULL);
+  this->server = g_dbus_server_new_sync(address, server_flags, guid, NULL, NULL, &error);
+  g_dbus_server_start(this->server);
+  g_free(guid);
 
-  dbusId = g_bus_own_name(G_BUS_TYPE_SESSION, DBUS_NAME_WKGTK,
-    G_BUS_NAME_OWNER_FLAGS_NONE, WebView::on_bus_acquired, WebView::on_name_acquired,
-    WebView::on_name_lost, this, NULL);
-  g_assert(dbusId != 0);
+  if (server == NULL) {
+    g_printerr ("Error creating server at address %s: %s\n", address, error->message);
+    g_error_free(error);
+    NanThrowError("WebKitGtk could not create dbus server");
+    return;
+  }
+  g_signal_connect(this->server, "new-connection", G_CALLBACK(on_new_connection), this);
 
   WebKitWebContext* context = webkit_web_context_get_default();
   webkit_web_context_set_process_model(context, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
@@ -65,7 +74,6 @@ WebView::~WebView() {
   delete[] username;
   delete[] password;
   delete[] css;
-  delete dbusPath;
 
   delete view;
   delete window;
@@ -81,10 +89,25 @@ WebView::~WebView() {
   delete loadCallback;
   delete requestCallback;
   delete responseCallback;
-  g_bus_unown_name(dbusId);
+
+  g_object_unref(server);
 }
 
 void WebView::Init(Handle<Object> exports, Handle<Object> module) {
+
+  const gchar* introspection_xml =
+  "<node>"
+  "  <interface name='org.nodejs.WebKitGtk.WebView'>"
+  "    <method name='HandleRequest'>"
+  "      <arg type='s' name='uri' direction='in'/>"
+  "      <arg type='s' name='uri' direction='out'/>"
+  "    </method>"
+  "  </interface>"
+  "</node>";
+
+  introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
+  g_assert(introspection_data != NULL);
+
   Local<FunctionTemplate> tpl = FunctionTemplate::New(WebView::New);
   tpl->SetClassName(NanNew("WebView"));
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
@@ -99,19 +122,6 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 
   constructor = Persistent<Function>::New(tpl->GetFunction());
   module->Set(NanNew("exports"), constructor);
-
-  const gchar* introspection_xml =
-  "<node>"
-  "  <interface name='org.nodejs.WebKitGtk'>"
-  "    <method name='HandleRequest'>"
-  "      <arg type='s' name='uri' direction='in'/>"
-  "      <arg type='s' name='uri' direction='out'/>"
-  "    </method>"
-  "  </interface>"
-  "</node>";
-
-  WebView::introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
-  g_assert(WebView::introspection_data != NULL);
 
   WebResponse::Init(exports);
 }
@@ -134,7 +144,7 @@ gboolean WebView::Authenticate(WebKitWebView* view, WebKitAuthenticationRequest*
 #ifdef ENABLE_WEB_EXTENSION
 void WebView::InitExtensions(WebKitWebContext* context, gpointer data) {
   WebView* self = (WebView*)data;
-  GVariant* userData = g_variant_new("s", self->dbusPath);
+  GVariant* userData = g_variant_new("s", g_dbus_server_get_client_address(self->server));
   webkit_web_context_set_web_extensions_initialization_user_data(context, userData);
 }
 #endif
@@ -579,22 +589,14 @@ NAN_METHOD(WebView::Loop) {
   NanReturnUndefined();
 }
 
-const GDBusInterfaceVTable interface_vtable = {
-  WebView::handle_method_call,
-  NULL,
-  NULL,
-  NULL
-};
-
-void WebView::on_bus_acquired(GDBusConnection* connection, const gchar* name, gpointer data) {
-  WebView* self = (WebView*)data;
-  guint registration_id;
-  registration_id = g_dbus_connection_register_object(connection, self->dbusPath,
-    WebView::introspection_data->interfaces[0], &interface_vtable, data, NULL, NULL);
-  g_assert (registration_id > 0);
+gboolean WebView::on_new_connection(GDBusServer* server, GDBusConnection* connection, gpointer data) {
+  g_object_ref(connection);
+  GError* error = NULL;
+  guint registration_id = g_dbus_connection_register_object(connection, DBUS_OBJECT_WKGTK,
+    introspection_data->interfaces[0], &interface_vtable, data, NULL, &error);
+  g_assert(registration_id > 0);
+  return TRUE;
 }
-void WebView::on_name_acquired(GDBusConnection* connection, const gchar* name, gpointer data) {}
-void WebView::on_name_lost(GDBusConnection* connection, const gchar* name, gpointer data) {}
 
 void WebView::handle_method_call(
 GDBusConnection* connection,

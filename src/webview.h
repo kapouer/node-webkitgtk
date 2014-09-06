@@ -21,15 +21,14 @@ struct RunMapComparator {
 typedef std::map<char*, Runnable*, RunMapComparator> RunMap;
 typedef std::pair<char*, Runnable*> RunMapPair;
 
+static const GDBusNodeInfo* introspection_data;
+
 class WebView : public node::ObjectWrap {
 public:
   static const int DOCUMENT_UNLOADED = 0;
   static const int DOCUMENT_LOADING = 1;
   static const int DOCUMENT_LOADED = 2;
   static const int DOCUMENT_ERROR = -1;
-
-  static const GDBusNodeInfo* introspection_data;
-
 
   static void Init(Handle<Object>, Handle<Object>);
 
@@ -52,9 +51,7 @@ public:
 
   static void handle_method_call(GDBusConnection*, const gchar*, const gchar*,
     const gchar*, const gchar*, GVariant*, GDBusMethodInvocation*, gpointer);
-  static void on_bus_acquired(GDBusConnection* connection, const gchar* name, gpointer data);
-  static void on_name_acquired(GDBusConnection* connection, const gchar* name, gpointer data);
-  static void on_name_lost(GDBusConnection* connection, const gchar* name, gpointer data);
+  static gboolean on_new_connection(GDBusServer*, GDBusConnection*, gpointer);
 
 private:
   static v8::Persistent<v8::Function> constructor;
@@ -63,7 +60,8 @@ private:
 
   RunMap runnables;
 
-  guint dbusId;
+  GDBusServer* server;
+  gchar* address;
   int state;
   int authRetryCount;
   bool allowDialogs;
@@ -71,8 +69,6 @@ private:
   char* username = NULL;
   char* password = NULL;
   char* css = NULL;
-
-  char* dbusPath = NULL;
 
   WebKitWebView* view = NULL;
   GtkWidget* window = NULL;
@@ -99,6 +95,5 @@ private:
   static NAN_GETTER(get_prop);
 };
 
-const GDBusNodeInfo* WebView::introspection_data;
 
 #endif

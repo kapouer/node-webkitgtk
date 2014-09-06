@@ -6,28 +6,27 @@
 #include <JavaScriptCore/JSStringRef.h>
 #include "dbus.h"
 
-static DBusGConnection* connection;
-static DBusGProxy* proxy;
+static GDBusConnection* connection;
 
 static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest* request, WebKitURIResponse* redirected_response, gpointer data) {
 	GError* error = NULL;
 	const char* uri = webkit_uri_request_get_uri(request);
-	char* newuri;
-  if (!dbus_g_proxy_call(proxy, "HandleRequest", &error, G_TYPE_STRING, uri, G_TYPE_INVALID, G_TYPE_STRING, &newuri, G_TYPE_INVALID)) {
-		if (error->domain == DBUS_GERROR && error->code == DBUS_GERROR_REMOTE_EXCEPTION) {
-			g_printerr ("Caught remote method exception %s: %s", dbus_g_error_get_name (error),	error->message);
-		}	else {
-			g_printerr ("Error: %s\n", error->message);
-		}
-		g_error_free (error);
+	GVariant* value = g_dbus_connection_call_sync(connection, NULL, DBUS_OBJECT_WKGTK, DBUS_INTERFACE_WKGTK,
+		"HandleRequest", g_variant_new("(s)", uri), G_VARIANT_TYPE("(s)"), G_DBUS_CALL_FLAGS_NONE, -1, NULL,
+		&error);
+  if (value == NULL) {
+		g_printerr("ERR %s\n", error->message);
+		g_error_free(error);
 		return FALSE;
 	}
+	const gchar* newuri;
+  g_variant_get(value, "(&s)", &newuri);
 	if (newuri != NULL && !g_strcmp0(newuri, "")) {
 		return TRUE;
 	} else if (g_strcmp0(uri, newuri)) {
 		webkit_uri_request_set_uri(request, newuri);
 	}
-	g_free(newuri);
+	g_variant_unref(value);
 	return FALSE;
 }
 
@@ -59,18 +58,17 @@ extern "C" {
 		// note that page-created happens before window-object-cleared
 		// g_signal_connect(webkit_script_world_get_default(), "window-object-cleared", G_CALLBACK(window_object_cleared_callback), NULL);
 
+		gchar* address = NULL;
+		g_variant_get((GVariant*)constData, "s", &address);
+
 		g_signal_connect(extension, "page-created", G_CALLBACK(web_page_created_callback), NULL);
-		GError* error;
-		error = NULL;
-		connection = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
+
+		GError* error = NULL;
+		connection = g_dbus_connection_new_for_address_sync(address, G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT, NULL, NULL, &error);
 		if (connection == NULL) {
 			g_printerr("Failed to open connection to bus: %s\n", error->message);
       g_error_free(error);
     }
-    proxy = dbus_g_proxy_new_for_name(connection, DBUS_NAME_WKGTK, g_variant_get_string((GVariant*)constData, NULL), DBUS_INTERFACE_WKGTK);
-    if (proxy == NULL) {
-			g_printerr("Failed to get proxy\n");
-		}
 	}
 }
 
