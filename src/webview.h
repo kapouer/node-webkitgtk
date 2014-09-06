@@ -31,6 +31,7 @@ public:
   static const int DOCUMENT_ERROR = -1;
 
   static void Init(Handle<Object>, Handle<Object>);
+  static void Exit(void*);
 
   static gboolean Authenticate(WebKitWebView*, WebKitAuthenticationRequest*, gpointer);
 #ifdef ENABLE_WEB_EXTENSION
@@ -57,11 +58,13 @@ private:
   static v8::Persistent<v8::Function> constructor;
   WebView(Handle<Object>);
   ~WebView();
+  void close();
 
   RunMap runnables;
 
+  gchar* guid;
   GDBusServer* server;
-  gchar* address;
+
   int state;
   int authRetryCount;
   bool allowDialogs;
@@ -95,5 +98,8 @@ private:
   static NAN_GETTER(get_prop);
 };
 
+typedef std::map<char*, WebView*> ObjMap;
+typedef std::pair<char*, WebView*> ObjMapPair;
+static ObjMap instances;
 
 #endif

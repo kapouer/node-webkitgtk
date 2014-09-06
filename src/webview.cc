@@ -19,13 +19,14 @@ WebView::WebView(Handle<Object> opts) {
   gtk_init(0, NULL);
   state = 0;
 
-  gchar* guid = g_dbus_generate_guid();
+  guid = g_dbus_generate_guid();
+  instances.insert(ObjMapPair(guid, this));
+
   GDBusServerFlags server_flags = G_DBUS_SERVER_FLAGS_NONE;
   GError* error = NULL;
-  gchar* address = g_strconcat("unix:path=/tmp/", guid, NULL);
+  gchar* address = g_strconcat("unix:tmpdir=", g_get_tmp_dir(), "/node-webkitgtk", NULL);
   this->server = g_dbus_server_new_sync(address, server_flags, guid, NULL, NULL, &error);
   g_dbus_server_start(this->server);
-  g_free(guid);
 
   if (server == NULL) {
     g_printerr ("Error creating server at address %s: %s\n", address, error->message);
@@ -69,14 +70,13 @@ WebView::WebView(Handle<Object> opts) {
   g_signal_connect(view, "notify::title", G_CALLBACK(WebView::TitleChange), this);
 }
 
-WebView::~WebView() {
+void WebView::close() {
   delete[] cookie;
   delete[] username;
   delete[] password;
   delete[] css;
 
-  delete view;
-  delete window;
+  if (window != NULL) gtk_widget_destroy(window);
 
   runnables.clear();
 
@@ -89,12 +89,18 @@ WebView::~WebView() {
   delete loadCallback;
   delete requestCallback;
   delete responseCallback;
-
+  g_dbus_server_stop(server);
   g_object_unref(server);
+  instances.erase(guid);
+  g_free(guid);
+}
+
+WebView::~WebView() {
+  close();
 }
 
 void WebView::Init(Handle<Object> exports, Handle<Object> module) {
-
+  node::AtExit(Exit);
   const gchar* introspection_xml =
   "<node>"
   "  <interface name='org.nodejs.WebKitGtk.WebView'>"
@@ -622,6 +628,14 @@ gpointer data) {
     g_dbus_method_invocation_return_value(invocation, response);
     g_free(uriStr);
   }
+}
+
+void WebView::Exit(void*) {
+  NanScope();
+  for (ObjMap::iterator it = instances.begin(); it != instances.end(); it++) {
+    it->second->close();
+  }
+  instances.clear();
 }
 
 
