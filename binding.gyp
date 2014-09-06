@@ -56,9 +56,9 @@
       ]
     },
     {
-      'target_name': 'action_after_build',
+      'target_name': 'mkdirs',
       'type': 'none',
-      'dependencies': [ 'webkitgtk', 'webextension' ],
+      'dependencies': [ ],
       'conditions': [
         ['OS=="linux"', {
           'actions': [
@@ -69,7 +69,18 @@
                 'lib/ext'
               ],
               'action': ['mkdir', '-p', 'lib/ext']
-            },
+            }
+          ]
+        }]
+      ]
+    },
+    {
+      'target_name': 'action_after_build',
+      'type': 'none',
+      'dependencies': [ 'mkdirs', 'webkitgtk', 'webextension' ],
+      'conditions': [
+        ['OS=="linux"', {
+          'actions': [
             {
               'action_name': 'move_node',
               'inputs': [
