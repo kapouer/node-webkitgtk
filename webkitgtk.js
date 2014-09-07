@@ -19,6 +19,7 @@ function WebKit(uri, opts, cb) {
 		opts = uri;
 		uri = null;
 	}
+	if (!cb) cb = noop;
 	opts = opts || {};
 	this.looping = 0;
 	this.ticket = 0;
