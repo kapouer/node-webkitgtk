@@ -182,12 +182,19 @@ WebKit.prototype.unload = function(cb) {
 };
 
 WebKit.prototype.close = function() {
+	this.closed = true;
 	if (this.timeoutId) {
 		clearTimeout(this.timeoutId);
 		delete this.timeoutId;
 	}
 	this.webview.close();
 	delete this.webview;
+	function disabled() {
+		throw new Error("Cannot use a closed WebKit view");
+	}
+	for (var prop in WebKit.prototype) {
+		this[prop] = disabled;
+	}
 };
 
 WebKit.prototype.loop = function(start, block) {
