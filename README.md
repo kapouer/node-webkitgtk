@@ -94,9 +94,13 @@ All events are on the WebKit instance.
   same as window's load event
 	listener()
 
-* steady
+* unload TODO with the ability to prevent unloading
+  same as window's unload event
+	listener()
+
+* steady TODO
   when there are no pending requests that have been initiated after
-	load event TODO
+	load event
 
 * request
   listener(request) where request.uri is read/write.
@@ -138,7 +142,11 @@ methods
 	fullpage : boolean, sets margins to 0, default false
 
 * unload
-  like `load('about:blank')`
+  like `load('about:blank')`, can be used to clear the WebView and
+	load something later
+
+* close
+	that one really makes the object unusable and frees memory
 
 
 about plugins

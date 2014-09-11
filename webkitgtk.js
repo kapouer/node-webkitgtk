@@ -230,6 +230,10 @@ WebKit.prototype.run = function(script, cb) {
 
 	message.mode = mode;
 
+	// this is a hack because it leaks information between worlds
+	// the good way of doing this is sending an empty event
+	// then the webextension execute some JS to fetch the data that has
+	// been stored somewhere as global TODO the day it doesn't work any more/:
 	var dispatcher = '\
 		var evt = document.createEvent("KeyboardEvent"); \
 		evt.initKeyboardEvent("' + this.eventName + '", false, true, null, JSON.stringify(message)); \

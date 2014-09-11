@@ -7,7 +7,10 @@ to check if the dbus server is running well.
 
 
 Calls to g_print() won't be printed to the terminal, but they can be
-searched in strace output: `strace -f node test.js 2> test.trace`.
+searched in strace output: `strace -s 128 -f node test.js 2> test.trace`.
 
-To enable/disable compilation of the webextension
-node-gyp configure --enable_web_extension=true
+Build the module with symbols for debugging:
+node-gyp rebuild --debug
+and then just use
+gdb nodejs
+> run test.js
