@@ -77,13 +77,13 @@ function requestDispatcher(uri) {
 		if (!this.allow.test(uri)) return;
 	}
 	var req = new Request(uri);
-	this.emit('request', req, this);
+	this.emit('request', req);
 	return req.uri;
 }
 
 function responseDispatcher(webResponse) {
 	if (this.preloading) return;
-	this.emit('response', webResponse, this);
+	this.emit('response', webResponse);
 }
 
 function noop(err) {
@@ -125,9 +125,9 @@ WebKit.prototype.load = function(uri, opts, cb) {
 				if (err) console.error(err);
 				self.readyState = result;
 				var prefix = self.preloading ? "pre" : "";
-				self.emit(prefix + 'ready', self);
+				self.emit(prefix + 'ready');
 				if (result == "complete") {
-					self.emit(prefix + 'load', self);
+					self.emit(prefix + 'load');
 				}	else {
 					self.run(function(done) {
 						if (document.readyState == "complete") done(null, document.readyState);
@@ -135,7 +135,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 					}, function(err, result) {
 						if (err) console.error(err);
 						self.readyState = result;
-						self.emit(prefix + 'load', self);
+						self.emit(prefix + 'load');
 					});
 				}
 			});
@@ -232,7 +232,7 @@ WebKit.prototype.png = function() {
 	passthrough.save = save.bind(this, passthrough);
 	if (!this.readyState || this.readyState == "loading") {
 		this.on('load', function() {
-			self.png().pipe(passthrough);
+			this.png().pipe(passthrough);
 		});
 	} else {
 		this.loop(true, true);
@@ -254,8 +254,8 @@ WebKit.prototype.png = function() {
 
 WebKit.prototype.html = function(cb) {
 	if (!this.readyState || this.readyState == "loading") {
-		this.on('ready', function(view) {
-			view.html(cb);
+		this.on('ready', function() {
+			this.html(cb);
 		});
 	} else {
 		this.run("document.documentElement.outerHTML;", cb);
@@ -274,7 +274,7 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 	var self = this;
 	if (!this.readyState || this.readyState == "loading") {
 		this.on('load', function() {
-			self.pdf(filepath, opts, cb);
+			this.pdf(filepath, opts, cb);
 		});
 	} else {
 		this.loop(true, true);
@@ -289,16 +289,17 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 WebKit.prototype.preload = function(uri, opts, cb) {
 	if (!opts.cookies || this.preloading !== undefined) return;
 	this.preloading = true;
-	this.once('preload', function(view) {
+	this.once('preload', function() {
 		var cookies = opts.cookies;
 		if (!Array.isArray(cookies)) cookies = [cookies];
 		var script = cookies.map(function(cookie) {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 		}).join(';') + ';';
-		view.run(script, function(err) {
+		var self = this;
+		this.run(script, function(err) {
 			if (err) return cb(err);
-			view.preloading = false;
-			view.load(uri, opts, cb);
+			self.preloading = false;
+			self.load(uri, opts, cb);
 		});
 	});
 };

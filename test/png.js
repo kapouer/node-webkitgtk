@@ -12,9 +12,9 @@ describe("png method", function suite() {
 			stylesheet: __dirname + "/../css/png.css"
 		}, function(err) {
 			expect(err).to.not.be.ok();
-		}).on("load", function(view) {
+		}).on("load", function() {
 			var filepath = __dirname + '/shots/test.png';
-			view.png().save(filepath, function(err) {
+			this.png().save(filepath, function(err) {
 				expect(err).to.not.be.ok();
 				fs.stat(filepath, function(err, stat) {
 					expect(stat.size).to.be.above(100000);

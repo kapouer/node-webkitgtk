@@ -17,8 +17,8 @@ WebKit(uri, {
 	stylesheet: "css/png.css"
 }, function(err, view) {
   // optional callback
-}).on('load', function(view) {
-  view.png().save('test.png', function(err) {
+}).on('load', function() {
+  this.png().save('test.png', function(err) {
 	  // file saved
 	});
 });
@@ -88,22 +88,22 @@ All events are on the WebKit instance.
 
 * ready
   same as document's DOMContentLoaded event
-	listener(view)
+	listener()
 
 * load
   same as window's load event
-	listener(view)
+	listener()
 
 * steady
   when there are no pending requests that have been initiated after
 	load event TODO
 
 * request
-  listener(request, view) where request.uri is read/write.
+  listener(request) where request.uri is read/write.
 	If request.uri is set to null or "", the request is cancelled.
 
 * response
-  listener(response, view)
+  listener(response)
 	response.uri, response.mime, response.status are read-only.
 	response.data(function(err, buf)) fetches the response data.
 
