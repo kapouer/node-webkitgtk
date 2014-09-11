@@ -120,7 +120,7 @@ methods
   async-script must be a function that calls its first and only argument,
 	like `function(done) { done(err, str); }`
 
-* run(async-script, event) TODO
+* run(async-script, event)
 	async-script must be a function that calls its first and only argument,
 	and each call emits the named event on current view object, which can
 	be listened using view.on(event, listener)

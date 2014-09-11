@@ -1,9 +1,8 @@
-#ifdef ENABLE_WEB_EXTENSION
-
 #include <dbus/dbus-glib.h>
 #include <webkit2/webkit-web-extension.h>
 #include <JavaScriptCore/JSContextRef.h>
 #include <JavaScriptCore/JSStringRef.h>
+#include <string.h>
 #include "dbus.h"
 
 static GDBusConnection* connection;
@@ -35,31 +34,35 @@ static void web_page_created_callback(WebKitWebExtension* extension, WebKitWebPa
 	g_signal_connect(web_page, "send-request", G_CALLBACK(web_page_send_request), data);
 }
 
-/*
-static void window_object_cleared_callback(WebKitScriptWorld* world, WebKitWebPage* web_page, WebKitFrame* frame, gpointer user_data) {
-	// JSGlobalContextRef jsContext;
-	// JSObjectRef        globalObject;
-//
-	// jsContext = webkit_frame_get_javascript_context_for_script_world(frame, world);
-	// globalObject = JSContextGetGlobalObject(jsContext);
-  // JSEvaluateScript(jsContext, JSStringCreateWithUTF8CString("document.cookie='wont=work'"), NULL, NULL, 1, NULL);
-  // GError* error = NULL;
-  // WebKitDOMDocument* dom = webkit_web_page_get_dom_document(web_page);
-	// webkit_dom_document_set_cookie(dom, "mycookie=myval", &error);
-	// if (error != NULL) g_printerr("Error in dom %s", error->message);
+static gboolean event_listener(WebKitDOMDOMWindow* view, WebKitDOMEvent* event, gpointer data) {
+	// find a better way to exchange data between client and here. XHR ?
+	// use CustomEvent, but how is it possible to get event->detail() ?
+	char* message = webkit_dom_keyboard_event_get_key_identifier((WebKitDOMKeyboardEvent*)event);
+	GError* error = NULL;
+	g_dbus_connection_call_sync(connection, NULL, DBUS_OBJECT_WKGTK, DBUS_INTERFACE_WKGTK,
+		"NotifyEvent", g_variant_new("(s)", message), G_VARIANT_TYPE("(s)"), G_DBUS_CALL_FLAGS_NONE, -1, NULL,
+		&error);
+	if (error != NULL) {
+		g_printerr("Failed to finish dbus call: %s\n", error->message);
+		g_error_free(error);
+	}
+	g_free(message);
+	return TRUE;
 }
-*/
 
+static void window_object_cleared_callback(WebKitScriptWorld* world, WebKitWebPage* page, WebKitFrame* frame, gchar* eventName) {
+	WebKitDOMDocument* document = webkit_web_page_get_dom_document(page);
+	WebKitDOMDOMWindow* window = webkit_dom_document_get_default_view(document);
+	webkit_dom_event_target_add_event_listener(WEBKIT_DOM_EVENT_TARGET(window), eventName, G_CALLBACK(event_listener), false, NULL);
+}
 
 extern "C" {
 	G_MODULE_EXPORT void webkit_web_extension_initialize_with_user_data(WebKitWebExtension* extension, const GVariant* constData) {
-		// constData will be the dbus object number
-		// GVariant* data = g_variant_new_string(g_variant_get_string((GVariant*)constData, NULL));
-		// note that page-created happens before window-object-cleared
-		// g_signal_connect(webkit_script_world_get_default(), "window-object-cleared", G_CALLBACK(window_object_cleared_callback), NULL);
-
 		gchar* address = NULL;
-		g_variant_get((GVariant*)constData, "s", &address);
+		gchar* eventName = NULL;
+		g_variant_get((GVariant*)constData, "(ss)", &address, &eventName);
+
+		g_signal_connect(webkit_script_world_get_default(), "window-object-cleared", G_CALLBACK(window_object_cleared_callback), eventName);
 
 		g_signal_connect(extension, "page-created", G_CALLBACK(web_page_created_callback), NULL);
 
@@ -71,5 +74,3 @@ extern "C" {
     }
 	}
 }
-
-#endif

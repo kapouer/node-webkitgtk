@@ -16,6 +16,19 @@ static const GDBusInterfaceVTable interface_vtable = {
 };
 
 WebView::WebView(Handle<Object> opts) {
+  if (opts->Has(H("eventName"))) {
+    this->eventName = **(new NanUtf8String(opts->Get(H("eventName"))));
+  }
+  if (opts->Has(H("requestListener"))) {
+    this->requestCallback = new NanCallback(opts->Get(H("requestListener")).As<Function>());
+  }
+  if (opts->Has(H("responseListener"))) {
+    this->responseCallback = new NanCallback(opts->Get(H("responseListener")).As<Function>());
+  }
+  if (opts->Has(H("eventsListener"))) {
+    this->eventsCallback = new NanCallback(opts->Get(H("eventsListener")).As<Function>());
+  }
+
   NanAdjustExternalMemory(1000000);
   gtk_init(0, NULL);
   state = 0;
@@ -40,7 +53,7 @@ WebView::WebView(Handle<Object> opts) {
   WebKitWebContext* context = webkit_web_context_get_default();
   webkit_web_context_set_process_model(context, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
   webkit_web_context_set_cache_model(context, WEBKIT_CACHE_MODEL_WEB_BROWSER);
-#ifdef ENABLE_WEB_EXTENSION
+
   if (opts->Has(H("webextension"))) {
     NanUtf8String* wePath = new NanUtf8String(opts->Get(H("webextension")));
     if (wePath->Size() > 1) {
@@ -48,13 +61,6 @@ WebView::WebView(Handle<Object> opts) {
       g_signal_connect(context, "initialize-web-extensions", G_CALLBACK(WebView::InitExtensions), this);
       delete wePath;
     }
-  }
-#endif
-  if (opts->Has(H("requestListener"))) {
-    this->requestCallback = new NanCallback(opts->Get(H("requestListener")).As<Function>());
-  }
-  if (opts->Has(H("responseListener"))) {
-    this->responseCallback = new NanCallback(opts->Get(H("responseListener")).As<Function>());
   }
 
   view = WEBKIT_WEB_VIEW(webkit_web_view_new());
@@ -68,7 +74,6 @@ WebView::WebView(Handle<Object> opts) {
   g_signal_connect(view, "load-changed", G_CALLBACK(WebView::Change), this);
   g_signal_connect(view, "resource-load-started", G_CALLBACK(WebView::ResourceLoad), this);
   g_signal_connect(view, "script-dialog", G_CALLBACK(WebView::ScriptDialog), this);
-  g_signal_connect(view, "notify::title", G_CALLBACK(WebView::TitleChange), this);
 }
 
 void WebView::close() {
@@ -78,8 +83,6 @@ void WebView::close() {
   delete[] css;
 
   if (window != NULL) gtk_widget_destroy(window);
-
-  runnables.clear();
 
   delete pngCallback;
   delete pngFilename;
@@ -108,6 +111,9 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
   "    <method name='HandleRequest'>"
   "      <arg type='s' name='uri' direction='in'/>"
   "      <arg type='s' name='uri' direction='out'/>"
+  "    </method>"
+  "    <method name='NotifyEvent'>"
+  "      <arg type='s' name='message' direction='in'/>"
   "    </method>"
   "  </interface>"
   "</node>";
@@ -148,26 +154,14 @@ gboolean WebView::Authenticate(WebKitWebView* view, WebKitAuthenticationRequest*
 
 }
 
-#ifdef ENABLE_WEB_EXTENSION
 void WebView::InitExtensions(WebKitWebContext* context, gpointer data) {
   WebView* self = (WebView*)data;
-  GVariant* userData = g_variant_new("s", g_dbus_server_get_client_address(self->server));
+  GVariant* userData = g_variant_new("(ss)", g_dbus_server_get_client_address(self->server), self->eventName);
   webkit_web_context_set_web_extensions_initialization_user_data(context, userData);
 }
-#endif
 
 void WebView::ResourceLoad(WebKitWebView* web_view, WebKitWebResource* resource, WebKitURIRequest* request, gpointer data) {
-  WebView* self = (WebView*)data;
-  // if (self->requestCallback != NULL) {
-    // const char* uri = webkit_uri_request_get_uri(request);
-    // Handle<Value> argv[] = {
-      // NanNew(uri)
-    // };
-    // self->requestCallback->Call(1, argv);
-  // }
-  if (self->responseCallback != NULL) {
-    g_signal_connect(resource, "notify::response", G_CALLBACK(WebView::ResourceResponse), self);
-  }
+  g_signal_connect(resource, "notify::response", G_CALLBACK(WebView::ResourceResponse), data);
 }
 
 void WebView::ResourceResponse(WebKitWebResource* resource, GParamSpec*, gpointer data) {
@@ -326,121 +320,46 @@ NAN_METHOD(WebView::Load) {
 }
 
 void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) {
-  Runnable* run = (Runnable*)data;
-  JSValueRef value;
-  JSGlobalContextRef context;
   GError* error = NULL;
-  Local<String> local_str;
+  SelfMessage* sm = (SelfMessage*)data;
   WebKitJavascriptResult* js_result = webkit_web_view_run_javascript_finish(WEBKIT_WEB_VIEW(object), result, &error);
   if (js_result == NULL) { // if NULL, error is defined
     Handle<Value> argv[] = {
-      NanError(error->message)
+      NanError(error->message),
+      NanNew(sm->message)
     };
+    sm->view->eventsCallback->Call(2, argv);
     g_error_free(error);
-    run->callback->Call(1, argv);
-    ((WebView*)run->view)->runnables.erase(run->ticket);
-    delete run;
-    return;
-  }
-  context = webkit_javascript_result_get_global_context(js_result);
-  value = webkit_javascript_result_get_value(js_result);
-  if (JSValueIsString(context, value)) {
-    JSStringRef js_str_value;
-    gchar* str_value;
-    gsize str_length;
-    js_str_value = JSValueToStringCopy(context, value, NULL);
-    str_length = JSStringGetMaximumUTF8CStringSize(js_str_value);
-    str_value = (gchar*)g_malloc(str_length);
-    JSStringGetUTF8CString(js_str_value, str_value, str_length);
-    JSStringRelease(js_str_value);
-    local_str = NanNew<String>(str_value);
-    g_free (str_value);
   } else {
-    local_str = NanNew<String>("");
+    webkit_javascript_result_unref(js_result);
   }
-  webkit_javascript_result_unref(js_result);
-  if (run->state < Runnable::RAN_SCRIPT) {
-    run->state = Runnable::RAN_SCRIPT;
-    if (run->sync == false) {
-      return;
-    }
-  } else {
-    run->state = Runnable::RAN_FINISH;
-  }
-  Handle<Value> argv[] = {
-    NanNull(),
-    local_str
-  };
-  run->callback->Call(2, argv);
-  ((WebView*)run->view)->runnables.erase(run->ticket);
-  delete run;
-}
-
-void WebView::TitleChange(WebKitWebView* web_view, GParamSpec*, gpointer data) {
-  WebView* self = (WebView*)data;
-  const gchar* title = webkit_web_view_get_title(web_view);
-  RunMap::iterator it = self->runnables.find((char*)title);
-  if (it != self->runnables.end()) {
-    Runnable* run = it->second;
-    if (run != NULL && run->sync == false && run->state < Runnable::RAN_FINISH) {
-      webkit_web_view_run_javascript(
-        self->view,
-        **run->finish,
-        NULL,
-        WebView::RunFinished,
-        run
-      );
-    }
-  }
+  delete sm;
 }
 
 NAN_METHOD(WebView::Run) {
-  // wrapped, retrieve, cb
-  // 1) tell TitleChange we expect something by setting self->scriptAsync
-  // 2) RunSync(wrapped), RunFinished see self->scriptAsync so doesn't call runCallback
-  // 3) TitleChange is notified and calls RunSync(self->scriptAsync), delete self->scriptAsync
-  // 4) RunFinished calls runCallback
   NanScope();
   WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
-  Runnable* run = new Runnable(self);
-
-  if (!args[4]->IsFunction()) {
-    NanThrowError("run(ticket, sync, script, finish, cb) missing cb argument");
-    NanReturnUndefined();
-  }
-  if (!args[2]->IsString()) {
-    NanThrowError("run(ticket, sync, script, finish, cb) missing wrapped argument");
-    NanReturnUndefined();
-  }
-  if (!args[1]->IsBoolean()) {
-    NanThrowError("run(ticket, sync, script, finish, cb) missing sync argument");
-    NanReturnUndefined();
-  }
   if (!args[0]->IsString()) {
-    NanThrowError("run(ticket, sync, script, finish, cb) missing ticket argument");
+    NanThrowError("run(script, message) missing script argument");
+    NanReturnUndefined();
+  }
+  if (!args[1]->IsString()) {
+    NanThrowError("run(script, message) missing message argument");
     NanReturnUndefined();
   }
 
-  run->sync = args[1]->BooleanValue();
-
-  if (run->sync == false && !args[3]->IsString()) {
-    NanThrowError("run(ticket, false, script, finish, cb) missing retrieve argument");
-    NanReturnUndefined();
-  }
-  run->ticket = **(new NanUtf8String(args[0]));
-  run->script = new NanUtf8String(args[2]);
-  if (run->sync == false) run->finish = new NanUtf8String(args[3]);
-  run->callback = new NanCallback(args[4].As<Function>());
-  self->runnables.insert(RunMapPair(run->ticket, run));
-
-  // self->scriptCancel = g_cancellable_new();
+  NanUtf8String* script = new NanUtf8String(args[0]);
+  NanUtf8String* message = new NanUtf8String(args[1]);
+  SelfMessage* data = new SelfMessage(self, **message);
   webkit_web_view_run_javascript(
     self->view,
-    **run->script,
-    NULL /*self->scriptCancel*/,
+    **script,
+    NULL,
     WebView::RunFinished,
-    run
+    data
   );
+
+  delete script;
 
   NanReturnUndefined();
 }
@@ -628,6 +547,15 @@ gpointer data) {
     else response = g_variant_new("(s)", "");
     g_dbus_method_invocation_return_value(invocation, response);
     g_free(uriStr);
+  } else if (g_strcmp0(method_name, "NotifyEvent") == 0) {
+    const gchar* message;
+    g_variant_get(parameters, "(&s)", &message);
+    Handle<Value> argv[] = {
+      NanNull(),
+      NanNew(message)
+    };
+    self->eventsCallback->Call(2, argv);
+    g_dbus_method_invocation_return_value(invocation, NULL);
   }
 }
 

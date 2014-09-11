@@ -1,7 +1,6 @@
 #ifndef WEBKITGTK_WEBVIEW_H
 #define WEBKITGTK_WEBVIEW_H
 
-#include "runnable.h"
 #include <node.h>
 #include <webkit2/webkit2.h>
 #include <nan.h>
@@ -11,15 +10,6 @@
 using namespace v8;
 
 #define H(name) NanNew<String>(name)
-
-struct RunMapComparator {
-  bool operator()(char const *a, char const *b) {
-    return strcmp(a, b) < 0;
-  }
-};
-
-typedef std::map<char*, Runnable*, RunMapComparator> RunMap;
-typedef std::pair<char*, Runnable*> RunMapPair;
 
 static const GDBusNodeInfo* introspection_data;
 
@@ -34,14 +24,11 @@ public:
   static void Exit(void*);
 
   static gboolean Authenticate(WebKitWebView*, WebKitAuthenticationRequest*, gpointer);
-#ifdef ENABLE_WEB_EXTENSION
   static void InitExtensions(WebKitWebContext*, gpointer);
-#endif
   static void ResourceLoad(WebKitWebView*, WebKitWebResource*, WebKitURIRequest*, gpointer);
   static void ResourceResponse(WebKitWebResource*, GParamSpec*, gpointer);
   static void Change(WebKitWebView*, WebKitLoadEvent, gpointer);
   static gboolean Fail(WebKitWebView*, WebKitLoadEvent, gchar*, GError*, gpointer);
-  static void TitleChange(WebKitWebView*, GParamSpec*, gpointer);
   static gboolean ScriptDialog(WebKitWebView*, WebKitScriptDialog*, gpointer);
   static void PngFinished(GObject*, GAsyncResult*, gpointer);
   static cairo_status_t PngWrite(void*, const unsigned char*, unsigned int);
@@ -60,8 +47,6 @@ private:
   ~WebView();
   void close();
 
-  RunMap runnables;
-
   gchar* guid;
   GDBusServer* server;
 
@@ -75,6 +60,9 @@ private:
 
   WebKitWebView* view = NULL;
   GtkWidget* window = NULL;
+
+  NanCallback* eventsCallback = NULL;
+  char* eventName = NULL;
 
   NanCallback* pngCallback = NULL;
   NanUtf8String* pngFilename = NULL;
@@ -98,6 +86,14 @@ private:
   static NAN_GETTER(get_prop);
 };
 
+struct SelfMessage {
+  WebView* view;
+  char* message;
+  SelfMessage(WebView* w, char* m) {
+    view = w;
+    message = m;
+  };
+};
 typedef std::map<char*, WebView*> ObjMap;
 typedef std::pair<char*, WebView*> ObjMapPair;
 static ObjMap instances;

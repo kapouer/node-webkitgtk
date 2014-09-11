@@ -23,6 +23,8 @@ function WebKit(uri, opts, cb) {
 	opts = opts || {};
 	this.looping = 0;
 	this.ticket = 0;
+	this.tickets = {};
+	this.eventName = "webkitgtk" + Date.now();
 	var self = this;
 	this.display(opts.display || 0, opts, function(err, display) {
 		if (err) return cb(err);
@@ -30,36 +32,32 @@ function WebKit(uri, opts, cb) {
 		var Bindings = require(__dirname + '/lib/webkitgtk.node');
 		self.webview = new Bindings({
 			webextension: __dirname + '/lib/ext',
+			eventName: self.eventName,
 			requestListener: requestDispatcher.bind(self),
-			responseListener: responseDispatcher.bind(self)
+			responseListener: responseDispatcher.bind(self),
+			eventsListener: eventsDispatcher.bind(self)
 		});
 		if (uri) self.load(uri, opts, cb);
 	});
 }
 util.inherits(WebKit, events.EventEmitter);
 
-WebKit.prototype.display = function(display, opts, cb) {
-	var self = this;
-	fs.exists('/tmp/.X' + display + '-lock', function(exists) {
-		if (exists) return cb(null, display);
-		if (display == 0) return cb("Error - do not spawn xvfb on DISPLAY 0");
-		if (opts.xfb) {
-			console.log("Unsafe xfb option is spawning xvfb...");
-			require('headless')({
-				display: {
-					width: opts.xfb.width || 1024,
-					height: opts.xfb.height || 768,
-					depth: opts.xfb.depth || 32
-				}
-			}, display, function(err, child, display) {
-				cb(err, display);
-				if (!err) process.on('exit', function() {
-					child.kill();
-				});
-			});
-		}
-	});
-};
+function eventsDispatcher(err, json) {
+	var obj = JSON.parse(json);
+	if (!obj) {
+		console.error("received invalid event", json);
+		return;
+	}
+	if (obj.event) {
+		obj.args.unshift(obj.event);
+		this.emit.apply(this, obj.args);
+	} else if (obj.ticket) {
+		this.loop(false);
+		var cb = this.tickets[obj.ticket];
+		delete this.tickets[obj.ticket];
+		cb(obj.error, obj.result);
+	}
+}
 
 function Request(uri) {
 	this.uri = uri;
@@ -90,6 +88,29 @@ function noop(err) {
 	if (err) console.error(err);
 }
 
+WebKit.prototype.display = function(display, opts, cb) {
+	var self = this;
+	fs.exists('/tmp/.X' + display + '-lock', function(exists) {
+		if (exists) return cb(null, display);
+		if (display == 0) return cb("Error - do not spawn xvfb on DISPLAY 0");
+		if (opts.xfb) {
+			console.log("Unsafe xfb option is spawning xvfb...");
+			require('headless')({
+				display: {
+					width: opts.xfb.width || 1024,
+					height: opts.xfb.height || 768,
+					depth: opts.xfb.depth || 32
+				}
+			}, display, function(err, child, display) {
+				cb(err, display);
+				if (!err) process.on('exit', function() {
+					child.kill();
+				});
+			});
+		}
+	});
+};
+
 WebKit.prototype.load = function(uri, opts, cb) {
 	if (!cb && typeof opts == "function") {
 		cb = opts;
@@ -99,8 +120,14 @@ WebKit.prototype.load = function(uri, opts, cb) {
 	}
 	if (!cb) cb = noop;
 	this.allow = opts.allow || "all";
-	this.preload(uri, opts, cb);
 	var self = this;
+	this.once('response', function(res) {
+		var status = res.status;
+		if (res.uri == self.webview.uri && (status < 200 || status >= 400)) {
+			self.status = status;
+		}
+	});
+	this.preload(uri, opts, cb);
 	(function(next) {
 		if (opts.stylesheet) {
 			fs.readFile(opts.stylesheet, function(err, css) {
@@ -116,7 +143,9 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		self.loop(true);
 		self.webview.load(uri, opts, function(err) {
 			self.loop(false);
-			if (!self.preloading) cb(err, self);
+			if (!self.preloading) {
+				cb(err || self.status, self);
+			}
 			self.run(function(done) {
 				// this function is executed in the window context of the current view - it cannot access local scopes
 				if (/interactive|complete/.test(document.readyState)) done(null, document.readyState);
@@ -148,6 +177,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 WebKit.prototype.unload = function(cb) {
 	this.load('about:blank', cb);
 	delete this.uri;
+	delete this.status;
 	delete this.readyState;
 };
 
@@ -170,45 +200,58 @@ WebKit.prototype.run = function(script, cb) {
 	if (typeof script == "function") script = script.toString();
 	cb = cb || noop;
 
+	var message = {};
+	if (typeof cb == "string") {
+		message.event = cb;
+	} else {
+		message.ticket = (this.ticket++).toString();
+		this.tickets[message.ticket] = cb;
+	}
+
 	var mode = RUN_SYNC;
 	if (/^\s*function(\s+\w+)?\s*\(\s*\w+\s*\)/.test(script)) mode = RUN_ASYNC;
 	else if (/^(file|http|https):/.test(script)) mode = RUN_PATH;
+
+	message.mode = mode;
+
+	var dispatcher = '\
+		var evt = document.createEvent("KeyboardEvent"); \
+		evt.initKeyboardEvent("' + this.eventName + '", false, true, null, JSON.stringify(message)); \
+		window.dispatchEvent(evt); \
+		';
+	var initialMessage = JSON.stringify(message);
 
 	var self = this;
 	setImmediate(function() {
 		if (mode == RUN_SYNC) {
 			if (/^\s*function(\s+\w+)?\s*\(\s*\)/.test(script)) script = '(' + script + ')()';
-			var ticket = "runticket" + self.ticket++;
+			else script = '(function() { return ' + script + '; })()';
+			var wrap = '\
+			(function() { \
+				var message = ' + initialMessage + '; \
+				try { \
+					message.result = ' + script + '; \
+				} catch(e) { \
+					message.error = e; \
+				} \
+				' + dispatcher + '\
+			})()';
 			self.loop(true);
-			self.webview.run(ticket, true, script, null, function(err, str) {
-				self.loop(false);
-				cb(err, str);
-			});
+			self.webview.run(wrap, initialMessage);
 		} else if (mode == RUN_ASYNC) {
-			var ticket = "runticket" + self.ticket++;
 			var fun = 'function(err, result) {\
-				var ticket = "' + ticket + '";\
-				window[ticket] = [err, result];\
-				setTimeout(function() {document.title = ticket;}, 0);\
-				return "nothing";\
+				var message = ' + initialMessage + ';\
+				if (message.event) { \
+					message.args = Array.prototype.slice.call(arguments, 0); \
+				} else { \
+					if (err) message.error = err; \
+					message.result = result; \
+				} \
+				' + dispatcher + '\
 			}';
-			var wrapped = '(' + script + ')(' + fun + ')';
-			var retrieve = '(function(ticket) {\
-				var str = JSON.stringify(window[ticket] || null);\
-				window[ticket] = undefined;\
-				return str;\
-			})("' + ticket + '")';
+			var wrap = '(' + script + ')(' + fun + ');';
 			self.loop(true);
-			self.webview.run(ticket, false, wrapped, retrieve, function(err, json) {
-				self.loop(false);
-				if (err) return cb(err);
-				var result = JSON.parse(json);
-				if (Array.isArray(result) && result.length == 2) {
-					cb.apply(null, result);
-				} else {
-					cb("bindings returned wrong data");
-				}
-			});
+			self.webview.run(wrap, initialMessage);
 		} else if (mode == RUN_PATH) {
 			console.log("TODO");
 		}

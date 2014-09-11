@@ -2,13 +2,7 @@
   'targets': [
     {
       'target_name': 'webkitgtk',
-      'variables': {
-        'enable_web_extension%': 'true'
-      },
       'conditions': [
-        ['enable_web_extension=="true"', {
-          'defines': [ 'ENABLE_WEB_EXTENSION' ]
-        }],
         ['OS=="linux"', {
           'sources': [ 'src/webresponse.cc', 'src/runnable.cc', 'src/webview.cc' ],
           "include_dirs": ["<!(node -e \"require('nan')\")"],
@@ -30,13 +24,7 @@
     {
       'target_name': 'webextension',
       'type': 'shared_library',
-      'variables': {
-        'enable_web_extension%': 'true'
-      },
       'conditions': [
-        ['enable_web_extension=="true"', {
-          'defines': [ 'ENABLE_WEB_EXTENSION' ]
-        }],
         ['OS=="linux"', {
           'product_extension': 'so',
           'sources': [ 'src/webextension.cc' ],
