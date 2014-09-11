@@ -5,8 +5,8 @@ var fs = require('fs');
 describe("pdf method", function suite() {
 	it("should save a printed pdf to disk", function(done) {
 		this.timeout(10000);
-		WebKit("http://www.neufdeuxtroisa.fr", {
-			width:400, height:1000,
+		WebKit("https://www.debian.org/", {
+			width:800, height:600,
 			stylesheet: __dirname + "/../css/png.css"
 		}, function(err) {
 			expect(err).to.not.be.ok();
