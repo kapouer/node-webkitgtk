@@ -41,11 +41,12 @@ public:
     const gchar*, const gchar*, GVariant*, GDBusMethodInvocation*, gpointer);
   static gboolean on_new_connection(GDBusServer*, GDBusConnection*, gpointer);
 
+  void close();
+
 private:
   static v8::Persistent<v8::Function> constructor;
   WebView(Handle<Object>);
   ~WebView();
-  void close();
 
   gchar* guid;
   GDBusServer* server;
@@ -82,6 +83,7 @@ private:
   static NAN_METHOD(Run);
   static NAN_METHOD(Png);
   static NAN_METHOD(Print);
+  static NAN_METHOD(Close);
 
   static NAN_GETTER(get_prop);
 };

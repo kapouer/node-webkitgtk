@@ -76,6 +76,13 @@ WebView::WebView(Handle<Object> opts) {
   g_signal_connect(view, "script-dialog", G_CALLBACK(WebView::ScriptDialog), this);
 }
 
+NAN_METHOD(WebView::Close) {
+  NanScope();
+  WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
+  self->close();
+  NanReturnUndefined();
+}
+
 void WebView::close() {
   delete[] cookie;
   delete[] username;
@@ -130,6 +137,7 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
   NODE_SET_PROTOTYPE_METHOD(tpl, "run", WebView::Run);
   NODE_SET_PROTOTYPE_METHOD(tpl, "png", WebView::Png);
   NODE_SET_PROTOTYPE_METHOD(tpl, "pdf", WebView::Print);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "close", WebView::Close);
 
   ATTR(tpl, "uri", get_prop, NULL);
 

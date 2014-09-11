@@ -181,6 +181,15 @@ WebKit.prototype.unload = function(cb) {
 	delete this.readyState;
 };
 
+WebKit.prototype.close = function() {
+	if (this.timeoutId) {
+		clearTimeout(this.timeoutId);
+		delete this.timeoutId;
+	}
+	this.webview.close();
+	delete this.webview;
+};
+
 WebKit.prototype.loop = function(start, block) {
 	if (start) {
 		this.looping++;
