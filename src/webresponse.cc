@@ -75,6 +75,11 @@ void WebResponse::DataFinished(GObject* object, GAsyncResult* result, gpointer d
 NAN_GETTER(WebResponse::get_prop) {
   NanScope();
   WebResponse* self = node::ObjectWrap::Unwrap<WebResponse>(args.Holder());
+
+  if (self->response == NULL) {
+    // failed response
+    NanReturnUndefined();
+  }
   std::string propstr = TOSTR(property);
 
   if (propstr == "uri") {
