@@ -9,6 +9,8 @@ static GDBusConnection* connection;
 
 static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest* request, WebKitURIResponse* redirected_response, gpointer data) {
 	GError* error = NULL;
+	// ignore redirected requests - it's transparent to the user
+	if (redirected_response != NULL) return FALSE;
 	const char* uri = webkit_uri_request_get_uri(request);
 	GVariant* value = g_dbus_connection_call_sync(connection, NULL, DBUS_OBJECT_WKGTK, DBUS_INTERFACE_WKGTK,
 		"HandleRequest", g_variant_new("(s)", uri), G_VARIANT_TYPE("(s)"), G_DBUS_CALL_FLAGS_NONE, -1, NULL,
