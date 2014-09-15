@@ -26,7 +26,7 @@ public:
   static gboolean Authenticate(WebKitWebView*, WebKitAuthenticationRequest*, gpointer);
   static void InitExtensions(WebKitWebContext*, gpointer);
   static void ResourceLoad(WebKitWebView*, WebKitWebResource*, WebKitURIRequest*, gpointer);
-  static void ResourceResponse(WebKitWebResource*, GParamSpec*, gpointer);
+  static void ResourceResponse(WebKitWebResource*, gpointer);
   static void Change(WebKitWebView*, WebKitLoadEvent, gpointer);
   static gboolean Fail(WebKitWebView*, WebKitLoadEvent, gchar*, GError*, gpointer);
   static gboolean ScriptDialog(WebKitWebView*, WebKitScriptDialog*, gpointer);

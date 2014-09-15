@@ -169,10 +169,10 @@ void WebView::InitExtensions(WebKitWebContext* context, gpointer data) {
 }
 
 void WebView::ResourceLoad(WebKitWebView* web_view, WebKitWebResource* resource, WebKitURIRequest* request, gpointer data) {
-  g_signal_connect(resource, "notify::response", G_CALLBACK(WebView::ResourceResponse), data);
+  g_signal_connect(resource, "finished", G_CALLBACK(WebView::ResourceResponse), data);
 }
 
-void WebView::ResourceResponse(WebKitWebResource* resource, GParamSpec*, gpointer data) {
+void WebView::ResourceResponse(WebKitWebResource* resource, gpointer data) {
   WebView* self = (WebView*)data;
   WebKitURIResponse* response = webkit_web_resource_get_response(resource);
   Handle<Object> obj = WebResponse::constructor->GetFunction()->NewInstance();
