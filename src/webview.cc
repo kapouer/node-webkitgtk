@@ -514,10 +514,16 @@ NAN_GETTER(WebView::get_prop) {
 NAN_METHOD(WebView::Loop) {
   NanScope();
   bool block = FALSE;
+  bool isPending = FALSE;
   if (args[0]->IsBoolean()) block = args[0]->BooleanValue();
-  if (block) while (gtk_events_pending()) gtk_main_iteration_do(TRUE);
-  else gtk_main_iteration_do(FALSE);
-  NanReturnUndefined();
+  if (block) while (gtk_events_pending()) {
+    isPending = TRUE;
+    gtk_main_iteration_do(TRUE);
+  } else if (gtk_events_pending()) {
+    isPending = TRUE;
+    gtk_main_iteration_do(FALSE);
+  }
+  NanReturnValue(NanNew<Boolean>(isPending));
 }
 
 gboolean WebView::on_new_connection(GDBusServer* server, GDBusConnection* connection, gpointer data) {
