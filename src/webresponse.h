@@ -21,6 +21,7 @@ public:
   WebKitWebResource* resource = NULL;
 
   WebResponse();
+  void init(WebKitWebResource*, WebKitURIResponse*);
 
 private:
   ~WebResponse();

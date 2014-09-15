@@ -177,10 +177,7 @@ void WebView::ResourceResponse(WebKitWebResource* resource, GParamSpec*, gpointe
   WebKitURIResponse* response = webkit_web_resource_get_response(resource);
   Handle<Object> obj = WebResponse::constructor->GetFunction()->NewInstance();
   WebResponse* selfResponse = node::ObjectWrap::Unwrap<WebResponse>(obj);
-  selfResponse->resource = resource;
-  g_object_ref(resource);
-  selfResponse->response = response;
-  g_object_ref(response);
+  selfResponse->init(resource, response);
   int argc = 1;
   Handle<Value> argv[] = { obj };
   self->responseCallback->Call(argc, argv);

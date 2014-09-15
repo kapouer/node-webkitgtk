@@ -8,9 +8,17 @@ Persistent<FunctionTemplate> WebResponse::constructor;
 WebResponse::WebResponse() {}
 
 WebResponse::~WebResponse() {
-  g_object_unref(response);
+  if (response != NULL) g_object_unref(response);
   g_object_unref(resource);
   delete dataCallback;
+}
+
+void WebResponse::init(WebKitWebResource* resource, WebKitURIResponse* response) {
+  this->resource = resource;
+  g_object_ref(resource);
+  this->response = response;
+  // response can be empty
+  if (response != NULL) g_object_ref(response);
 }
 
 void WebResponse::Init(Handle<Object> target) {
