@@ -85,6 +85,7 @@ events
 ------
 
 All events are on the WebKit instance.
+The first four events are like lifecycle events:
 
 * ready
   same as document's DOMContentLoaded event
@@ -94,13 +95,23 @@ All events are on the WebKit instance.
   same as window's load event
 	listener()
 
+* idle
+  when all requests are finished, failed, or just hanging, and when the
+	gtk loop has been doing nothing for a couple of cycles.
+	This event is used to automatically pause the view.
+	Use .on('idle', function() { this.loop(true); }) to restart the gtk
+	loop if needed.
+
 * unload TODO with the ability to prevent unloading
   same as window's unload event
 	listener()
 
-* steady TODO
-  when there are no pending requests that have been initiated after
-	load event
+
+These three events can happen at any moment:
+
+* error
+  this is what is caught by window.onerror
+	listener(message, url, line, column)
 
 * request
   listener(request) where request.uri is read/write.
@@ -110,6 +121,23 @@ All events are on the WebKit instance.
   listener(response)
 	response.uri, response.mime, response.status are read-only.
 	response.data(function(err, buf)) fetches the response data.
+
+
+gtk loop and events
+-------------------
+
+Calls to webkitgtk (load, run, png, pdf) all make the gtk loop run.
+When the gtk loop is stopped, all processing is suspended within
+webkitgtk - network, rendering, events...
+
+To allow the gtk loop to stop when running it is no longer useful,
+webkitgtk.js stops it if the next lifecycle event has no listeners.
+
+For example, if there are no "idle" listeners after "load" is emitted,
+the loop won't be kept running.
+
+To keep the gtk loop running forever, just listen to "unload" event,
+or manually restart it using internal method .loop(true).
 
 
 methods
@@ -128,6 +156,8 @@ methods
 	async-script must be a function that calls its first and only argument,
 	and each call emits the named event on current view object, which can
 	be listened using view.on(event, listener)
+	Can be used to listen recurring events, but the gtk loop needs to be
+	running, see above.
 
 * png()
   takes a png snapshot immediately, returns a stream with an additional
