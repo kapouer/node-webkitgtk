@@ -84,18 +84,18 @@ NAN_GETTER(WebResponse::get_prop) {
   NanScope();
   WebResponse* self = node::ObjectWrap::Unwrap<WebResponse>(args.Holder());
 
-  if (self->response == NULL) {
-    // failed response
-    NanReturnUndefined();
-  }
   std::string propstr = TOSTR(property);
 
   if (propstr == "uri") {
-    NanReturnValue(NanNew<String>(webkit_uri_response_get_uri(self->response)));
-  } else if (propstr == "mime") {
+    NanReturnValue(NanNew<String>(webkit_web_resource_get_uri(self->resource)));
+  } else if (propstr == "mime" && self->response != NULL) {
     NanReturnValue(NanNew<String>(webkit_uri_response_get_mime_type(self->response)));
   } else if (propstr == "status") {
-    NanReturnValue(NanNew<Integer>(webkit_uri_response_get_status_code(self->response)));
+    if (self->response != NULL) {
+      NanReturnValue(NanNew<Integer>(webkit_uri_response_get_status_code(self->response)));
+    } else {
+      NanReturnValue(NanNew<Integer>(0));
+    }
   }
   NanReturnUndefined();
 }
