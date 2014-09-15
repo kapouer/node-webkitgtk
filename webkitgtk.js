@@ -26,6 +26,11 @@ function WebKit(uri, opts, cb) {
 	this.tickets = {};
 	this.eventName = "webkitgtk" + Date.now();
 	var self = this;
+	this.on('error', function(msg, uri, line, column) {
+		if (this.listeners('error').length <= 1) {
+			console.error(msg, "\n", uri, "line", line, "column", column);
+		}
+	});
 	this.display(opts.display || 0, opts, function(err, display) {
 		if (err) return cb(err);
 		process.env.DISPLAY = ":" + display;
@@ -146,6 +151,11 @@ WebKit.prototype.load = function(uri, opts, cb) {
 			if (!self.preloading) {
 				cb(err || self.status, self);
 			}
+			self.run(function(emit) {
+				window.onerror = function() {
+					emit.apply(null, Array.prototype.slice.call(arguments, 0));
+				};
+			}, "error");
 			self.run(function(done) {
 				// this function is executed in the window context of the current view - it cannot access local scopes
 				if (/interactive|complete/.test(document.readyState)) done(null, document.readyState);
