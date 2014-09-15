@@ -21,6 +21,7 @@ function WebKit(uri, opts, cb) {
 	}
 	if (!cb) cb = noop;
 	opts = opts || {};
+	this.pendingRequests = 0;
 	this.looping = 0;
 	this.ticket = 0;
 	this.tickets = {};
@@ -72,21 +73,26 @@ function requestDispatcher(uri) {
 	if (this.preloading && uri != this.webview.uri) {
 		return;
 	}
+	var cancel = false;
 	if (this.allow == "none") {
-		if (uri != this.webview.uri) return;
+		if (uri != this.webview.uri) cancel = true;
 	} else if (this.allow == "same-origin") {
-		if (url.parse(uri).host != url.parse(this.webview.uri).host) return;
+		if (url.parse(uri).host != url.parse(this.webview.uri).host) cancel = true;
 	} else if (this.allow instanceof RegExp) {
-		if (!this.allow.test(uri)) return;
+		if (!this.allow.test(uri)) cancel = true;
 	}
+	if (cancel) return;
+
 	var req = new Request(uri);
 	this.emit('request', req);
+	if (req.uri) this.pendingRequests++;
 	return req.uri;
 }
 
-function responseDispatcher(webResponse) {
+function responseDispatcher(res) {
 	if (this.preloading) return;
-	this.emit('response', webResponse);
+	this.pendingRequests--;
+	this.emit('response', res);
 }
 
 function noop(err) {
@@ -215,7 +221,16 @@ WebKit.prototype.loop = function(start, block) {
 	}
 	if (!this.looping) return;
 	var self = this;
-	this.webview.loop(block);
+	var busy = this.webview.loop(block);
+	if (!busy && this.pendingRequests == 0 && !this.wasBusy && this.readyState == "complete") {
+		setImmediate(function() {
+			self.emit('idle');
+		});
+		this.looping--;
+		return;
+	} else {
+		self.wasBusy = busy;
+	}
 	if (!self.timeoutId) self.timeoutId = setTimeout(function() {
 		self.timeoutId = null;
 		self.loop(null, block);
