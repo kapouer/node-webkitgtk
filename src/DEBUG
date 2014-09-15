@@ -14,3 +14,10 @@ node-gyp rebuild --debug
 and then just use
 gdb nodejs
 > run test.js
+
+
+To debug glib warnings:
+G_DEBUG=fatal_warnings gdb nodejs
+...
+
+will break on failed assertions
