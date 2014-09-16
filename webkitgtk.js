@@ -199,10 +199,7 @@ WebKit.prototype.unload = function(cb) {
 
 WebKit.prototype.close = function() {
 	this.closed = true;
-	if (this.timeoutId) {
-		clearTimeout(this.timeoutId);
-		delete this.timeoutId;
-	}
+	this.loop(false);
 	this.webview.close();
 	delete this.webview;
 	function disabled() {
@@ -219,7 +216,13 @@ WebKit.prototype.loop = function(start, block) {
 	} else if (start === false) {
 		this.looping--;
 	}
-	if (!this.looping) return;
+	if (!this.looping) {
+		if (this.timeoutId) {
+			clearTimeout(this.timeoutId);
+			this.timeoutId = null;
+		}
+		return;
+	}
 	var self = this;
 	var busy = this.webview.loop(block);
 	if (!busy && this.pendingRequests == 0 && !this.wasBusy && this.readyState == "complete") {
