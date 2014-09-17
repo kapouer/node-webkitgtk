@@ -138,6 +138,8 @@ function display(display, opts, cb) {
 }
 
 WebKit.prototype.load = function(uri, opts, cb) {
+	if (this.readyState == "loading") throw new Error("Cannot call load while loading");
+	this.readyState = null;
 	if (!cb && typeof opts == "function") {
 		cb = opts;
 		opts = {};
@@ -146,11 +148,15 @@ WebKit.prototype.load = function(uri, opts, cb) {
 	}
 	if (!cb) cb = noop;
 	if (!this.webview) {
-		if (this.initCb) throw new Error("Cannot call load twice in a row");
+		// if this happens some other code is broken
+		if (this.initCb) throw new Error("Bad state: already queued a load after initialize");
 		this.initCb = this.load.bind(this, uri, opts, cb);
-		if (!this.initializing) initialize.call(this, opts, cb);
+		if (!this.initializing) initialize.call(this, opts, function(err) {
+			if (err) cb(err); // propagate error
+		});
 		return;
 	}
+	this.readyState = "loading";
 	this.allow = opts.allow || "all";
 	var self = this;
 	this.once('response', function(res) {

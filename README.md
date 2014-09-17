@@ -143,7 +143,16 @@ or manually restart it using internal method .loop(true).
 methods
 -------
 
+* [new] Webkit([opts], [cb])
+  if opts.display is set it will check that display is available.
+
+* [new] WebKit(uri, [opts], [cb])
+	initialize display then calls .load(uri, opts, cb)
+
 * load(uri, [opts], [cb])
+  load uri - can be called right after WebKit instantiation, the
+	display initializing will always be done before.
+	This method cannot be called twice in a row !
 
 * run(sync-script, cb)
   any synchronous script text or global function

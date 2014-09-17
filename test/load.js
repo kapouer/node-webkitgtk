@@ -20,7 +20,7 @@ describe("load method", function suite() {
 describe("load method", function suite() {
 	it("should callback with error when url cannot be resolved", function(done) {
 		this.timeout(10000);
-		WebKit("http://atipepipapa-sdqdqsd.com", function(err, html) {
+		WebKit("http://atipepipapa-sdqdqsd.com", function(err) {
 			expect(err).to.be.ok();
 			done();
 		});
