@@ -32,7 +32,16 @@ function WebKit(uri, opts, cb) {
 			console.error(msg, "\n", uri, "line", line, "column", column);
 		}
 	});
-	this.display(opts.display || 0, opts, function(err, display) {
+	if (uri) this.load(uri, opts, cb);
+	else if (opts.display != null) initialize.call(this, opts, cb);
+}
+util.inherits(WebKit, events.EventEmitter);
+
+function initialize(opts, cb) {
+	if (this.initializing) return cb(new Error("Initialized twice"));
+	this.initializing = true;
+	var self = this;
+	display.call(this, opts.display || 0, opts, function(err, display) {
 		if (err) return cb(err);
 		process.env.DISPLAY = ":" + display;
 		var Bindings = require(__dirname + '/lib/webkitgtk.node');
@@ -43,10 +52,15 @@ function WebKit(uri, opts, cb) {
 			responseListener: responseDispatcher.bind(self),
 			eventsListener: eventsDispatcher.bind(self)
 		});
-		if (uri) self.load(uri, opts, cb);
+		delete self.initializing;
+		cb();
+		if (self.initCb) {
+			var fun = self.initCb;
+			delete self.initCb;
+			fun();
+		}
 	});
 }
-util.inherits(WebKit, events.EventEmitter);
 
 function eventsDispatcher(err, json) {
 	var obj = JSON.parse(json);
@@ -55,6 +69,7 @@ function eventsDispatcher(err, json) {
 		return;
 	}
 	if (obj.event) {
+
 		obj.args.unshift(obj.event);
 		this.emit.apply(this, obj.args);
 	} else if (obj.ticket) {
@@ -99,7 +114,7 @@ function noop(err) {
 	if (err) console.error(err);
 }
 
-WebKit.prototype.display = function(display, opts, cb) {
+function display(display, opts, cb) {
 	var self = this;
 	fs.exists('/tmp/.X' + display + '-lock', function(exists) {
 		if (exists) return cb(null, display);
@@ -120,7 +135,7 @@ WebKit.prototype.display = function(display, opts, cb) {
 			});
 		}
 	});
-};
+}
 
 WebKit.prototype.load = function(uri, opts, cb) {
 	if (!cb && typeof opts == "function") {
@@ -130,6 +145,12 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		opts = {};
 	}
 	if (!cb) cb = noop;
+	if (!this.webview) {
+		if (this.initCb) throw new Error("Cannot call load twice in a row");
+		this.initCb = this.load.bind(this, uri, opts, cb);
+		if (!this.initializing) initialize.call(this, opts, cb);
+		return;
+	}
 	this.allow = opts.allow || "all";
 	var self = this;
 	this.once('response', function(res) {
