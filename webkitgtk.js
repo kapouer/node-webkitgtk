@@ -165,7 +165,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 			self.status = status;
 		}
 	});
-	this.preload(uri, opts, cb);
+	preload.call(this, uri, opts, cb);
 	(function(next) {
 		if (opts.stylesheet) {
 			fs.readFile(opts.stylesheet, function(err, css) {
@@ -404,7 +404,7 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 	return this;
 };
 
-WebKit.prototype.preload = function(uri, opts, cb) {
+function preload(uri, opts, cb) {
 	if (!opts.cookies || this.preloading !== undefined) return;
 	this.preloading = true;
 	this.once('preload', function() {
