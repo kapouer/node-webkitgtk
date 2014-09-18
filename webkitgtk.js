@@ -175,7 +175,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		if (!this.initializing) initialize.call(this, opts, function(err) {
 			if (err) cb(err); // propagate error
 		});
-		return;
+		return this;
 	}
 	this.readyState = "opening";
 	this.allow = opts.allow || "all";
