@@ -188,6 +188,13 @@ methods
 	that one really makes the object unusable and frees memory
 
 
+properties
+----------
+
+* uri
+  Read-only, get current uri of the web view.
+
+
 about plugins
 -------------
 

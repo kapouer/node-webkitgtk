@@ -37,6 +37,13 @@ function WebKit(uri, opts, cb) {
 }
 util.inherits(WebKit, events.EventEmitter);
 
+Object.defineProperty(WebKit.prototype, "uri", {
+  get: function() {
+		if (this.webview) return this.webview.uri;
+		else return null;
+	}
+});
+
 function initialize(opts, cb) {
 	if (this.initializing) return cb(new Error("Initialized twice"));
 	this.initializing = true;
@@ -85,14 +92,14 @@ function Request(uri) {
 }
 
 function requestDispatcher(uri) {
-	if (this.preloading && uri != this.webview.uri) {
+	if (this.preloading && uri != this.uri) {
 		return;
 	}
 	var cancel = false;
 	if (this.allow == "none") {
-		if (uri != this.webview.uri) cancel = true;
+		if (uri != this.uri) cancel = true;
 	} else if (this.allow == "same-origin") {
-		if (url.parse(uri).host != url.parse(this.webview.uri).host) cancel = true;
+		if (url.parse(uri).host != url.parse(this.uri).host) cancel = true;
 	} else if (this.allow instanceof RegExp) {
 		if (!this.allow.test(uri)) cancel = true;
 	}
@@ -161,7 +168,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 	var self = this;
 	this.once('response', function(res) {
 		var status = res.status;
-		if (res.uri == self.webview.uri && (status < 200 || status >= 400)) {
+		if (res.uri == self.uri && (status < 200 || status >= 400)) {
 			self.status = status;
 		}
 	});
@@ -213,7 +220,6 @@ WebKit.prototype.load = function(uri, opts, cb) {
 			});
 		});
 	});
-	this.uri = uri;
 	return this;
 };
 
