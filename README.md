@@ -194,6 +194,11 @@ properties
 * uri
   Read-only, get current uri of the web view.
 
+* readyState
+  Read-only: empty, "opening", "loading", "interactive", "complete"
+	Before the first call to .load() it is empty, and before the callback
+	it is opening.
+
 
 about plugins
 -------------

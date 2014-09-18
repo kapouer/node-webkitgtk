@@ -145,7 +145,7 @@ function display(display, opts, cb) {
 }
 
 WebKit.prototype.load = function(uri, opts, cb) {
-	if (this.readyState == "loading") throw new Error("Cannot call load while loading");
+	if (this.readyState == "opening") throw new Error("Cannot call load while loading");
 	this.readyState = null;
 	if (!cb && typeof opts == "function") {
 		cb = opts;
@@ -163,7 +163,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		});
 		return;
 	}
-	this.readyState = "loading";
+	this.readyState = "opening";
 	this.allow = opts.allow || "all";
 	var self = this;
 	this.once('response', function(res) {
@@ -191,6 +191,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 			if (!self.preloading) {
 				cb(err || self.status, self);
 			}
+			self.readyState = "loading";
 			self.run(function(emit) {
 				window.onerror = function() {
 					emit.apply(null, Array.prototype.slice.call(arguments, 0));
@@ -354,7 +355,7 @@ WebKit.prototype.png = function() {
 	}
 	var passthrough = new stream.PassThrough();
 	passthrough.save = save.bind(this, passthrough);
-	if (!this.readyState || this.readyState == "loading") {
+	if (!this.readyState || this.readyState == "opening" || this.readyState == "loading") {
 		this.on('load', function() {
 			this.png().pipe(passthrough);
 		});
@@ -377,7 +378,7 @@ WebKit.prototype.png = function() {
 };
 
 WebKit.prototype.html = function(cb) {
-	if (!this.readyState || this.readyState == "loading") {
+	if (!this.readyState || this.readyState == "opening" || this.readyState == "loading") {
 		this.on('ready', function() {
 			this.html(cb);
 		});
@@ -396,7 +397,7 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 	}
 	if (!cb) cb = noop;
 	var self = this;
-	if (!this.readyState || this.readyState == "loading") {
+	if (!this.readyState || this.readyState == "opening" || this.readyState == "loading") {
 		this.on('load', function() {
 			this.pdf(filepath, opts, cb);
 		});
