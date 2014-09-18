@@ -1,5 +1,5 @@
 build
 node_modules
 lib/*
-dev/run
+dev/*
 test/shots
