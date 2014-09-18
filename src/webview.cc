@@ -505,7 +505,8 @@ NAN_GETTER(WebView::get_prop) {
   std::string propstr = TOSTR(property);
 
   if (propstr == "uri") {
-    NanReturnValue(NanNew<String>(self->uri));
+    if (self->uri != NULL) NanReturnValue(NanNew<String>(self->uri));
+    else NanReturnUndefined();
   } else {
     NanReturnUndefined();
   }
