@@ -23,20 +23,13 @@ describe("unload method", function suite() {
 		var view = new WebKit();
 		var uri = 'http://google.com';
 		view.load(uri).once('load', function() {
-			console.log("first load");
 			view.unload(function(err) {
 				view.load('http://google.com', function(err) {
 					expect(err).to.not.be.ok();
-					console.log("second load cb");
-				}).on('ready', function() {
-					console.log("second ready event");
-				})
-				.on('load', function() {
-
-					this.html(function(err, html) {
-						console.log(html.length);
-						done();
-					});
+				}).html(function(err, html) {
+					expect(err).to.not.be.ok();
+					expect(html.length).to.be.greaterThan(200);
+					done();
 				});
 			});
 		});
