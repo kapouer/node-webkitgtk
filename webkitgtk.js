@@ -45,7 +45,7 @@ util.inherits(WebKit, events.EventEmitter);
 Object.defineProperty(WebKit.prototype, "uri", {
   get: function() {
 		if (this.webview) return this.webview.uri;
-		else return null;
+		else return;
 	}
 });
 
