@@ -28,6 +28,9 @@ WebView::WebView(Handle<Object> opts) {
   if (opts->Has(H("eventsListener"))) {
     this->eventsCallback = new NanCallback(opts->Get(H("eventsListener")).As<Function>());
   }
+  if (opts->Has(H("policyListener"))) {
+    this->policyCallback = new NanCallback(opts->Get(H("policyListener")).As<Function>());
+  }
 
   NanAdjustExternalMemory(1000000);
   gtk_init(0, NULL);
@@ -74,6 +77,7 @@ WebView::WebView(Handle<Object> opts) {
   g_signal_connect(view, "load-changed", G_CALLBACK(WebView::Change), this);
   g_signal_connect(view, "resource-load-started", G_CALLBACK(WebView::ResourceLoad), this);
   g_signal_connect(view, "script-dialog", G_CALLBACK(WebView::ScriptDialog), this);
+  g_signal_connect(view, "decide-policy", G_CALLBACK(WebView::DecidePolicy), this);
 }
 
 NAN_METHOD(WebView::Close) {
@@ -100,6 +104,8 @@ void WebView::close() {
   delete loadCallback;
   delete requestCallback;
   delete responseCallback;
+  delete policyCallback;
+
   g_dbus_server_stop(server);
   g_object_unref(server);
   instances.erase(guid);
@@ -166,6 +172,36 @@ void WebView::InitExtensions(WebKitWebContext* context, gpointer data) {
   WebView* self = (WebView*)data;
   GVariant* userData = g_variant_new("(ss)", g_dbus_server_get_client_address(self->server), self->eventName);
   webkit_web_context_set_web_extensions_initialization_user_data(context, userData);
+}
+
+gboolean WebView::DecidePolicy(WebKitWebView* web_view, WebKitPolicyDecision* decision, WebKitPolicyDecisionType type, gpointer data) {
+  WebView* self = (WebView*)data;
+  if (type == WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION) {
+    WebKitNavigationPolicyDecision* navDecision = WEBKIT_NAVIGATION_POLICY_DECISION(decision);
+    WebKitURIRequest* navRequest = webkit_navigation_policy_decision_get_request(navDecision);
+    Local<String> uri = NanNew<String>(webkit_uri_request_get_uri(navRequest));
+    Local<String> type = NanNew<String>("navigation");
+    Handle<Value> argv[] = { type, uri };
+    Handle<Value> ignore = self->policyCallback->Call(2, argv);
+    if (ignore->IsBoolean() && ignore->BooleanValue() == true) {
+      webkit_policy_decision_ignore(decision);
+      return TRUE;
+    }
+  } else if (type == WEBKIT_POLICY_DECISION_TYPE_NEW_WINDOW_ACTION) {
+    // ignore for now
+    webkit_policy_decision_ignore(decision);
+    return TRUE;
+    // WebKitNavigationPolicyDecision* navDecision = WEBKIT_NAVIGATION_POLICY_DECISION(decision);
+    // WebKitURIRequest* navRequest = webkit_navigation_policy_decision_get_request(navDecision);
+    // const gchar* uri = webkit_uri_request_get_uri(navRequest);
+    // g_print("policy new window decision for\n%s\n", uri);
+  } else if (type == WEBKIT_POLICY_DECISION_TYPE_RESPONSE) {
+    // WebKitResponsePolicyDecision* resDecision = WEBKIT_RESPONSE_POLICY_DECISION(decision);
+    // WebKitURIRequest* resRequest = webkit_response_policy_decision_get_request(resDecision);
+    // const gchar* uri = webkit_uri_request_get_uri(resRequest);
+    // g_print("policy response decision for\n%s\n", uri);
+  }
+  return FALSE;
 }
 
 void WebView::ResourceLoad(WebKitWebView* web_view, WebKitWebResource* resource, WebKitURIRequest* request, gpointer data) {

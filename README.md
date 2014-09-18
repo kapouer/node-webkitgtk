@@ -50,6 +50,11 @@ options
   "all" or "same-origin" or "none" or a RegExp, default "all"
 	allow requests only matching option (except the document request),
 	bypassing 'request' event.
+	This does not allow requests that are rejected by cross-origin policy.
+
+- navigation
+	boolean, default false
+	allow navigation within the webview (changing document.location).
 
 - dialogs
   boolean, default false

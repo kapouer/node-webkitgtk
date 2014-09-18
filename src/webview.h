@@ -25,6 +25,7 @@ public:
 
   static gboolean Authenticate(WebKitWebView*, WebKitAuthenticationRequest*, gpointer);
   static void InitExtensions(WebKitWebContext*, gpointer);
+  static gboolean DecidePolicy(WebKitWebView*, WebKitPolicyDecision*, WebKitPolicyDecisionType, gpointer);
   static void ResourceLoad(WebKitWebView*, WebKitWebResource*, WebKitURIRequest*, gpointer);
   static void ResourceResponse(WebKitWebResource*, gpointer);
   static void Change(WebKitWebView*, WebKitLoadEvent, gpointer);
@@ -74,6 +75,7 @@ private:
   NanCallback* loadCallback = NULL;
   NanCallback* requestCallback = NULL;
   NanCallback* responseCallback = NULL;
+  NanCallback* policyCallback = NULL;
 
   const char* uri = NULL;
 

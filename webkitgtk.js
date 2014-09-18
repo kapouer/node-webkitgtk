@@ -67,7 +67,8 @@ function initialize(opts, cb) {
 			eventName: self.eventName,
 			requestListener: requestDispatcher.bind(self),
 			responseListener: responseDispatcher.bind(self),
-			eventsListener: eventsDispatcher.bind(self)
+			eventsListener: eventsDispatcher.bind(self),
+			policyListener: policyDispatcher.bind(self)
 		});
 		delete self.initializing;
 		cb();
@@ -88,6 +89,14 @@ function lifeEventHandler(event) {
 		);
 	if (condition) this.defaultLoop = false;
 }
+
+function policyDispatcher(type, uri) {
+	// prevents navigation once a view has started loading (if navigation is false)
+	if (type == "navigation" && this.navigation == false && this.readyState && this.readyState != "opening") {
+		return true;
+	}
+}
+
 function eventsDispatcher(err, json) {
 	var obj = JSON.parse(json);
 	if (!obj) {
@@ -184,6 +193,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 	}
 	this.readyState = "opening";
 	this.allow = opts.allow || "all";
+	this.navigation = opts.navigation || false;
 	var self = this;
 	this.once('response', function(res) {
 		var status = res.status;
