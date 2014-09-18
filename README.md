@@ -190,9 +190,9 @@ methods
 	orientation : "landscape" or "portrait", default "portrait"
 	fullpage : boolean, sets margins to 0, default false
 
-* unload
-  like `load('about:blank')`, can be used to clear the WebView and
-	load something later
+* unload(cb)
+  Sets current view to an empty document and uri.
+	Emits 'unload' event.
 
 * close
 	that one really makes the object unusable and frees memory

@@ -191,24 +191,22 @@ gboolean WebView::ScriptDialog(WebKitWebView* web_view, WebKitScriptDialog* dial
 
 void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpointer data) {
   WebView* self = (WebView*)data;
+  self->uri = webkit_web_view_get_uri(web_view);
   switch (load_event) {
     case WEBKIT_LOAD_STARTED: // 0
       /* New load, we have now a provisional URI */
       // provisional_uri = webkit_web_view_get_uri (web_view);
       /* Here we could start a spinner or update the
       * location bar with the provisional URI */
-      self->uri = webkit_web_view_get_uri(web_view);
     break;
     case WEBKIT_LOAD_REDIRECTED: // 1
       // redirected_uri = webkit_web_view_get_uri (web_view);
-      self->uri = webkit_web_view_get_uri(web_view);
     break;
     case WEBKIT_LOAD_COMMITTED: // 2
       /* The load is being performed. Current URI is
       * the final one and it won't change unless a new
       * load is requested or a navigation within the
       * same page is performed */
-      self->uri = webkit_web_view_get_uri(web_view);
       if (self->state == DOCUMENT_LOADING) {
         self->state = DOCUMENT_LOADED;
         Handle<Value> argv[] = {};
@@ -251,21 +249,28 @@ NAN_METHOD(WebView::Load) {
     NanThrowError("load(uri, opts, cb) missing cb argument");
     NanReturnUndefined();
   }
+  NanCallback* loadCb = new NanCallback(args[2].As<Function>());
 
   if (self->state == DOCUMENT_LOADING) {
     Handle<Value> argv[] = {
       NanError("A document is being loaded")
     };
-    (new NanCallback(args[2].As<Function>()))->Call(1, argv);
+    if (loadCb != NULL) {
+      loadCb->Call(1, argv);
+      delete loadCb;
+    }
     NanReturnUndefined();
   }
   self->state = DOCUMENT_LOADING;
   if (args[0]->IsString()) self->uri = **(new NanUtf8String(args[0])); // leaking by design :(
-  if (self->uri == NULL || strlen(self->uri) == 0) {
+  if (self->uri == NULL) {
     Handle<Value> argv[] = {
       NanError("Empty uri")
     };
-    (new NanCallback(args[2].As<Function>()))->Call(1, argv);
+    if (loadCb != NULL) {
+      loadCb->Call(1, argv);
+      delete loadCb;
+    }
     NanReturnUndefined();
   }
 
@@ -315,12 +320,14 @@ NAN_METHOD(WebView::Load) {
   );
 
   self->allowDialogs = NanBooleanOptionValue(opts, H("dialogs"), false);
-
   if (self->loadCallback != NULL) delete self->loadCallback;
-  self->loadCallback = new NanCallback(args[2].As<Function>());
-
-  WebKitURIRequest* request = webkit_uri_request_new(self->uri);
-  webkit_web_view_load_request(self->view, request);
+  self->loadCallback = loadCb;
+  if (g_strcmp0(self->uri, "") == 0) {
+    webkit_web_view_load_html(self->view, "", NULL);
+  } else {
+    WebKitURIRequest* request = webkit_uri_request_new(self->uri);
+    webkit_web_view_load_request(self->view, request);
+  }
   NanReturnUndefined();
 }
 

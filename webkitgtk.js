@@ -44,8 +44,13 @@ util.inherits(WebKit, events.EventEmitter);
 
 Object.defineProperty(WebKit.prototype, "uri", {
   get: function() {
-		if (this.webview) return this.webview.uri;
-		else return;
+		if (this.webview) {
+			var uri = this.webview.uri;
+			if (uri == "about:blank") uri = "";
+			return uri;
+		}	else {
+			return;
+		}
 	}
 });
 
@@ -239,10 +244,14 @@ WebKit.prototype.load = function(uri, opts, cb) {
 };
 
 WebKit.prototype.unload = function(cb) {
-	this.load('about:blank', cb);
-	delete this.uri;
-	delete this.status;
-	delete this.readyState;
+	this.readyState = null;
+	this.loop(true);
+	var self = this;
+	this.webview.load('', {}, function(err) {
+		self.loop(false);
+		cb(err);
+		self.emit('unload');
+	});
 };
 
 WebKit.prototype.close = function() {
