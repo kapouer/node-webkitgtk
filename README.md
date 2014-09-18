@@ -26,11 +26,6 @@ WebKit(uri, {
 
 See test/ for more examples.
 
-WebKit is a class whose instances are views.
-`var view = new Webkit()` is the same as `var view = Webkit()`.
-
-`Webkit(uri, [opts], [cb])` is a short-hand for `Webkit().load(uri, opts, cb)`.
-
 
 options
 -------
@@ -126,18 +121,33 @@ These three events can happen at any moment:
 gtk loop and events
 -------------------
 
-Calls to webkitgtk (load, run, png, pdf) all make the gtk loop run.
-When the gtk loop is stopped, all processing is suspended within
-webkitgtk - network, rendering, events...
+webkit cannot run if its gtk event loop isn't run, and running the gtk
+loop is done by calling gtk_main_iteration_do on each Node.js process
+event loop. It works all right, but as long as setImmediate is called,
+the current node process won't stop either.
 
 To allow the gtk loop to stop when running it is no longer useful,
-webkitgtk.js stops it if the next lifecycle event has no listeners.
+webkitgtk starts running the gtk loop when these methods are called:
+
+* load
+* run but not the run(fun, event) signature
+* pdf
+* png
+* html
+
+and it stops running the gtk loop when these conditions are met:
+
+* when a lifecycle event happen and the next lifecycle event has no
+  listener
+* when all callbacks have been invoked and the next lifecycle event
+  has no listener
 
 For example, if there are no "idle" listeners after "load" is emitted,
 the loop won't be kept running.
+Note that calling run(fun, event) won't start the gtk loop, and receiving
+such events won't stop the gtk loop either.
 
-To keep the gtk loop running forever, just listen to "unload" event,
-or manually restart it using internal method .loop(true).
+To keep the gtk loop running forever, just listen to "unload" event.
 
 
 methods

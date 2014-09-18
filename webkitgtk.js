@@ -32,6 +32,11 @@ function WebKit(uri, opts, cb) {
 			console.error(msg, "\n", uri, "line", line, "column", column);
 		}
 	});
+	this.on('ready', lifeEventHandler.bind(this, 'ready'));
+	this.on('load', lifeEventHandler.bind(this, 'load'));
+	this.on('idle', lifeEventHandler.bind(this, 'idle'));
+	this.on('unload', lifeEventHandler.bind(this, 'unload'));
+
 	if (uri) this.load(uri, opts, cb);
 	else if (opts.display != null) initialize.call(this, opts, cb);
 }
@@ -69,6 +74,15 @@ function initialize(opts, cb) {
 	});
 }
 
+function lifeEventHandler(event) {
+	var condition = event == "unload" || this.listeners('unload').length == 1 && (
+		event == "idle" || this.listeners('idle').length == 1 && (
+			event == "load" || this.listeners('load').length == 1 &&
+				event == "ready"
+			)
+		);
+	if (condition) this.defaultLoop = false;
+}
 function eventsDispatcher(err, json) {
 	var obj = JSON.parse(json);
 	if (!obj) {
@@ -332,7 +346,7 @@ WebKit.prototype.run = function(script, cb) {
 				' + dispatcher + '\
 			}';
 			var wrap = '(' + script + ')(' + fun + ');';
-			self.loop(true);
+			if (!message.event) self.loop(true);
 			self.webview.run(wrap, initialMessage);
 		} else if (mode == RUN_PATH) {
 			console.log("TODO");
@@ -427,6 +441,6 @@ function preload(uri, opts, cb) {
 			self.load(uri, opts, cb);
 		});
 	});
-};
+}
 
 module.exports = WebKit;
