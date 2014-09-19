@@ -104,7 +104,6 @@ function eventsDispatcher(err, json) {
 		return;
 	}
 	if (obj.event) {
-
 		obj.args.unshift(obj.event);
 		this.emit.apply(this, obj.args);
 	} else if (obj.ticket) {
@@ -276,34 +275,33 @@ WebKit.prototype.close = function() {
 	}
 };
 
-WebKit.prototype.loop = function(start, block) {
+WebKit.prototype.loop = function(start) {
 	if (start) {
 		this.looping++;
 	} else if (start === false) {
 		this.looping--;
 	}
-	if (!this.looping) {
-		if (this.timeoutId) {
-			clearTimeout(this.timeoutId);
-			this.timeoutId = null;
+	var loop = function() {
+		this.loopHandle = null;
+		counter++;
+		if (this.looping < 0) {
+			console.error("looping should be >= 0");
+			this.looping = 0;
 		}
-		return;
-	}
-	var self = this;
-	var busy = this.webview.loop(block);
-	if (!busy && this.pendingRequests == 0 && !this.wasBusy && this.readyState == "complete") {
-		setImmediate(function() {
-			self.emit('idle');
-		});
-		this.looping--;
-		return;
-	} else {
-		self.wasBusy = busy;
-	}
-	if (!self.timeoutId) self.timeoutId = setTimeout(function() {
-		self.timeoutId = null;
-		self.loop(null, block);
-	}, 20);
+		if (this.looping == 0) {
+			return;
+		}
+		var busy = this.webview.loop(true);
+		if (!busy && this.pendingRequests == 0 && !this.wasBusy && this.readyState == "complete") {
+			this.emit('idle');
+			this.looping--;
+		} else {
+			this.wasBusy = busy;
+		}
+		if (busy)	this.loopHandle = setImmediate(loop);
+		else this.loopHandle = setTimeout(loop, 30); // TODO make this value depend on how busy we are
+	}.bind(this);
+	if (!this.loopHandle) this.loopHandle = setImmediate(loop);
 };
 
 WebKit.prototype.run = function(script, cb) {
@@ -364,6 +362,7 @@ WebKit.prototype.run = function(script, cb) {
 				' + dispatcher + '\
 			}';
 			var wrap = '(' + script + ')(' + fun + ');';
+			// events work only if webview is alive, see lifecycle events
 			if (!message.event) self.loop(true);
 			self.webview.run(wrap, initialMessage);
 		} else if (mode == RUN_PATH) {
@@ -392,7 +391,7 @@ WebKit.prototype.png = function() {
 			this.png().pipe(passthrough);
 		});
 	} else {
-		this.loop(true, true);
+		this.loop(true);
 		this.webview.png(function(err, buf) {
 			if (err) {
 				self.loop(false);
@@ -434,7 +433,7 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 			this.pdf(filepath, opts, cb);
 		});
 	} else {
-		this.loop(true, true);
+		this.loop(true);
 		this.webview.pdf("file://" + path.resolve(filepath), opts, function(err) {
 			self.loop(false);
 			cb(err);
