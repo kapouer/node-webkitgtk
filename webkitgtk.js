@@ -87,7 +87,7 @@ function lifeEventHandler(event) {
 				event == "ready"
 			)
 		);
-	if (condition) this.defaultLoop = false;
+	if (condition) this.looping--; // this would stop the loop started by first load
 }
 
 function policyDispatcher(type, uri) {
@@ -216,7 +216,6 @@ WebKit.prototype.load = function(uri, opts, cb) {
 	})(function() {
 		self.loop(true);
 		self.webview.load(uri, opts, function(err) {
-			self.loop(false);
 			if (!self.preloading) {
 				cb(err || self.status, self);
 			}
@@ -266,7 +265,7 @@ WebKit.prototype.unload = function(cb) {
 
 WebKit.prototype.close = function() {
 	this.closed = true;
-	this.loop(false);
+	this.looping = 0;
 	this.webview.close();
 	delete this.webview;
 	function disabled() {
