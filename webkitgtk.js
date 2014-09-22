@@ -18,10 +18,12 @@ var LOADING = 3;
 
 var ChainableWebKit;
 
-function WebKit(opts) {
+function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
 		if (!ChainableWebKit) ChainableWebKit = require('chainit')(WebKit);
-		return (new ChainableWebKit()).init(opts);
+		var inst = new ChainableWebKit();
+		if (cb) return inst.init(opts, cb);
+		else return inst.init(opts);
 	}
 	if (opts) throw new Error("Use WebKit(opts, cb) as short-hand for Webkit().init(opts, cb)");
 	var priv = this.priv = initialPriv();
