@@ -480,8 +480,7 @@ function run(script, message, cb) {
 WebKit.prototype.png = function(obj, cb) {
 	var wstream;
 	if (typeof obj == "string") {
-		wstream = new stream.PassThrough();
-		wstream.pipe(fs.createWriteStream(obj));
+		wstream = fs.createWriteStream(obj);
 	} else if (obj instanceof stream.Writable || obj instanceof stream.Duplex) {
 		wstream = obj;
 	} else {
