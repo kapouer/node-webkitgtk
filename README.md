@@ -103,6 +103,9 @@ load() options
 	string, default none
 	path to some user stylesheet, overrides css option if any.
 
+- ua
+	user-agent string, default to "Mozilla/5.0"
+
 
 init() options
 --------------

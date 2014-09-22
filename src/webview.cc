@@ -366,6 +366,12 @@ NAN_METHOD(WebView::Load) {
     NanUInt32OptionValue(opts, H("height"), 768)
   );
   //gtk_window_resize(GTK_WINDOW(self->window), width, height); // useless
+  const gchar* ua;
+  if (opts->Has(H("ua"))) {
+    ua = **(new NanUtf8String(opts->Get(H("ua"))));
+  } else {
+    ua = "Mozilla/5.0";
+  }
 
   WebKitSettings* settings = webkit_web_view_get_settings(self->view);
   g_object_set(settings,
@@ -381,7 +387,7 @@ NAN_METHOD(WebView::Load) {
     "auto-load-images", NanBooleanOptionValue(opts, H("images"), true),
     "zoom-text-only", FALSE,
     "media-playback-requires-user-gesture", FALSE, // effectively disables media playback ?
-		"user-agent", "Mozilla/5.0", NULL
+		"user-agent", ua, NULL
   );
 
   self->allowDialogs = NanBooleanOptionValue(opts, H("dialogs"), false);
