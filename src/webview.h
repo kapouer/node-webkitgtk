@@ -42,7 +42,7 @@ public:
     const gchar*, const gchar*, GVariant*, GDBusMethodInvocation*, gpointer);
   static gboolean on_new_connection(GDBusServer*, GDBusConnection*, gpointer);
 
-  void close();
+  void destroy();
 
 private:
   static v8::Persistent<v8::Function> constructor;
@@ -85,7 +85,8 @@ private:
   static NAN_METHOD(Run);
   static NAN_METHOD(Png);
   static NAN_METHOD(Print);
-  static NAN_METHOD(Close);
+  static NAN_METHOD(Stop);
+  static NAN_METHOD(Destroy);
 
   static NAN_GETTER(get_prop);
 };

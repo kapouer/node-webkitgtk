@@ -80,14 +80,27 @@ WebView::WebView(Handle<Object> opts) {
   g_signal_connect(view, "decide-policy", G_CALLBACK(WebView::DecidePolicy), this);
 }
 
-NAN_METHOD(WebView::Close) {
+NAN_METHOD(WebView::Stop) {
   NanScope();
   WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
-  self->close();
+  gboolean wasLoading = FALSE;
+  if (self->state == DOCUMENT_LOADING) {
+    delete self->loadCallback;
+    self->loadCallback = new NanCallback(args[0].As<Function>());
+    wasLoading = TRUE;
+  }
+  webkit_web_view_stop_loading(self->view);
+  NanReturnValue(NanNew<Boolean>(wasLoading));
+}
+
+NAN_METHOD(WebView::Destroy) {
+  NanScope();
+  WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
+  self->destroy();
   NanReturnUndefined();
 }
 
-void WebView::close() {
+void WebView::destroy() {
   delete[] cookie;
   delete[] username;
   delete[] password;
@@ -113,7 +126,7 @@ void WebView::close() {
 }
 
 WebView::~WebView() {
-  close();
+  destroy();
 }
 
 void WebView::Init(Handle<Object> exports, Handle<Object> module) {
@@ -143,7 +156,8 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
   NODE_SET_PROTOTYPE_METHOD(tpl, "run", WebView::Run);
   NODE_SET_PROTOTYPE_METHOD(tpl, "png", WebView::Png);
   NODE_SET_PROTOTYPE_METHOD(tpl, "pdf", WebView::Print);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "close", WebView::Close);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "stop", WebView::Stop);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "destroy", WebView::Destroy);
 
   ATTR(tpl, "uri", get_prop, NULL);
 
@@ -225,6 +239,17 @@ gboolean WebView::ScriptDialog(WebKitWebView* web_view, WebKitScriptDialog* dial
   else return FALSE;
 }
 
+guint getStatusFromView(WebKitWebView* web_view) {
+  WebKitWebResource* resource = webkit_web_view_get_main_resource(web_view);
+  if (resource != NULL) {
+    WebKitURIResponse* response = webkit_web_resource_get_response(resource);
+    if (response != NULL) {
+      return webkit_uri_response_get_status_code(response);
+    }
+  }
+  return 0;
+}
+
 void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpointer data) {
   WebView* self = (WebView*)data;
   self->uri = webkit_web_view_get_uri(web_view);
@@ -245,8 +270,11 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
       * same page is performed */
       if (self->state == DOCUMENT_LOADING) {
         self->state = DOCUMENT_LOADED;
-        Handle<Value> argv[] = {};
-        self->loadCallback->Call(0, argv);
+        Handle<Value> argv[] = {
+          NanNull(),
+          NanNew<Integer>(getStatusFromView(web_view))
+        };
+        self->loadCallback->Call(2, argv);
       }
     break;
     case WEBKIT_LOAD_FINISHED: // 3
@@ -261,9 +289,10 @@ gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gcha
   if (load_event <= WEBKIT_LOAD_COMMITTED && self->state == DOCUMENT_LOADING && g_strcmp0(failing_uri, self->uri) == 0) {
     self->state = DOCUMENT_ERROR;
     Handle<Value> argv[] = {
-      NanError(error->message)
+      NanError(error->message),
+      NanNew<Integer>(getStatusFromView(web_view))
     };
-    self->loadCallback->Call(1, argv);
+    self->loadCallback->Call(2, argv);
     return TRUE;
   } else {
     return FALSE;
@@ -615,7 +644,7 @@ gpointer data) {
 void WebView::Exit(void*) {
   NanScope();
   for (ObjMap::iterator it = instances.begin(); it != instances.end(); it++) {
-    it->second->close();
+    it->second->destroy();
   }
   instances.clear();
 }

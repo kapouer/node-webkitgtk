@@ -3,32 +3,67 @@ node-webkitgtk
 
 Pilot webkitgtk from Node.js with a simple API.
 
-*DEVELOPMENT VERSION*
-
 
 usage
 -----
 
+Basic callback + event API:
+
 ```
 var WebKit = require('webkitgtk');
-WebKit(uri, {
+var view = new WebKit();
+view.init({
 	width: 1024,
 	height: 768,
-	stylesheet: "css/png.css"
+	display: "99"
 }, function(err, view) {
-  // optional callback
-}).on('load', function() {
-  this.png().save('test.png', function(err) {
-	  // file saved
+	view.load(uri, {
+		stylesheet: "css/png.css"
+	}, function(err) {
+		if (err) console.error(err);
+	}).on('load', function() {
+		this.png().save('test.png', function(err) {
+			if (err) console.error(err);
+			else console.log("screenshot saved", uri);
+		});
 	});
+});
+```
+
+Optionally, cool and chainable API - requires `chainit`:
+
+```
+// this spawns xvfb instance
+WebKit("1024x768x16:99").load("http://github.com").png('test.png');
+
+// this just use a pre-existing one
+Webkit(98).load("http://webkitgtk.org").html(function(err, html) {
+	// dump html
+	console.log(html);
 });
 ```
 
 See test/ for more examples.
 
 
-options
--------
+use cases
+---------
+
+This module is specifically designed to run 'headless'.
+Patches are welcome for UI uses, though.
+
+* snapshotting service (in combination with 'gm' module)
+
+* print to pdf service (in combination with 'gs' module)
+
+* static web page rendering
+
+* long-running web page as a service with websockets or webrtc
+  communications
+
+
+load() options
+--------------
 
 - username
 - password
@@ -68,17 +103,30 @@ options
 	string, default none
 	path to some user stylesheet, overrides css option if any.
 
-- display
-	number, default 0
-	the X display needed by gtk X11 backend
 
-- xfb
-	{width: 1024, height: 768, depth: 32}, default false
-	spawn a X backend with these options with number given by 'display',
-	or any higher number available.
-	Requires "headless" module.
-	It is safer to use a daemon monitoring tool for xvfb and just
-	set display option.
+init() options
+--------------
+
+- display
+	number, 0
+	checks an X display or framebuffer is listening on that port
+
+- width
+	number, 1024
+- height
+  number, 768
+	Framebuffer dimensions
+- depth
+	number, 32
+	Framebuffer pixel depth
+
+- WIDTHxHEIGHTxDEPTH:PORT
+	string, null
+	a short-hand notation for passing all these options at once.
+
+If width, height, depth options are given, an xvfb instance listening
+given display port will be spawn using `headless` module.
+It is advised and safer to monitor xvfb using a proper daemon tool.
 
 
 events
@@ -123,6 +171,78 @@ These three events can happen at any moment:
 	response.data(function(err, buf)) fetches the response data.
 
 
+methods
+-------
+
+* new Webkit()
+	creates a totally unusable object
+
+* WebKit([opts])
+	create an instance with the chainable API using `chainit`.
+	If arguments are given, equals `WebKit().init(opts)`
+
+* init([opts], cb)
+	see parameters described above
+	*must be invoked first*
+
+* load(uri, [opts], [cb])
+  load uri into webview
+	see parameters described above
+
+* run(sync-script, cb)
+  any synchronous script text or global function
+
+* run(async-script, cb)
+  async-script must be a function that calls its first and only argument,
+	like `function(done) { done(err, str); }`
+
+* runev(async-script, cb)
+	async-script must be a function that calls its first and only argument,
+	like `function(emit) { emit(eventName); }`
+	and each call emits the named event on current view object, which can
+	be listened using view.on(event, listener)
+	Can be used to listen recurring events, but the gtk loop needs to be
+	running, see above.
+	The cb argument is only there for the chaining API to work, it reports
+	only arguments errors - it can be omitted if the chainable API isn't used.
+
+* png(writableStream or filename, [cb])
+  takes a png snapshot immediately, returns a stream.
+	If invoked with a filename, save the stream to file.
+
+* html(cb)
+  get documentElement.outerHTML when document is ready
+
+* pdf(filepath, [opts], [cb])
+  print page to file
+	orientation : "landscape" or "portrait", default "portrait"
+	fullpage : boolean, sets margins to 0, default false
+
+* unload(cb)
+  Sets current view to an empty document and uri.
+	Emits 'unload' event.
+
+* stop(cb)
+	same as browser `window.stop()`.
+	If the view is currently loading, .load() won't call back.
+
+* destroy(cb)
+	does the reverse of init - frees webview and xvfb instance if any.
+	init() can be called again to recover a working instance.
+
+
+properties
+----------
+
+* uri
+  Read-only, get current uri of the web view.
+
+* readyState
+  Read-only: empty, "opening", "loading", "interactive", "complete"
+	Before the first call to .load() it is empty, and before the callback
+	it is opening.
+
+
 gtk loop and events
 -------------------
 
@@ -155,66 +275,6 @@ such events won't stop the gtk loop either.
 To keep the gtk loop running forever, just listen to "unload" event.
 
 
-methods
--------
-
-* [new] Webkit([opts], [cb])
-  if opts.display is set it will check that display is available.
-
-* [new] WebKit(uri, [opts], [cb])
-	initialize display then calls .load(uri, opts, cb)
-
-* load(uri, [opts], [cb])
-  load uri - can be called right after WebKit instantiation, the
-	display initializing will always be done before.
-	This method cannot be called twice in a row !
-
-* run(sync-script, cb)
-  any synchronous script text or global function
-
-* run(async-script, cb)
-  async-script must be a function that calls its first and only argument,
-	like `function(done) { done(err, str); }`
-
-* run(async-script, event)
-	async-script must be a function that calls its first and only argument,
-	and each call emits the named event on current view object, which can
-	be listened using view.on(event, listener)
-	Can be used to listen recurring events, but the gtk loop needs to be
-	running, see above.
-
-* png()
-  takes a png snapshot immediately, returns a stream with an additional
-	.save(filename) short-hand for saving to a file
-
-* html(cb)
-  get documentElement.outerHTML when document is ready
-
-* pdf(filepath, [opts], [cb])
-  print page to file
-	orientation : "landscape" or "portrait", default "portrait"
-	fullpage : boolean, sets margins to 0, default false
-
-* unload(cb)
-  Sets current view to an empty document and uri.
-	Emits 'unload' event.
-
-* close
-	that one really makes the object unusable and frees memory
-
-
-properties
-----------
-
-* uri
-  Read-only, get current uri of the web view.
-
-* readyState
-  Read-only: empty, "opening", "loading", "interactive", "complete"
-	Before the first call to .load() it is empty, and before the callback
-	it is opening.
-
-
 about plugins
 -------------
 
@@ -225,22 +285,6 @@ and that could impact first page load time greatly - especially if
 there's a java plugin.
 Workaround: uninstall the plugin, on my dev machine it was
 /usr/lib/mozilla/plugins/libjavaplugin.so installed by icedtea.
-
-
-use cases
----------
-
-This module is specifically designed to run 'headless'.
-Patches are welcome for UI uses, though.
-
-* snapshotting service (in combination with 'gm' module)
-
-* print to pdf service (in combination with 'gs' module)
-
-* static web page rendering
-
-* long-running web page as a service with websockets or webrtc
-  communications
 
 
 install

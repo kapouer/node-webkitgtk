@@ -5,28 +5,26 @@ var fs = require('fs');
 var path = require('path');
 var url = require('url');
 
+// different ways of running commands
 var RUN_SYNC = 0;
 var RUN_ASYNC = 1;
 var RUN_PATH = 2;
 
-function WebKit(uri, opts, cb) {
-	if (!(this instanceof WebKit)) return new WebKit(uri, opts, cb);
-	if (!cb && typeof opts == "function") {
-		cb = opts;
-		opts = {};
+// internal state, does not match readyState
+var CREATED = 0;
+var INITIALIZING = 1;
+var INITIALIZED = 2;
+var LOADING = 3;
+
+var ChainableWebKit;
+
+function WebKit(opts) {
+	if (!(this instanceof WebKit)) {
+		if (!ChainableWebKit) ChainableWebKit = require('chainit')(WebKit);
+		return (new ChainableWebKit()).init(opts);
 	}
-	if (typeof uri != "string") {
-		opts = uri;
-		uri = null;
-	}
-	if (!cb) cb = noop;
-	opts = opts || {};
-	this.pendingRequests = 0;
-	this.looping = 0;
-	this.ticket = 0;
-	this.tickets = {};
-	this.eventName = "webkitgtk" + Date.now();
-	var self = this;
+	if (opts) throw new Error("Use WebKit(opts, cb) as short-hand for Webkit().init(opts, cb)");
+	var priv = this.priv = initialPriv();
 	this.on('error', function(msg, uri, line, column) {
 		if (this.listeners('error').length <= 1) {
 			console.error(msg, "\n", uri, "line", line, "column", column);
@@ -36,63 +34,76 @@ function WebKit(uri, opts, cb) {
 	this.on('load', lifeEventHandler.bind(this, 'load'));
 	this.on('idle', lifeEventHandler.bind(this, 'idle'));
 	this.on('unload', lifeEventHandler.bind(this, 'unload'));
-
-	if (uri) this.load(uri, opts, cb);
-	else if (opts.display != null) initialize.call(this, opts, cb);
 }
 util.inherits(WebKit, events.EventEmitter);
 
-Object.defineProperty(WebKit.prototype, "uri", {
-  get: function() {
-		if (this.webview) {
-			var uri = this.webview.uri;
-			if (uri == "about:blank") uri = "";
-			return uri;
-		}	else {
-			return;
-		}
-	}
-});
-
-function initialize(opts, cb) {
-	if (this.initializing) return cb(new Error("Initialized twice"));
-	this.initializing = true;
-	var self = this;
-	display.call(this, opts.display || 0, opts, function(err, display) {
+WebKit.prototype.init = function(opts, cb) {
+	var priv = this.priv;
+	if (priv.state >= INITIALIZING) return cb(new Error("init must not be called twice"), this);
+	priv.state = INITIALIZING;
+	if (typeof opts == "string") {
+		var match = /^(\d+)x(\d+)x(\d+)\:(\d+)$/.match(opts);
+		opts = {
+			width: match[1],
+			height: match[2],
+			depth: match[3],
+			display: match[4]
+		};
+	} else if (typeof opts == "number") {
+		opts = { display: opts };
+	} else if (!opts) opts = {};
+	opts.display = opts.display || 0;
+	display.call(this, opts, function(err, child) {
 		if (err) return cb(err);
-		process.env.DISPLAY = ":" + display;
+		if (child) priv.xvfb = child;
+		process.env.DISPLAY = ":" + opts.display;
 		var Bindings = require(__dirname + '/lib/webkitgtk.node');
-		self.webview = new Bindings({
+		this.webview = new Bindings({
 			webextension: __dirname + '/lib/ext',
-			eventName: self.eventName,
-			requestListener: requestDispatcher.bind(self),
-			responseListener: responseDispatcher.bind(self),
-			eventsListener: eventsDispatcher.bind(self),
-			policyListener: policyDispatcher.bind(self)
+			eventName: priv.eventName,
+			requestListener: requestDispatcher.bind(this),
+			responseListener: responseDispatcher.bind(this),
+			eventsListener: eventsDispatcher.bind(this),
+			policyListener: policyDispatcher.bind(this)
 		});
-		delete self.initializing;
+		priv.state = INITIALIZED;
 		cb();
-		if (self.initCb) {
-			var fun = self.initCb;
-			delete self.initCb;
-			fun();
-		}
-	});
+	}.bind(this));
+};
+
+function initialPriv() {
+	return {
+		state: CREATED,
+		pendingRequests: 0,
+		loopForCallbacks: 0,
+		loopForLife: false,
+		loopCount: 0,
+		idleCount: 0,
+		ticket: 0,
+		tickets: {},
+		eventName: "webkitgtk" + Date.now(),
+		loopTimeout: null,
+		loopImmediate: null,
+		preloading: null,
+		wasBusy: false,
+	};
 }
 
 function lifeEventHandler(event) {
-	var condition = event == "unload" || this.listeners('unload').length == 1 && (
+	var willStop = event == "unload" || this.listeners('unload').length == 1 && (
 		event == "idle" || this.listeners('idle').length == 1 && (
 			event == "load" || this.listeners('load').length == 1 &&
 				event == "ready"
 			)
 		);
-	if (condition) this.looping--; // this would stop the loop started by first load
+	if (willStop && this.priv.loopForLife) {
+		this.priv.loopForLife = false;
+	}
 }
 
 function policyDispatcher(type, uri) {
 	// prevents navigation once a view has started loading (if navigation is false)
-	if (type == "navigation" && this.navigation == false && this.readyState && this.readyState != "opening") {
+	if (type == "navigation" && this.navigation == false && this.priv.state != LOADING) {
 		return true;
 	}
 }
@@ -107,19 +118,32 @@ function eventsDispatcher(err, json) {
 		obj.args.unshift(obj.event);
 		this.emit.apply(this, obj.args);
 	} else if (obj.ticket) {
-		this.loop(false);
-		var cb = this.tickets[obj.ticket];
-		delete this.tickets[obj.ticket];
+		loop.call(this, false);
+		var cb = this.priv.tickets[obj.ticket];
+		delete this.priv.tickets[obj.ticket];
 		cb(obj.error, obj.result);
 	}
 }
+
+Object.defineProperty(WebKit.prototype, "uri", {
+  get: function() {
+		if (this.webview) {
+			var uri = this.webview.uri;
+			if (uri == "about:blank") uri = "";
+			return uri;
+		}	else {
+			return;
+		}
+	}
+});
 
 function Request(uri) {
 	this.uri = uri;
 }
 
 function requestDispatcher(uri) {
-	if (this.preloading && uri != this.uri) {
+	var priv = this.priv;
+	if (priv.preloading && uri != this.uri) {
 		return;
 	}
 	var cancel = false;
@@ -130,17 +154,20 @@ function requestDispatcher(uri) {
 	} else if (this.allow instanceof RegExp) {
 		if (!this.allow.test(uri)) cancel = true;
 	}
-	if (cancel) return;
+	if (cancel) {
+		return;
+	}
 
 	var req = new Request(uri);
 	this.emit('request', req);
-	if (req.uri) this.pendingRequests++;
+	if (req.uri) priv.pendingRequests++;
 	return req.uri;
 }
 
 function responseDispatcher(res) {
-	if (this.preloading) return;
-	this.pendingRequests--;
+	if (this.priv.preloading) return;
+	if (res.status == 0) return; // was actually cancelled
+	this.priv.pendingRequests--;
 	this.emit('response', res);
 }
 
@@ -148,32 +175,36 @@ function noop(err) {
 	if (err) console.error(err);
 }
 
-function display(display, opts, cb) {
-	var self = this;
+function display(opts, cb) {
+	var display = opts.display;
 	fs.exists('/tmp/.X' + display + '-lock', function(exists) {
-		if (exists) return cb(null, display);
+		if (exists) return cb();
 		if (display == 0) return cb("Error - do not spawn xvfb on DISPLAY 0");
-		if (opts.xfb) {
-			console.log("Unsafe xfb option is spawning xvfb...");
-			require('headless')({
-				display: {
-					width: opts.xfb.width || 1024,
-					height: opts.xfb.height || 768,
-					depth: opts.xfb.depth || 32
-				}
-			}, display, function(err, child, display) {
-				cb(err, display);
-				if (!err) process.on('exit', function() {
+		console.log("Spawning xvfb on DISPLAY=:" + display);
+		require('headless')({
+			display: {
+				width: opts.width || 1024,
+				height: opts.height || 768,
+				depth: opts.depth || 32
+			}
+		}, display, function(err, child, display) {
+			if (err) cb(err);
+			else {
+				cb(null, child);
+				process.on('exit', function() {
 					child.kill();
 				});
-			});
-		}
+			}
+		});
 	});
 }
 
+function errorLoad(state) {
+	if (state < INITIALIZED) return "cannot call method before init";
+	else if (state > INITIALIZED) return "cannot call method during loading";
+}
+
 WebKit.prototype.load = function(uri, opts, cb) {
-	if (this.readyState == "opening") throw new Error("Cannot call load while loading");
-	this.readyState = null;
 	if (!cb && typeof opts == "function") {
 		cb = opts;
 		opts = {};
@@ -181,25 +212,15 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		opts = {};
 	}
 	if (!cb) cb = noop;
-	if (!this.webview) {
-		// if this happens some other code is broken
-		if (this.initCb) throw new Error("Bad state: already queued a load after initialize");
-		this.initCb = this.load.bind(this, uri, opts, cb);
-		if (!this.initializing) initialize.call(this, opts, function(err) {
-			if (err) cb(err); // propagate error
-		});
-		return this;
-	}
-	this.readyState = "opening";
+	var priv = this.priv;
+	if (priv.state != INITIALIZED) return cb(new Error(errorLoad(priv.state)), this);
+
+	priv.state = LOADING;
+
 	this.allow = opts.allow || "all";
 	this.navigation = opts.navigation || false;
-	var self = this;
-	this.once('response', function(res) {
-		var status = res.status;
-		if (res.uri == self.uri && (status < 200 || status >= 400)) {
-			self.status = status;
-		}
-	});
+	this.readyState = "loading";
+
 	preload.call(this, uri, opts, cb);
 	(function(next) {
 		if (opts.stylesheet) {
@@ -213,127 +234,176 @@ WebKit.prototype.load = function(uri, opts, cb) {
 			next();
 		}
 	})(function() {
-		self.loop(true);
-		self.webview.load(uri, opts, function(err) {
-			if (!self.preloading) {
-				cb(err || self.status, self);
+		priv.loopForLife = true;
+		loop.call(this);
+		this.webview.load(uri, opts, function(err, status) {
+			this.status = status;
+			if (!priv.preloading) {
+				priv.preloading = null;
+				if (!err && status < 200 || status >= 400) err = status;
+				cb(err, this);
+				if (priv.state != LOADING) {
+					console.log("this should never be reached ?");
+					return;
+				}
 			}
-			self.readyState = "loading";
-			self.run(function(emit) {
+			priv.state = INITIALIZED;
+			this.runev(function(emit) {
 				window.onerror = function() {
-					emit.apply(null, Array.prototype.slice.call(arguments, 0));
+					emit.apply(null, "error", Array.prototype.slice.call(arguments, 0));
 				};
-			}, "error");
-			self.run(function(done) {
-				// this function is executed in the window context of the current view - it cannot access local scopes
+			}, noop);
+			this.run(function(done) {
 				if (/interactive|complete/.test(document.readyState)) done(null, document.readyState);
 				else document.addEventListener('DOMContentLoaded', function() { done(null, "interactive"); }, false);
 			}, function(err, result) {
 				if (err) console.error(err);
-				self.readyState = result;
-				var prefix = self.preloading ? "pre" : "";
-				self.emit(prefix + 'ready');
+				this.readyState = result;
+				var prefix = priv.preloading ? "pre" : "";
+				this.emit(prefix + 'ready');
 				if (result == "complete") {
-					self.emit(prefix + 'load');
+					this.emit(prefix + 'load');
 				}	else {
-					self.run(function(done) {
+					this.run(function(done) {
 						if (document.readyState == "complete") done(null, document.readyState);
 						else window.addEventListener('load', function() { done(null, "complete"); }, false);
 					}, function(err, result) {
 						if (err) console.error(err);
-						self.readyState = result;
-						self.emit(prefix + 'load');
-					});
+						this.readyState = result;
+						this.emit(prefix + 'load');
+					}.bind(this));
 				}
-			});
-		});
-	});
-	return this;
+			}.bind(this));
+		}.bind(this));
+	}.bind(this));
+};
+
+WebKit.prototype.stop = function(cb) {
+	var priv = this.priv;
+	cb = cb || noop;
+	if (priv.state < INITIALIZED) return cb(new Error(errorLoad(priv.state)));
+	loop.call(this, true);
+	var wasLoading = false;
+	var fincb = function() {
+		if (wasLoading) this.priv.loopForLife = false; // because it will never call back
+		loop.call(this, false);
+		cb();
+	}.bind(this);
+	wasLoading = this.webview.stop(fincb);
+	// immediately returned
+	if (!wasLoading) setImmediate(fincb);
 };
 
 WebKit.prototype.unload = function(cb) {
+	var priv = this.priv;
+	cb = cb || noop;
+	if (priv.state != INITIALIZED) return cb(new Error(errorLoad(priv.state)), this);
 	this.readyState = null;
-	this.loop(true);
-	var self = this;
+	this.status = null;
+	loop.call(this, true);
 	this.webview.load('', {}, function(err) {
-		self.loop(false);
+		loop.call(this, false);
+		this.priv = initialPriv();
+		this.priv.state = INITIALIZED;
+		this.emit('unload');
 		cb(err);
-		self.emit('unload');
-	});
+	}.bind(this));
 };
 
-WebKit.prototype.close = function() {
-	this.closed = true;
-	this.looping = 0;
-	this.webview.close();
+WebKit.prototype.destroy = function(cb) {
+	if (this.priv.xvfb) {
+		this.priv.xvfb.kill();
+	}
+	this.priv = initialPriv();
+	this.webview.destroy();
 	delete this.webview;
-	function disabled() {
-		throw new Error("Cannot use a closed WebKit view");
-	}
-	for (var prop in WebKit.prototype) {
-		this[prop] = disabled;
-	}
+	if (cb) setImmediate(cb);
 };
 
-WebKit.prototype.loop = function(start) {
+function loop(start) {
+	var priv = this.priv;
 	if (start) {
-		this.looping++;
+		priv.loopForCallbacks++;
 	} else if (start === false) {
-		this.looping--;
+		priv.loopForCallbacks--;
 	}
-	var loop = function() {
-		this.loopHandle = null;
-		counter++;
-		if (this.looping < 0) {
-			console.error("looping should be >= 0");
-			this.looping = 0;
+	var loopFun = function() {
+		if (!priv.loopImmediate && !priv.loopTimeout) return;
+		priv.loopImmediate = null;
+		priv.loopTimeout = null;
+		priv.loopCount++;
+		if (priv.loopForCallbacks < 0) {
+			console.error("FIXME loopForCallbacks should be >= 0");
+			priv.loopForCallbacks = 0;
 		}
-		if (this.looping == 0) {
+		if (priv.loopForCallbacks == 0 && !priv.loopForLife) {
+			priv.loopCount = 0;
 			return;
 		}
 		var busy = this.webview.loop(true);
-		if (!busy && this.pendingRequests == 0 && !this.wasBusy && this.readyState == "complete") {
+		if (busy) priv.idleCount = 0;
+		else if (!priv.wasBusy) priv.idleCount++;
+
+		if (priv.pendingRequests == 0 && priv.idleCount >= 1 && this.readyState == "complete") {
 			this.emit('idle');
-			this.looping--;
 		} else {
-			this.wasBusy = busy;
+			priv.wasBusy = busy;
 		}
-		if (busy)	this.loopHandle = setImmediate(loop);
-		else this.loopHandle = setTimeout(loop, 30); // TODO make this value depend on how busy we are
+		if (busy)	{
+			priv.loopImmediate = setImmediate(loopFun);
+		} else {
+			var delay = (priv.idleCount + 1) * 5;
+			priv.loopTimeout = setTimeout(loopFun, Math.min(delay, 1000));
+		}
 	}.bind(this);
-	if (!this.loopHandle) this.loopHandle = setImmediate(loop);
-};
+
+	if (priv.loopTimeout) {
+		clearTimeout(priv.loopTimeout);
+		priv.loopTimeout = null;
+	}
+	if (!priv.loopImmediate) {
+		priv.loopImmediate = setImmediate(loopFun);
+	}
+}
 
 WebKit.prototype.run = function(script, cb) {
+	var message = {
+		ticket: (this.priv.ticket++).toString()
+	};
+	this.priv.tickets[message.ticket] = cb;
+	run.call(this, script, message, cb);
+};
+
+WebKit.prototype.runev = function(script, cb) {
+	run.call(this, script, {}, cb);
+};
+
+function run(script, message, cb) {
+	var priv = this.priv;
 	if (typeof script == "function") script = script.toString();
 	cb = cb || noop;
-
-	var message = {};
-	if (typeof cb == "string") {
-		message.event = cb;
-	} else {
-		message.ticket = (this.ticket++).toString();
-		this.tickets[message.ticket] = cb;
-	}
 
 	var mode = RUN_SYNC;
 	if (/^\s*function(\s+\w+)?\s*\(\s*\w+\s*\)/.test(script)) mode = RUN_ASYNC;
 	else if (/^(file|http|https):/.test(script)) mode = RUN_PATH;
+
+	if (mode != RUN_ASYNC && !message.ticket) {
+		return cb(new Error("cannot call runev without function(emit) {} script signature"));
+	}
 
 	message.mode = mode;
 
 	// this is a hack because it leaks information between worlds
 	// the good way of doing this is sending an empty event
 	// then the webextension execute some JS to fetch the data that has
-	// been stored somewhere as global TODO the day it doesn't work any more/:
+	// been stored somewhere as global... FIXME the day it doesn't work any more/:
 	var dispatcher = '\
 		var evt = document.createEvent("KeyboardEvent"); \
-		evt.initKeyboardEvent("' + this.eventName + '", false, true, null, JSON.stringify(message)); \
+		evt.initKeyboardEvent("' + priv.eventName + '", false, true, null, JSON.stringify(message)); \
 		window.dispatchEvent(evt); \
 		';
 	var initialMessage = JSON.stringify(message);
 
-	var self = this;
 	setImmediate(function() {
 		if (mode == RUN_SYNC) {
 			if (/^\s*function(\s+\w+)?\s*\(\s*\)/.test(script)) script = '(' + script + ')()';
@@ -348,13 +418,14 @@ WebKit.prototype.run = function(script, cb) {
 				} \
 				' + dispatcher + '\
 			})()';
-			self.loop(true);
-			self.webview.run(wrap, initialMessage);
+			loop.call(this, true);
+			this.webview.run(wrap, initialMessage);
 		} else if (mode == RUN_ASYNC) {
 			var fun = 'function(err, result) {\
 				var message = ' + initialMessage + ';\
-				if (message.event) { \
-					message.args = Array.prototype.slice.call(arguments, 0); \
+				if (!message.ticket) { \
+					message.event = err; \
+					message.args = Array.prototype.slice.call(arguments, 1); \
 				} else { \
 					if (err) message.error = err; \
 					message.result = result; \
@@ -363,60 +434,55 @@ WebKit.prototype.run = function(script, cb) {
 			}';
 			var wrap = '(' + script + ')(' + fun + ');';
 			// events work only if webview is alive, see lifecycle events
-			if (!message.event) self.loop(true);
-			self.webview.run(wrap, initialMessage);
+			this.webview.run(wrap, initialMessage);
+			if (message.ticket) loop.call(this, true);
+			else setImmediate(cb);
 		} else if (mode == RUN_PATH) {
 			console.log("TODO");
 		}
-	});
-	return this;
+	}.bind(this));
 };
 
-function save(rstream, filename, cb) {
-	cb = cb || noop;
-	var wstream = fs.createWriteStream(filename);
-	rstream.pipe(wstream).on('finish', cb).on('error', cb);
-	return this;
-}
-
-WebKit.prototype.png = function() {
-	var self = this;
-	function close(err) {
-		self.loop(false);
+WebKit.prototype.png = function(obj, cb) {
+	var wstream;
+	if (typeof obj == "string") {
+		wstream = new stream.PassThrough();
+		wstream.pipe(fs.createWriteStream(obj));
+	} else if (obj instanceof stream.Writable || obj instanceof stream.Duplex) {
+		wstream = obj;
+	} else {
+		return cb(new Error("png() first arg must be either a writableStream or a file path"));
 	}
-	var passthrough = new stream.PassThrough();
-	passthrough.save = save.bind(this, passthrough);
-	if (!this.readyState || this.readyState == "opening" || this.readyState == "loading") {
+	cb = cb || noop;
+	if (!wstream._webkit_png_cb) wstream.on('finish', cb).on('error', cb)._webkit_png_cb = true;
+	if (!this.readyState || this.readyState == "loading") {
 		this.on('load', function() {
-			this.png().pipe(passthrough);
+			this.png.call(this, wstream, cb);
 		});
 	} else {
-		this.loop(true);
+		loop.call(this, true);
 		this.webview.png(function(err, buf) {
 			if (err) {
-				self.loop(false);
-				passthrough.emit('error', err);
-			}
-			else if (buf == null) {
-				self.loop(false);
-				passthrough.end();
+				loop.call(this, false);
+				wstream.emit('error', err);
+			} else if (buf == null) {
+				loop.call(this, false);
+				wstream.end();
 			} else {
-				passthrough.write(buf);
+				wstream.write(buf);
 			}
-		});
+		}.bind(this));
 	}
-	return passthrough;
 };
 
 WebKit.prototype.html = function(cb) {
-	if (!this.readyState || this.readyState == "opening" || this.readyState == "loading") {
+	if (!this.readyState || this.readyState == "loading") {
 		this.on('ready', function() {
 			this.html(cb);
 		});
 	} else {
 		this.run("document.documentElement.outerHTML;", cb);
 	}
-	return this;
 };
 
 WebKit.prototype.pdf = function(filepath, opts, cb) {
@@ -427,36 +493,34 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 		opts = {};
 	}
 	if (!cb) cb = noop;
-	var self = this;
-	if (!this.readyState || this.readyState == "opening" || this.readyState == "loading") {
+	if (!this.readyState || this.readyState == "loading") {
 		this.on('load', function() {
 			this.pdf(filepath, opts, cb);
 		});
 	} else {
-		this.loop(true);
+		loop.call(this, true);
 		this.webview.pdf("file://" + path.resolve(filepath), opts, function(err) {
-			self.loop(false);
+			loop.call(this, false);
 			cb(err);
-		});
+		}.bind(this));
 	}
-	return this;
 };
 
 function preload(uri, opts, cb) {
-	if (!opts.cookies || this.preloading !== undefined) return;
-	this.preloading = true;
+	var priv = this.priv;
+	if (!opts.cookies || priv.preloading !== null) return;
+	priv.preloading = true;
 	this.once('preload', function() {
 		var cookies = opts.cookies;
 		if (!Array.isArray(cookies)) cookies = [cookies];
 		var script = cookies.map(function(cookie) {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 		}).join(';') + ';';
-		var self = this;
 		this.run(script, function(err) {
 			if (err) return cb(err);
-			self.preloading = false;
-			self.load(uri, opts, cb);
-		});
+			priv.preloading = false;
+			this.load(uri, opts, cb);
+		}.bind(this));
 	});
 }
 
