@@ -143,6 +143,37 @@ function Request(uri) {
 	this.uri = uri;
 }
 
+function Response(view, binding) {
+	this.binding = binding;
+	this.view = view;
+}
+Object.defineProperty(Response.prototype, "uri", {
+  get: function() {
+		if (this._uri == null) this._uri = this.binding.uri;
+		return this._uri;
+	}
+});
+Object.defineProperty(Response.prototype, "status", {
+  get: function() {
+		if (this._status == null) this._status = this.binding.status;
+		return this._status;
+	}
+});
+Object.defineProperty(Response.prototype, "mime", {
+  get: function() {
+		if (this._mime == null) this._mime = this.binding.mime;
+		return this._mime;
+	}
+});
+Response.prototype.data = function(cb) {
+	var view = this.view;
+	loop.call(view, true);
+	this.binding.data(function(err, data) {
+		loop.call(view, false);
+		cb(err, data);
+	});
+};
+
 function requestDispatcher(uri) {
 	var priv = this.priv;
 	if (priv.preloading && uri != this.uri) {
@@ -166,8 +197,9 @@ function requestDispatcher(uri) {
 	return req.uri;
 }
 
-function responseDispatcher(res) {
+function responseDispatcher(binding) {
 	if (this.priv.preloading) return;
+	var res = new Response(this, binding);
 	if (res.status == 0) return; // was actually cancelled
 	this.priv.pendingRequests--;
 	this.emit('response', res);
