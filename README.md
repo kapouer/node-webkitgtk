@@ -30,14 +30,17 @@ view.init({
 });
 ```
 
-Optionally, cool and chainable API - requires `chainit`:
+Or the chainable API - requires `chainit`:
 
 ```
 // this spawns xvfb instance
 WebKit("1024x768x16:99").load("http://github.com").png('test.png');
 
-// this just use a pre-existing one
-Webkit(98).load("http://webkitgtk.org").html(function(err, html) {
+// this uses a pre-existing display
+WebKit(98).load("http://google.com")
+
+// use pre-existing display 0 by default
+Webkit().load("http://webkitgtk.org").html(function(err, html) {
 	// dump html
 	console.log(html);
 });
