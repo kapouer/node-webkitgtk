@@ -252,16 +252,17 @@ guint getStatusFromView(WebKitWebView* web_view) {
 
 void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpointer data) {
   WebView* self = (WebView*)data;
-  self->uri = webkit_web_view_get_uri(web_view);
   switch (load_event) {
     case WEBKIT_LOAD_STARTED: // 0
       /* New load, we have now a provisional URI */
       // provisional_uri = webkit_web_view_get_uri (web_view);
       /* Here we could start a spinner or update the
       * location bar with the provisional URI */
+      self->uri = webkit_web_view_get_uri(web_view);
     break;
     case WEBKIT_LOAD_REDIRECTED: // 1
       // redirected_uri = webkit_web_view_get_uri (web_view);
+      self->uri = webkit_web_view_get_uri(web_view);
     break;
     case WEBKIT_LOAD_COMMITTED: // 2
       /* The load is being performed. Current URI is
@@ -270,6 +271,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
       * same page is performed */
       if (self->state == DOCUMENT_LOADING) {
         self->state = DOCUMENT_LOADED;
+        self->uri = webkit_web_view_get_uri(web_view);
         Handle<Value> argv[] = {
           NanNull(),
           NanNew<Integer>(getStatusFromView(web_view))
