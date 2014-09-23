@@ -293,7 +293,9 @@ function load(uri, opts, cb) {
 				}
 				run.call(this, function(emit) {
 					window.onerror = function() {
-						emit.apply(null, "error", Array.prototype.slice.call(arguments, 0));
+						var ret = Array.prototype.slice.call(arguments, 0);
+						ret.unshift("error");
+						emit.apply(null, ret);
 					};
 				});
 				runcb.call(this, function(done) {
