@@ -15,10 +15,9 @@ static const GDBusNodeInfo* introspection_data;
 
 class WebView : public node::ObjectWrap {
 public:
-  static const int DOCUMENT_UNLOADED = 0;
-  static const int DOCUMENT_LOADING = 1;
-  static const int DOCUMENT_LOADED = 2;
   static const int DOCUMENT_ERROR = -1;
+  static const int DOCUMENT_AVAILABLE = 0;
+  static const int DOCUMENT_LOADING = 1;
 
   static void Init(Handle<Object>, Handle<Object>);
   static void Exit(void*);
@@ -37,7 +36,7 @@ public:
   static void PrintFinished(WebKitPrintOperation*, gpointer);
   static void PrintFailed(WebKitPrintOperation*, gpointer, gpointer);
 
-
+  static void requestUri(WebView*, const char*);
   static void handle_method_call(GDBusConnection*, const gchar*, const gchar*,
     const gchar*, const gchar*, GVariant*, GDBusMethodInvocation*, gpointer);
   static gboolean on_new_connection(GDBusServer*, GDBusConnection*, gpointer);
@@ -55,6 +54,7 @@ private:
   int state;
   int authRetryCount;
   bool allowDialogs;
+
   char* cookie = NULL;
   char* username = NULL;
   char* password = NULL;
@@ -78,6 +78,7 @@ private:
   NanCallback* policyCallback = NULL;
 
   const char* uri = NULL;
+  const char* nextUri = NULL;
 
   static NAN_METHOD(New);
   static NAN_METHOD(Load);

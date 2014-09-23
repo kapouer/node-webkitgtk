@@ -270,7 +270,6 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
       * load is requested or a navigation within the
       * same page is performed */
       if (self->state == DOCUMENT_LOADING) {
-        self->state = DOCUMENT_LOADED;
         self->uri = webkit_web_view_get_uri(web_view);
         Handle<Value> argv[] = {
           NanNull(),
@@ -281,14 +280,17 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
     break;
     case WEBKIT_LOAD_FINISHED: // 3
       /* Load finished, we can now stop the spinner */
-
+      self->state = DOCUMENT_AVAILABLE;
+      if (self->nextUri != NULL) {
+        requestUri(self, self->nextUri);
+      }
     break;
   }
 }
 
 gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gchar* failing_uri, GError* error, gpointer data) {
   WebView* self = (WebView*)data;
-  if (load_event <= WEBKIT_LOAD_COMMITTED && self->state == DOCUMENT_LOADING && g_strcmp0(failing_uri, self->uri) == 0) {
+  if (self->nextUri == NULL && self->state == DOCUMENT_LOADING && g_strcmp0(failing_uri, self->uri) == 0) {
     self->state = DOCUMENT_ERROR;
     Handle<Value> argv[] = {
       NanError(error->message),
@@ -318,9 +320,9 @@ NAN_METHOD(WebView::Load) {
   }
   NanCallback* loadCb = new NanCallback(args[2].As<Function>());
 
-  if (self->state == DOCUMENT_LOADING) {
+  if (self->state == DOCUMENT_LOADING && self->nextUri != NULL) {
     Handle<Value> argv[] = {
-      NanError("A document is being loaded")
+      NanError("A document is already being loaded")
     };
     if (loadCb != NULL) {
       loadCb->Call(1, argv);
@@ -328,11 +330,10 @@ NAN_METHOD(WebView::Load) {
     }
     NanReturnUndefined();
   }
-  self->state = DOCUMENT_LOADING;
-  if (args[0]->IsString()) self->uri = **(new NanUtf8String(args[0])); // leaking by design :(
-  if (self->uri == NULL) {
+
+  if (!args[0]->IsString()) {
     Handle<Value> argv[] = {
-      NanError("Empty uri")
+      NanError("load(uri, opts, cb) expected a string for uri argument")
     };
     if (loadCb != NULL) {
       loadCb->Call(1, argv);
@@ -340,6 +341,8 @@ NAN_METHOD(WebView::Load) {
     }
     NanReturnUndefined();
   }
+
+  NanUtf8String* uri = new NanUtf8String(args[0]);
 
   Local<Object> opts = args[1]->ToObject();
 
@@ -357,7 +360,7 @@ NAN_METHOD(WebView::Load) {
   if (opts->Has(H("css"))) webkit_web_view_group_add_user_style_sheet(
     group,
     *NanUtf8String(opts->Get(H("css"))),
-    self->uri,
+    **uri,
     NULL, // whitelist
     NULL, // blacklist
     WEBKIT_INJECTED_CONTENT_FRAMES_TOP_ONLY
@@ -395,13 +398,25 @@ NAN_METHOD(WebView::Load) {
   self->allowDialogs = NanBooleanOptionValue(opts, H("dialogs"), false);
   if (self->loadCallback != NULL) delete self->loadCallback;
   self->loadCallback = loadCb;
-  if (g_strcmp0(self->uri, "") == 0) {
-    webkit_web_view_load_html(self->view, "", NULL);
+  webkit_web_view_stop_loading(self->view);
+
+  if (self->state == DOCUMENT_AVAILABLE) {
+    requestUri(self, **uri);
   } else {
-    WebKitURIRequest* request = webkit_uri_request_new(self->uri);
-    webkit_web_view_load_request(self->view, request);
+    self->nextUri = **uri;
   }
   NanReturnUndefined();
+}
+
+void WebView::requestUri(WebView* self, const char* uri) {
+  self->state = DOCUMENT_LOADING;
+  self->uri = uri;
+  self->nextUri = NULL;
+  if (g_strcmp0(uri, "") == 0) {
+    webkit_web_view_load_html(self->view, "", NULL);
+  } else {
+    webkit_web_view_load_request(self->view, webkit_uri_request_new(uri));
+  }
 }
 
 void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) {
@@ -625,10 +640,10 @@ GDBusMethodInvocation* invocation,
 gpointer data) {
   WebView* self = (WebView*)data;
   if (g_strcmp0(method_name, "HandleRequest") == 0) {
-    const gchar* requestUri;
-    g_variant_get(parameters, "(&s)", &requestUri);
+    const gchar* reqUri;
+    g_variant_get(parameters, "(&s)", &reqUri);
     Handle<Value> argv[] = {
-      NanNew(requestUri)
+      NanNew(reqUri)
     };
     GVariant* response;
     Handle<Value> uriVal = self->requestCallback->Call(1, argv);
