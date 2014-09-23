@@ -504,26 +504,30 @@ WebKit.prototype.png = function(obj, cb) {
 		return cb(new Error("png() first arg must be either a writableStream or a file path"));
 	}
 	cb = cb || noop;
-	if (!wstream._webkit_png_cb) wstream.on('finish', cb).on('error', cb)._webkit_png_cb = true;
 	if (!this.readyState || this.readyState == "loading") {
 		this.on('load', function() {
-			this.png.call(this, wstream, cb);
+			png.call(this, wstream, cb);
 		});
 	} else {
-		loop.call(this, true);
-		this.webview.png(function(err, buf) {
-			if (err) {
-				loop.call(this, false);
-				wstream.emit('error', err);
-			} else if (buf == null) {
-				loop.call(this, false);
-				wstream.end();
-			} else {
-				wstream.write(buf);
-			}
-		}.bind(this));
+		png.call(this, wstream, cb);
 	}
 };
+
+function png(wstream, cb) {
+	loop.call(this, true);
+	wstream.on('finish', cb).on('error', cb);
+	this.webview.png(function(err, buf) {
+		if (err) {
+			loop.call(this, false);
+			wstream.emit('error', err);
+		} else if (buf == null) {
+			loop.call(this, false);
+			wstream.end();
+		} else {
+			wstream.write(buf);
+		}
+	}.bind(this));
+}
 
 WebKit.prototype.html = function(cb) {
 	if (!this.readyState || this.readyState == "loading") {
