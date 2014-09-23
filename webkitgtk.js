@@ -528,12 +528,16 @@ WebKit.prototype.png = function(obj, cb) {
 WebKit.prototype.html = function(cb) {
 	if (!this.readyState || this.readyState == "loading") {
 		this.on('ready', function() {
-			this.html(cb);
+			html.call(this, cb);
 		});
 	} else {
-		this.run("document.documentElement.outerHTML;", cb);
+		html.call(this, cb);
 	}
 };
+
+function html(cb) {
+	runcb.call(this, "document.documentElement.outerHTML;", cb);
+}
 
 WebKit.prototype.pdf = function(filepath, opts, cb) {
 	if (!cb && typeof opts == "function") {
@@ -545,16 +549,20 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 	if (!cb) cb = noop;
 	if (!this.readyState || this.readyState == "loading") {
 		this.on('load', function() {
-			this.pdf(filepath, opts, cb);
+			pdf.call(this, filepath, opts, cb);
 		});
 	} else {
-		loop.call(this, true);
-		this.webview.pdf("file://" + path.resolve(filepath), opts, function(err) {
-			loop.call(this, false);
-			cb(err);
-		}.bind(this));
+		pdf.call(this, filepath, opts, cb);
 	}
 };
+
+function pdf(filepath, opts, cb) {
+	loop.call(this, true);
+	this.webview.pdf("file://" + path.resolve(filepath), opts, function(err) {
+		loop.call(this, false);
+		cb(err);
+	}.bind(this));
+}
 
 function preload(uri, opts, cb) {
 	var priv = this.priv;
