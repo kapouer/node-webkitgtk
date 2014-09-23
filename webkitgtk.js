@@ -170,6 +170,7 @@ Object.defineProperty(Response.prototype, "mime", {
 	}
 });
 Response.prototype.data = function(cb) {
+	if (!cb) throw new Error("Missing callback");
 	var view = this.view;
 	loop.call(view, true);
 	this.binding.data(function(err, data) {
