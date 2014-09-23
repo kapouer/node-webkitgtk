@@ -120,10 +120,14 @@ function eventsDispatcher(err, json) {
 		obj.args.unshift(obj.event);
 		this.emit.apply(this, obj.args);
 	} else if (obj.ticket) {
-		loop.call(this, false);
 		var cb = this.priv.tickets[obj.ticket];
-		delete this.priv.tickets[obj.ticket];
-		cb(obj.error, obj.result);
+		if (cb) {
+			loop.call(this, false);
+			delete this.priv.tickets[obj.ticket];
+			cb(obj.error, obj.result);
+		} else {
+			// could be reached by dropped events
+		}
 	}
 }
 
