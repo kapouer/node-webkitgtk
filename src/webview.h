@@ -59,6 +59,7 @@ private:
   char* username = NULL;
   char* password = NULL;
   char* css = NULL;
+  char* content = NULL;
 
   WebKitWebView* view = NULL;
   GtkWidget* window = NULL;

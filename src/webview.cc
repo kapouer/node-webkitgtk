@@ -105,6 +105,7 @@ void WebView::destroy() {
   delete[] username;
   delete[] password;
   delete[] css;
+  delete[] content;
 
   if (window != NULL) gtk_widget_destroy(window);
 
@@ -346,7 +347,7 @@ NAN_METHOD(WebView::Load) {
 
   Local<Object> opts = args[1]->ToObject();
 
-  if (self->cookie != NULL) self->cookie = NULL;
+  if (self->cookie != NULL) delete self->cookie;
   if (opts->Has(H("cookie"))) self->cookie = **(new NanUtf8String(opts->Get(H("cookie"))));
 
   if (self->username != NULL) delete self->username;
@@ -354,6 +355,9 @@ NAN_METHOD(WebView::Load) {
 
   if (self->password != NULL) delete self->password;
   if (opts->Has(H("password"))) self->password = **(new NanUtf8String(opts->Get(H("password"))));
+
+  if (self->content != NULL) delete self->content;
+  if (opts->Has(H("content"))) self->content = **(new NanUtf8String(opts->Get(H("content"))));
 
   WebKitWebViewGroup* group = webkit_web_view_get_group(self->view);
   webkit_web_view_group_remove_all_user_style_sheets(group);
@@ -396,6 +400,7 @@ NAN_METHOD(WebView::Load) {
   );
 
   self->allowDialogs = NanBooleanOptionValue(opts, H("dialogs"), false);
+
   if (self->loadCallback != NULL) delete self->loadCallback;
   self->loadCallback = loadCb;
   webkit_web_view_stop_loading(self->view);
@@ -412,8 +417,12 @@ void WebView::requestUri(WebView* self, const char* uri) {
   self->state = DOCUMENT_LOADING;
   self->uri = uri;
   self->nextUri = NULL;
-  if (g_strcmp0(uri, "") == 0) {
-    webkit_web_view_load_html(self->view, "", NULL);
+  gboolean isEmpty = g_strcmp0(uri, "") == 0;
+  if (isEmpty || self->content != NULL) {
+    const char* content = self->content;
+    if (content == NULL) content = "";
+    if (isEmpty) uri = NULL;
+    webkit_web_view_load_html(self->view, content, uri);
   } else {
     webkit_web_view_load_request(self->view, webkit_uri_request_new(uri));
   }
