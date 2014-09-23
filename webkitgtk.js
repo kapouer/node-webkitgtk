@@ -243,6 +243,10 @@ function errorLoad(state) {
 }
 
 WebKit.prototype.load = function(uri, opts, cb) {
+	load.call(this, uri, opts, cb);
+};
+
+function load(uri, opts, cb) {
 	if (!cb && typeof opts == "function") {
 		cb = opts;
 		opts = {};
@@ -280,37 +284,38 @@ WebKit.prototype.load = function(uri, opts, cb) {
 				priv.preloading = null;
 				if (!err && status < 200 || status >= 400) err = status;
 				cb(err, this);
-				if (priv.state != LOADING) {
-					console.log("this should never be reached ?");
-					return;
-				}
 			}
 			priv.state = INITIALIZED;
-			this.runev(function(emit) {
-				window.onerror = function() {
-					emit.apply(null, "error", Array.prototype.slice.call(arguments, 0));
-				};
-			}, noop);
-			this.run(function(done) {
-				if (/interactive|complete/.test(document.readyState)) done(null, document.readyState);
-				else document.addEventListener('DOMContentLoaded', function() { done(null, "interactive"); }, false);
-			}, function(err, result) {
-				if (err) console.error(err);
-				this.readyState = result;
-				var prefix = priv.preloading ? "pre" : "";
-				this.emit(prefix + 'ready');
-				if (result == "complete") {
-					this.emit(prefix + 'load');
-				}	else {
-					this.run(function(done) {
-						if (document.readyState == "complete") done(null, document.readyState);
-						else window.addEventListener('load', function() { done(null, "complete"); }, false);
-					}, function(err, result) {
-						if (err) console.error(err);
-						this.readyState = result;
-						this.emit(prefix + 'load');
-					}.bind(this));
+			setImmediate(function() {
+				if (priv.state != INITIALIZED) {
+					return;
 				}
+				run.call(this, function(emit) {
+					window.onerror = function() {
+						emit.apply(null, "error", Array.prototype.slice.call(arguments, 0));
+					};
+				});
+				runcb.call(this, function(done) {
+					if (/interactive|complete/.test(document.readyState)) done(null, document.readyState);
+					else document.addEventListener('DOMContentLoaded', function() { done(null, "interactive"); }, false);
+				}, function(err, result) {
+					if (err) console.error(err);
+					this.readyState = result;
+					var prefix = priv.preloading ? "pre" : "";
+					this.emit(prefix + 'ready');
+					if (result == "complete") {
+						this.emit(prefix + 'load');
+					}	else {
+						runcb.call(this, function(done) {
+							if (document.readyState == "complete") done(null, document.readyState);
+							else window.addEventListener('load', function() { done(null, "complete"); }, false);
+						}, function(err, result) {
+							if (err) console.error(err);
+							this.readyState = result;
+							this.emit(prefix + 'load');
+						}.bind(this));
+					}
+				}.bind(this));
 			}.bind(this));
 		}.bind(this));
 	}.bind(this));
@@ -336,15 +341,17 @@ WebKit.prototype.unload = function(cb) {
 	var priv = this.priv;
 	cb = cb || noop;
 	if (priv.state != INITIALIZED) return cb(new Error(errorLoad(priv.state)), this);
+	priv.state = LOADING;
 	this.readyState = null;
 	this.status = null;
 	loop.call(this, true);
 	this.webview.load('', {}, function(err) {
 		loop.call(this, false);
-		this.priv = initialPriv();
-		this.priv.state = INITIALIZED;
+		priv.state = INITIALIZED;
+		priv.tickets = {};
+		priv.loopForCallbacks = 0;
 		this.emit('unload');
-		cb(err);
+		cb();
 	}.bind(this));
 };
 
@@ -405,12 +412,16 @@ function loop(start) {
 }
 
 WebKit.prototype.run = function(script, cb) {
+	runcb.call(this, script, cb);
+};
+
+function runcb(script, cb) {
 	var message = {
 		ticket: (this.priv.ticket++).toString()
 	};
 	this.priv.tickets[message.ticket] = cb;
 	run.call(this, script, message, cb);
-};
+}
 
 WebKit.prototype.runev = function(script, cb) {
 	run.call(this, script, {}, cb);
@@ -420,6 +431,7 @@ function run(script, message, cb) {
 	var priv = this.priv;
 	if (typeof script == "function") script = script.toString();
 	cb = cb || noop;
+	message = message || {};
 
 	var mode = RUN_SYNC;
 	if (/^\s*function(\s+\w+)?\s*\(\s*\w+\s*\)/.test(script)) mode = RUN_ASYNC;
@@ -553,10 +565,10 @@ function preload(uri, opts, cb) {
 		var script = cookies.map(function(cookie) {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 		}).join(';') + ';';
-		this.run(script, function(err) {
+		runcb.call(this, script, function(err) {
 			if (err) return cb(err);
 			priv.preloading = false;
-			this.load(uri, opts, cb);
+			load.call(this, uri, opts, cb);
 		}.bind(this));
 	});
 }
