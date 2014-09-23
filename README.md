@@ -98,6 +98,10 @@ load() options
   boolean, default false
 	allow display of dialogs.
 
+- content
+  string, default null
+	load this content with the given base uri
+
 - css
 	string, default none
 	a css string applied as user stylesheet.
