@@ -46,7 +46,7 @@ WebView::WebView(Handle<Object> opts) {
   g_dbus_server_start(this->server);
 
   if (server == NULL) {
-    g_printerr ("Error creating server at address %s: %s\n", address, error->message);
+    g_printerr("Error creating server at address %s: %s\n", address, error->message);
     g_error_free(error);
     NanThrowError("WebKitGtk could not create dbus server");
     return;
