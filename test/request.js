@@ -4,9 +4,9 @@ var fs = require('fs');
 
 describe("changing request uri in listener", function suite() {
 	it("should cancel the request when set to null or empty string", function(done) {
-		this.timeout(10000);
+		this.timeout(15000);
 		var cancelledRequests = 0;
-		WebKit("http://www.selmer.fr").on("request", function(request) {
+		WebKit().load("http://www.selmer.fr").on("request", function(request) {
 			if (/\.js$/.test(request.uri)) {
 				cancelledRequests++;
 				request.uri = null;

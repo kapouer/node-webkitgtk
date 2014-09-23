@@ -8,16 +8,14 @@ describe("uri property", function suite() {
 		expect(view.uri).to.be(undefined);
 	});
 	it("should be undefined after initialization and before load", function(done) {
-		var view = new WebKit({display:0}, function(err) {
-			console.log("done initializating");
+		var view = WebKit(0, function(err) {
 			expect(view.uri).to.be(undefined);
 			done();
 		});
 	});
 	it("should add a trailing slash - not that it matters but it's a sign it works", function(done) {
-		var view = new WebKit();
 		var uri = 'http://localhost';
-		view.load(uri, function(err) {
+		WebKit().load(uri, function(err, view) {
 			expect(view.uri).to.be(uri + '/');
 			done();
 		});
