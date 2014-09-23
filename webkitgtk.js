@@ -105,7 +105,7 @@ function lifeEventHandler(event) {
 
 function policyDispatcher(type, uri) {
 	// prevents navigation once a view has started loading (if navigation is false)
-	if (type == "navigation" && this.navigation == false && this.priv.state != LOADING) {
+	if (type == "navigation" && this.navigation == false && this.priv.state > LOADING) {
 		return true;
 	}
 }
