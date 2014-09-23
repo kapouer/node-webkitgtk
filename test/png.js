@@ -17,7 +17,7 @@ describe("png method", function suite() {
 	it("should save a screenshot to disk", function(done) {
 		this.timeout(10000);
 		var filepath = __dirname + '/shots/test2.png';
-		WebKit(98).load("https://www.debian.org/", {
+		WebKit().load("https://www.debian.org/", {
 			width: 512,
 			height: 512,
 			stylesheet: __dirname + "/../css/png.css"
