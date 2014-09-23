@@ -65,11 +65,11 @@ void WebResponse::DataFinished(GObject* object, GAsyncResult* result, gpointer d
   guchar* buf = webkit_web_resource_get_data_finish(self->resource, result, &length, &error);
   if (buf == NULL) { // if NULL, error is defined
     Handle<Value> argv[] = {
-      NanError(error->message)
+      NanError(error != NULL ? error->message : "Empty buffer")
     };
-    g_error_free(error);
     self->dataCallback->Call(1, argv);
     delete self->dataCallback;
+    if (error != NULL) g_error_free(error);
     self->dataCallback = NULL;
     return;
   }
