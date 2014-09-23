@@ -446,10 +446,9 @@ function run(script, message, cb) {
 
 	message.mode = mode;
 
-	// this is a hack because it leaks information between worlds
-	// the good way of doing this is sending an empty event
-	// then the webextension execute some JS to fetch the data that has
-	// been stored somewhere as global... FIXME the day it doesn't work any more/:
+	// KeyboardEvent is the only event that can carry an arbitrary string
+	// If it isn't supported any more, send an empty event and make the webextension fetch
+	// the data (stored in a global window variable).
 	var dispatcher = '\
 		var evt = document.createEvent("KeyboardEvent"); \
 		evt.initKeyboardEvent("' + priv.eventName + '", false, true, null, JSON.stringify(message)); \
