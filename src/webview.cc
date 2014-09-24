@@ -41,6 +41,7 @@ WebView::WebView(Handle<Object> opts) {
   state = 0;
 
   guid = g_dbus_generate_guid();
+
   instances.insert(ObjMapPair(guid, this));
 
   GDBusServerFlags server_flags = G_DBUS_SERVER_FLAGS_NONE;
@@ -105,11 +106,13 @@ NAN_METHOD(WebView::Destroy) {
 }
 
 void WebView::destroy() {
+  if (window == NULL) return;
+  view = NULL;
+  gtk_widget_destroy(window);
+  window = NULL;
   delete[] cookie;
   delete[] css;
   delete[] content;
-
-  if (window != NULL) gtk_widget_destroy(window);
 
   delete pngCallback;
   delete pngFilename;
