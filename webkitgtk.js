@@ -45,15 +45,21 @@ WebKit.prototype.init = function(opts, cb) {
 	priv.state = INITIALIZING;
 	if (typeof opts == "string") {
 		var match = /^(\d+)x(\d+)x(\d+)\:(\d+)$/.exec(opts);
-		opts = {
+		if (!match) {
+			var ndis = parseInt(opts);
+			if (!isNaN(ndis)) opts = ndis;
+		} else opts = {
 			width: match[1],
 			height: match[2],
 			depth: match[3],
 			display: match[4]
 		};
-	} else if (typeof opts == "number") {
+	}
+	if (typeof opts == "number") {
 		opts = { display: opts };
-	} else if (!opts) opts = {};
+	} else if (!opts) {
+		opts = {};
+	}
 	opts.display = opts.display || 0;
 	display.call(this, opts, function(err, child) {
 		if (err) return cb(err);
