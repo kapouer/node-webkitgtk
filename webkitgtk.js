@@ -66,7 +66,8 @@ WebKit.prototype.init = function(opts, cb) {
 			requestListener: requestDispatcher.bind(this),
 			responseListener: responseDispatcher.bind(this),
 			eventsListener: eventsDispatcher.bind(this),
-			policyListener: policyDispatcher.bind(this)
+			policyListener: policyDispatcher.bind(this),
+			authListener: authDispatcher.bind(this)
 		});
 		priv.state = INITIALIZED;
 		cb();
@@ -101,6 +102,12 @@ function lifeEventHandler(event) {
 	if (willStop && this.priv.loopForLife) {
 		this.priv.loopForLife = false;
 	}
+}
+
+function authDispatcher(request) {
+	// ignore auth request synchronously
+	if (this.listeners('authenticate').length == 0) return true;
+	this.emit('authenticate', request);
 }
 
 function policyDispatcher(type, uri) {

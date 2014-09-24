@@ -4,9 +4,7 @@
 #include <node.h>
 #include <webkit2/webkit2.h>
 #include <nan.h>
-
-#define ATTR(t, name, get, set) t->InstanceTemplate()->SetAccessor(NanNew(name), get, set);
-#define TOSTR(obj) (*String::Utf8Value((obj)->ToString()))
+#include "utils.h"
 
 using namespace v8;
 

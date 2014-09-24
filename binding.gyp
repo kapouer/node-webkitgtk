@@ -4,7 +4,12 @@
       'target_name': 'webkitgtk',
       'conditions': [
         ['OS=="linux"', {
-          'sources': [ 'src/webresponse.cc', 'src/runnable.cc', 'src/webview.cc' ],
+          'sources': [
+            'src/webauthrequest.cc',
+            'src/webresponse.cc',
+            'src/runnable.cc',
+            'src/webview.cc'
+          ],
           "include_dirs": ["<!(node -e \"require('nan')\")"],
           'cflags_cc' : [
               '<!@(pkg-config gtk+-3.0 --cflags)',

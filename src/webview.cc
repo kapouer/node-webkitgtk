@@ -2,6 +2,7 @@
 #include <JavaScriptCore/JSStringRef.h>
 #include "webview.h"
 #include "webresponse.h"
+#include "webauthrequest.h"
 #include "dbus.h"
 
 using namespace v8;
@@ -30,6 +31,9 @@ WebView::WebView(Handle<Object> opts) {
   }
   if (opts->Has(H("policyListener"))) {
     this->policyCallback = new NanCallback(opts->Get(H("policyListener")).As<Function>());
+  }
+  if (opts->Has(H("authListener"))) {
+    this->authCallback = new NanCallback(opts->Get(H("authListener")).As<Function>());
   }
 
   NanAdjustExternalMemory(1000000);
@@ -102,8 +106,6 @@ NAN_METHOD(WebView::Destroy) {
 
 void WebView::destroy() {
   delete[] cookie;
-  delete[] username;
-  delete[] password;
   delete[] css;
   delete[] content;
 
@@ -119,6 +121,7 @@ void WebView::destroy() {
   delete requestCallback;
   delete responseCallback;
   delete policyCallback;
+  delete authCallback;
 
   g_dbus_server_stop(server);
   g_object_unref(server);
@@ -166,21 +169,30 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
   module->Set(NanNew("exports"), constructor);
 
   WebResponse::Init(exports);
+  WebAuthRequest::Init(exports);
 }
 
 gboolean WebView::Authenticate(WebKitWebView* view, WebKitAuthenticationRequest* request, gpointer data) {
   WebView* self = (WebView*)data;
-  if (!webkit_authentication_request_is_retry(request)) self->authRetryCount = 0;
-  else self->authRetryCount += 1;
-  if (self->username != NULL && self->password != NULL && self->authRetryCount <= 1) {
-    WebKitCredential* creds = webkit_credential_new(self->username, self->password, WEBKIT_CREDENTIAL_PERSISTENCE_FOR_SESSION);
-    webkit_authentication_request_authenticate(request, creds);
-    webkit_credential_free(creds);
-  } else {
-    webkit_authentication_request_cancel(request);
+  if (webkit_authentication_request_is_retry(request)) return TRUE;
+
+  // WebKitCredential* savedCred = webkit_authentication_request_get_proposed_credential(request);
+  // if (savedCred != NULL) {
+    // g_print("saved cred %s\n", webkit_credential_get_username(savedCred));
+    // webkit_authentication_request_authenticate(request, savedCred);
+    // return TRUE;
+  // }
+
+  Handle<Object> obj = WebAuthRequest::constructor->GetFunction()->NewInstance();
+  WebAuthRequest* selfAuthRequest = node::ObjectWrap::Unwrap<WebAuthRequest>(obj);
+  selfAuthRequest->init(request);
+
+  Handle<Value> argv[] = { obj };
+  Handle<Value> ignore = self->authCallback->Call(1, argv);
+  if (ignore->IsBoolean() && ignore->BooleanValue() == true) {
+    webkit_authentication_request_authenticate(request, NULL);
   }
   return TRUE;
-
 }
 
 void WebView::InitExtensions(WebKitWebContext* context, gpointer data) {
@@ -349,12 +361,6 @@ NAN_METHOD(WebView::Load) {
 
   if (self->cookie != NULL) delete self->cookie;
   if (opts->Has(H("cookie"))) self->cookie = **(new NanUtf8String(opts->Get(H("cookie"))));
-
-  if (self->username != NULL) delete self->username;
-  if (opts->Has(H("username"))) self->username = **(new NanUtf8String(opts->Get(H("username"))));
-
-  if (self->password != NULL) delete self->password;
-  if (opts->Has(H("password"))) self->password = **(new NanUtf8String(opts->Get(H("password"))));
 
   if (self->content != NULL) delete self->content;
   if (opts->Has(H("content"))) self->content = **(new NanUtf8String(opts->Get(H("content"))));

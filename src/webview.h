@@ -56,8 +56,6 @@ private:
   bool allowDialogs;
 
   char* cookie = NULL;
-  char* username = NULL;
-  char* password = NULL;
   char* css = NULL;
   char* content = NULL;
 
@@ -77,6 +75,7 @@ private:
   NanCallback* requestCallback = NULL;
   NanCallback* responseCallback = NULL;
   NanCallback* policyCallback = NULL;
+  NanCallback* authCallback = NULL;
 
   const char* uri = NULL;
   const char* nextUri = NULL;

@@ -68,11 +68,6 @@ Patches are welcome for UI uses, though.
 load() options
 --------------
 
-- username
-- password
-  string, default none
-  HTTP Auth.
-
 - cookies
   string | [string], default none
 	it preloads the document to be able to set document.cookie, all other
@@ -179,6 +174,12 @@ These three events can happen at any moment:
   listener(response)
 	response.uri, response.mime, response.status are read-only.
 	response.data(function(err, buf)) fetches the response data.
+
+* authenticate
+	listener(request) where request.host, request.port, request.realm are
+	read-only.
+	request.use(username, password) authenticates asynchronously,
+	request.ignore() ignores request asynchronously.
 
 
 methods
