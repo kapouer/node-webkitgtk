@@ -513,7 +513,7 @@ NAN_METHOD(WebView::Png) {
   self->pngCallback = new NanCallback(args[0].As<Function>());
   webkit_web_view_get_snapshot(
     self->view,
-    WEBKIT_SNAPSHOT_REGION_VISIBLE,
+    WEBKIT_SNAPSHOT_REGION_FULL_DOCUMENT,
     WEBKIT_SNAPSHOT_OPTIONS_NONE,
     NULL, //  GCancellable
     WebView::PngFinished,
