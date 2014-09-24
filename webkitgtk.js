@@ -44,7 +44,7 @@ WebKit.prototype.init = function(opts, cb) {
 	if (priv.state >= INITIALIZING) return cb(new Error("init must not be called twice"), this);
 	priv.state = INITIALIZING;
 	if (typeof opts == "string") {
-		var match = /^(\d+)x(\d+)x(\d+)\:(\d+)$/.match(opts);
+		var match = /^(\d+)x(\d+)x(\d+)\:(\d+)$/.exec(opts);
 		opts = {
 			width: match[1],
 			height: match[2],
