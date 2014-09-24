@@ -531,7 +531,11 @@ function png(wstream, cb) {
 		} else if (buf == null) {
 			loop.call(this, false);
 			wstream.end();
-			cb();
+			if (wstream instanceof stream.Readable) {
+				cb();
+			} else {
+				wstream.on('finish', cb);
+			}
 		} else {
 			wstream.write(buf);
 		}
