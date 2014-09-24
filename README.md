@@ -87,69 +87,70 @@ Patches are welcome for UI uses, though.
 load() options
 --------------
 
-- cookies
-  string | [string], default none
-	it preloads the document to be able to set document.cookie, all other
-	requests being disabled, then do the actual load with Cookie header.
+- cookies  
+  string | [string], default none  
+  it preloads the document to be able to set document.cookie, all other
+  requests being disabled, then do the actual load with Cookie header.
 
-- width
+- width  
   number, 1024
-- height
-	number, 768
-	the viewport
+- height  
+  number, 768  
+  the viewport
 
-- allow
-  "all" or "same-origin" or "none" or a RegExp, default "all"
-	allow requests only matching option (except the document request),
-	bypassing 'request' event.
-	This does not allow requests that are rejected by cross-origin policy.
+- allow  
+  "all" or "same-origin" or "none" or a RegExp, default "all"  
+  allow requests only matching option (except the document request),
+  bypassing 'request' event.  
+  This does not allow requests that are rejected by cross-origin policy.
 
-- navigation
-	boolean, default false
-	allow navigation within the webview (changing document.location).
+- navigation  
+  boolean, default false  
+  allow navigation within the webview (changing document.location).
 
-- dialogs
-  boolean, default false
-	allow display of dialogs.
+- dialogs  
+  boolean, default false  
+  allow display of dialogs.
 
-- content
-  string, default null
-	load this content with the given base uri
+- content  
+  string, default null  
+  load this content with the given base uri
 
-- css
-	string, default none
-	a css string applied as user stylesheet.
+- css  
+  string, default none  
+  a css string applied as user stylesheet.
 
-- stylesheet
-	string, default none
-	path to some user stylesheet, overrides css option if any.
+- stylesheet  
+  string, default none  
+  path to some user stylesheet, overrides css option if any.
 
-- ua
-	user-agent string, default to "Mozilla/5.0"
+- ua  
+  user-agent string, default to "Mozilla/5.0"
 
 
 init() options
 --------------
 
-- display
-	number, 0
-	checks an X display or framebuffer is listening on that port
+- display  
+  number, 0  
+  checks an X display or framebuffer is listening on that port
 
-- width
-	number, 1024
-- height
+- width  
+  number, 1024
+- height  
   number, 768
-	Framebuffer dimensions
-- depth
-	number, 32
-	Framebuffer pixel depth
+  Framebuffer dimensions
+- depth  
+  number, 32
+  Framebuffer pixel depth
 
-- WIDTHxHEIGHTxDEPTH:PORT
-	string, null
-	a short-hand notation for passing all these options at once.
+- WIDTHxHEIGHTxDEPTH:PORT  
+  string, null  
+  a short-hand notation for passing all these options at once.
 
 If width, height, depth options are given, an xvfb instance listening
 given display port will be spawn using `headless` module.
+
 It is advised and safer to monitor xvfb using a proper daemon tool.
 
 
@@ -157,120 +158,117 @@ events
 ------
 
 All events are on the WebKit instance.
+
 The first four events are like lifecycle events:
 
-* ready
-  same as document's DOMContentLoaded event
-	listener()
+* ready  
+  same as document's DOMContentLoaded event  
+  listener()
 
-* load
-  same as window's load event
-	listener()
+* load  
+  same as window's load event  
+  listener()
 
-* idle
+* idle  
   when all requests are finished, failed, or just hanging, and when the
-	gtk loop has been doing nothing for a couple of cycles.
-	This event is used to automatically pause the view.
-	Use .on('idle', function() { this.loop(true); }) to restart the gtk
-	loop if needed.
+  gtk loop has been doing nothing for a couple of cycles.  
+  This event is used to automatically pause the view.  
+  Use .on('idle', function() { this.loop(true); }) to restart the gtk
+  loop if needed.
 
-* unload TODO with the ability to prevent unloading
-  same as window's unload event
-	listener()
+* unload  
+  same as window's unload event  
+  listener()
 
 
 These three events can happen at any moment:
 
-* error
-  this is what is caught by window.onerror
-	listener(message, url, line, column)
+* error  
+  this is what is caught by window.onerror  
+  listener(message, url, line, column)
 
-* request
-  listener(request) where request.uri is read/write.
-	If request.uri is set to null or "", the request is cancelled.
+* request  
+  listener(request) where request.uri is read/write.  
+  If request.uri is set to null or "", the request is cancelled.
 
-* response
-  listener(response)
-	response.uri, response.mime, response.status are read-only.
-	response.data(function(err, buf)) fetches the response data.
+* response  
+  listener(response)  
+  response.uri, response.mime, response.status are read-only.  
+  response.data(function(err, buf)) fetches the response data.
 
-* authenticate
-	listener(request) where request.host, request.port, request.realm are
-	read-only.
-	request.use(username, password) authenticates asynchronously,
-	request.ignore() ignores request asynchronously.
+* authenticate  
+  listener(request) where request.host, request.port, request.realm are
+  read-only.  
+  request.use(username, password) authenticates asynchronously,  
+  request.ignore() ignores request asynchronously.
 
 
 methods
 -------
 
-* new Webkit()
-	creates a totally unusable object
+* new Webkit()  
+  creates a totally unusable object
 
-* WebKit([opts])
-	create an instance with the chainable API using `chainit`.
-	If arguments are given, equals `WebKit().init(opts)`
+* WebKit([opts])  
+  create an instance with the chainable API using `chainit`.  
+  If arguments are given, equals `WebKit().init(opts)`
 
-* init([opts], cb)
-	see parameters described above
-	*must be invoked first*
+* init([opts], cb)  
+  see parameters described above  
+  *must be invoked first*
 
-* load(uri, [opts], [cb])
-  load uri into webview
-	see parameters described above
+* load(uri, [opts], [cb])  
+  load uri into webview  
+  see parameters described above
 
-* run(sync-script, cb)
+* run(sync-script, cb)  
   any synchronous script text or global function
 
-* run(async-script, cb)
-  async-script must be a function that calls its first and only argument,
-	like `function(done) { done(err, str); }`
+* run(async-script, cb)  
+  async-script must be a function that calls its first and only argument,  
+  like `function(done) { done(err, str); }`
 
-* runev(async-script, cb)
-	async-script must be a function that calls its first and only argument,
-	like `function(emit) { emit(eventName); }`
-	and each call emits the named event on current view object, which can
-	be listened using view.on(event, listener)
-	Can be used to listen recurring events, but the gtk loop needs to be
-	running, see above.
-	The cb argument is only there for the chaining API to work, it reports
-	only arguments errors - it can be omitted if the chainable API isn't used.
+* runev(async-script, cb)  
+  async-script must be a function that calls its first and only argument,  
+  like `function(emit) { emit(eventName); }`  
+  and each call emits the named event on current view object, which can
+  be listened using view.on(event, listener).  
+  Can be used to listen recurring events, but the gtk loop needs to be
+  running, see above.  
+  The cb argument is only there for the chaining API to work, it reports
+  only arguments errors - it can be omitted if the chainable API isn't used.
 
-* png(writableStream or filename, [cb])
-  takes a png snapshot immediately, returns a stream.
-	If invoked with a filename, save the stream to file.
+* png(writableStream or filename, [cb])  
+  takes a png snapshot immediately, returns a stream.  
+  If invoked with a filename, save the stream to file.
 
-* html(cb)
+* html(cb)  
   get documentElement.outerHTML when document is ready
 
-* pdf(filepath, [opts], [cb])
-  print page to file
-	orientation : "landscape" or "portrait", default "portrait"
-	fullpage : boolean, sets margins to 0, default false
+* pdf(filepath, [opts], [cb])  
+  print page to file  
+  orientation : "landscape" or "portrait", default "portrait"  
+  fullpage : boolean, sets margins to 0, default false
 
-* unload(cb)
-  Sets current view to an empty document and uri.
-	Emits 'unload' event.
+* unload(cb)  
+  Sets current view to an empty document and uri.  
+  Emits 'unload' event.
 
-* stop(cb)
-	same as browser `window.stop()`.
-	If the view is currently loading, .load() won't call back.
-
-* destroy(cb)
-	does the reverse of init - frees webview and xvfb instance if any.
-	init() can be called again to recover a working instance.
+* destroy(cb)  
+  does the reverse of init - frees webview and xvfb instance if any.  
+  init() can be called again to recover a working instance.
 
 
 properties
 ----------
 
-* uri
+* uri  
   Read-only, get current uri of the web view.
 
-* readyState
-  Read-only: empty, "opening", "loading", "interactive", "complete"
-	Before the first call to .load() it is empty, and before the callback
-	it is opening.
+* readyState  
+  Read-only: empty, "opening", "loading", "interactive", "complete"  
+  Before the first call to .load() it is empty, and before the callback
+  it is opening.
 
 
 gtk loop and events
@@ -299,6 +297,7 @@ and it stops running the gtk loop when these conditions are met:
 
 For example, if there are no "idle" listeners after "load" is emitted,
 the loop won't be kept running.
+
 Note that calling run(fun, event) won't start the gtk loop, and receiving
 such events won't stop the gtk loop either.
 
@@ -308,12 +307,13 @@ To keep the gtk loop running forever, just listen to "unload" event.
 about plugins
 -------------
 
-In webkit2gtk ^2.4.4, if there are plugins in
-/usr/lib/mozilla/plugins
+In webkit2gtk ^2.4.4, if there are plugins in `/usr/lib/mozilla/plugins`
 they could be loaded (but not necessarily enabled on the WebView),
 and that could impact first page load time greatly - especially if
 there's a java plugin.
-Workaround: uninstall the plugin, on my dev machine it was
+
+Workaround:
+uninstall the plugin, on my dev machine it was
 /usr/lib/mozilla/plugins/libjavaplugin.so installed by icedtea.
 
 
