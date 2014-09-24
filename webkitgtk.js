@@ -366,12 +366,12 @@ WebKit.prototype.unload = function(cb) {
 };
 
 WebKit.prototype.destroy = function(cb) {
-	if (this.priv.xvfb) {
-		this.priv.xvfb.kill();
-	}
 	this.priv = initialPriv();
 	this.webview.destroy();
 	delete this.webview;
+	if (this.priv.xvfb) {
+		this.priv.xvfb.kill();
+	}
 	if (cb) setImmediate(cb);
 };
 
@@ -391,7 +391,7 @@ function loop(start) {
 			console.error("FIXME loopForCallbacks should be >= 0");
 			priv.loopForCallbacks = 0;
 		}
-		if (priv.loopForCallbacks == 0 && !priv.loopForLife) {
+		if (priv.loopForCallbacks == 0 && !priv.loopForLife || !this.webview) {
 			priv.loopCount = 0;
 			return;
 		}
