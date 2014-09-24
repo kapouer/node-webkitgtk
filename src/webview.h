@@ -50,6 +50,7 @@ private:
 
   gchar* guid;
   GDBusServer* server;
+  guint contextSignalId;
 
   int state;
   int authRetryCount;

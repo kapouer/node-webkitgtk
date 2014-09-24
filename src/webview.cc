@@ -65,7 +65,7 @@ WebView::WebView(Handle<Object> opts) {
     NanUtf8String* wePath = new NanUtf8String(opts->Get(H("webextension")));
     if (wePath->Size() > 1) {
       webkit_web_context_set_web_extensions_directory(context, **wePath);
-      g_signal_connect(context, "initialize-web-extensions", G_CALLBACK(WebView::InitExtensions), this);
+      this->contextSignalId = g_signal_connect(context, "initialize-web-extensions", G_CALLBACK(WebView::InitExtensions), this);
       delete wePath;
     }
   }
@@ -197,6 +197,10 @@ gboolean WebView::Authenticate(WebKitWebView* view, WebKitAuthenticationRequest*
 
 void WebView::InitExtensions(WebKitWebContext* context, gpointer data) {
   WebView* self = (WebView*)data;
+  if (self->contextSignalId) {
+    g_signal_handler_disconnect(context, self->contextSignalId);
+    self->contextSignalId = 0;
+  }
   GVariant* userData = g_variant_new("(ss)", g_dbus_server_get_client_address(self->server), self->eventName);
   webkit_web_context_set_web_extensions_initialization_user_data(context, userData);
 }
