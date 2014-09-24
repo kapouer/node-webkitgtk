@@ -71,7 +71,8 @@ WebView::WebView(Handle<Object> opts) {
     }
   }
 
-  view = WEBKIT_WEB_VIEW(webkit_web_view_new());
+  WebKitWebViewGroup* group = webkit_web_view_group_new(NULL);
+  view = WEBKIT_WEB_VIEW(webkit_web_view_new_with_group(group));
 
   window = gtk_offscreen_window_new();
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
