@@ -239,8 +239,9 @@ methods
   only arguments errors - it can be omitted if the chainable API isn't used.
 
 * png(writableStream or filename, [cb])  
-  takes a png snapshot immediately, returns a stream.  
-  If invoked with a filename, save the stream to file.
+  takes a png snapshot of the whole document after it is loaded.  
+  If invoked with a filename, save the stream to file.  
+  Tip: use custom css to cut portions of the document.
 
 * html(cb)  
   get documentElement.outerHTML when document is ready
@@ -325,17 +326,21 @@ Linux only.
 These libraries and their development files must be available in usual
 locations.
 
+```
 webkit2gtk-3.0 (2.4.x)
 dbus-glib-1
 glib-2.0
 gtk+-3.0
+```
 
 Also usual development tools are needed (pkg-config, gcc, and so on).
 
 On debian, these packages are needed :
 
+```
 libwebkit2gtk-3.0-dev
 libdbus-glib-1-dev
+```
 
 License
 -------
