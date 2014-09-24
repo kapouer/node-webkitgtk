@@ -523,14 +523,15 @@ WebKit.prototype.png = function(obj, cb) {
 
 function png(wstream, cb) {
 	loop.call(this, true);
-	wstream.on('finish', cb).on('error', cb);
 	this.webview.png(function(err, buf) {
 		if (err) {
 			loop.call(this, false);
 			wstream.emit('error', err);
+			cb(err);
 		} else if (buf == null) {
 			loop.call(this, false);
 			wstream.end();
+			cb();
 		} else {
 			wstream.write(buf);
 		}
