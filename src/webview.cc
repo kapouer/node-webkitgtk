@@ -36,7 +36,7 @@ WebView::WebView(Handle<Object> opts) {
     this->authCallback = new NanCallback(opts->Get(H("authListener")).As<Function>());
   }
 
-  NanAdjustExternalMemory(1000000);
+  NanAdjustExternalMemory(100000000);
   gtk_init(0, NULL);
   state = 0;
 
