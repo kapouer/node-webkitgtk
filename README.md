@@ -7,9 +7,28 @@ Pilot webkitgtk from Node.js with a simple API.
 usage
 -----
 
-Basic callback + event API:
+The chainable API (requires `chainit`)
 
+```js
+WebKit().load('http://github.com')
+  .png('github.png')
+  .pdf('github.pdf')
+  .html(function(err, html) {
+    // the html body as string
+    console.log(this.status, html);
+  }).on('authenticate', function(auth) {
+    auth.use('mylogin', 'mypass');
+  }).on('request', function(req) {
+    if (/\.js/.test(req.uri)) req.uri = null;
+  }).on('response', function(res) {
+    console.log(res.status, res.uri);
+  });
 ```
+
+
+Or the basic one from which the chainable API is build
+
+```js
 var WebKit = require('webkitgtk');
 var view = new WebKit();
 view.init({
@@ -30,9 +49,9 @@ view.init({
 });
 ```
 
-Or the chainable API - requires `chainit`:
+A facility for choosing/spawning a display using xvfb
 
-```
+```js
 // this spawns xvfb instance
 WebKit("1024x768x16:99").load("http://github.com").png('test.png');
 
