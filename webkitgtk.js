@@ -373,8 +373,10 @@ WebKit.prototype.unload = function(cb) {
 
 WebKit.prototype.destroy = function(cb) {
 	this.priv = initialPriv();
-	this.webview.destroy();
-	delete this.webview;
+	if (this.webview) {
+		this.webview.destroy();
+		delete this.webview;
+	}
 	if (this.priv.xvfb) {
 		this.priv.xvfb.kill();
 	}
