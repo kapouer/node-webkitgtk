@@ -3,6 +3,8 @@ node-webkitgtk
 
 Pilot webkitgtk from Node.js with a simple API.
 
+*this module uses only system-installed, shared libraries*  
+it doesn't embed static libraries at all.
 
 usage
 -----
@@ -22,6 +24,9 @@ WebKit().load('http://github.com')
     if (/\.js/.test(req.uri)) req.uri = null;
   }).on('response', function(res) {
     console.log(res.status, res.uri);
+    res.data(function(err, data) {
+      console.log("got", data.length, "bytes");
+    });
   });
 ```
 
