@@ -31,7 +31,7 @@ WebKit().load('http://github.com')
 ```
 
 
-Or the basic one from which the chainable API is build
+Or the basic one from which the chainable API is built
 
 ```js
 var WebKit = require('webkitgtk');
