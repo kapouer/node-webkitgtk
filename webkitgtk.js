@@ -216,7 +216,7 @@ function requestDispatcher(uri) {
 
 	var req = new Request(uri);
 	this.emit('request', req);
-	if (req.uri) priv.pendingRequests++;
+	if (req.uri && !/^data\:/.test(req.uri)) priv.pendingRequests++;
 	return req.uri;
 }
 
