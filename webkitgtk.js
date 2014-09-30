@@ -97,6 +97,7 @@ function initialPriv() {
 		loopImmediate: null,
 		preloading: null,
 		wasBusy: false,
+		wasIdle: false
 	};
 }
 
@@ -281,6 +282,7 @@ function load(uri, opts, cb) {
 	this.allow = opts.allow || "all";
 	this.navigation = opts.navigation || false;
 	this.readyState = "loading";
+	priv.wasIdle = false;
 
 	preload.call(this, uri, opts, cb);
 	(function(next) {
@@ -412,7 +414,8 @@ function loop(start) {
 		if (busy) priv.idleCount = 0;
 		else if (!priv.wasBusy) priv.idleCount++;
 
-		if (priv.pendingRequests == 0 && priv.idleCount >= 1 && this.readyState == "complete") {
+		if (priv.pendingRequests == 0 && priv.idleCount >= 1 && this.readyState == "complete" && !priv.wasIdle) {
+			priv.wasIdle = true;
 			this.emit('idle');
 		} else {
 			priv.wasBusy = busy;
