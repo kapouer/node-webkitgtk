@@ -20,8 +20,10 @@ var ChainableWebKit;
 
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
-		if (!ChainableWebKit) ChainableWebKit = require('chainit')(WebKit);
+		var chainit = require('chainit');
+		if (!ChainableWebKit) ChainableWebKit = chainit(WebKit);
 		var inst = new ChainableWebKit();
+		chainit.add(inst, 'wait', inst.once);
 		if (cb) return inst.init(opts, cb);
 		else return inst.init(opts);
 	}
@@ -520,13 +522,7 @@ WebKit.prototype.png = function(obj, cb) {
 		return cb(new Error("png() first arg must be either a writableStream or a file path"));
 	}
 	cb = cb || noop;
-	if (!this.readyState || this.readyState == "loading") {
-		this.on('load', function() {
-			png.call(this, wstream, cb);
-		});
-	} else {
-		png.call(this, wstream, cb);
-	}
+	png.call(this, wstream, cb);
 };
 
 function png(wstream, cb) {
@@ -542,7 +538,7 @@ function png(wstream, cb) {
 			if (wstream instanceof stream.Readable) {
 				cb();
 			} else {
-				wstream.on('finish', cb);
+				wstream.once('finish', cb);
 			}
 		} else {
 			wstream.write(buf);
@@ -551,18 +547,8 @@ function png(wstream, cb) {
 }
 
 WebKit.prototype.html = function(cb) {
-	if (!this.readyState || this.readyState == "loading") {
-		this.on('ready', function() {
-			html.call(this, cb);
-		});
-	} else {
-		html.call(this, cb);
-	}
-};
-
-function html(cb) {
 	runcb.call(this, "document.documentElement.outerHTML;", cb);
-}
+};
 
 WebKit.prototype.pdf = function(filepath, opts, cb) {
 	if (!cb && typeof opts == "function") {
@@ -572,13 +558,7 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 		opts = {};
 	}
 	if (!cb) cb = noop;
-	if (!this.readyState || this.readyState == "loading") {
-		this.on('load', function() {
-			pdf.call(this, filepath, opts, cb);
-		});
-	} else {
-		pdf.call(this, filepath, opts, cb);
-	}
+	pdf.call(this, filepath, opts, cb);
 };
 
 function pdf(filepath, opts, cb) {
