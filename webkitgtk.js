@@ -217,7 +217,15 @@ function requestDispatcher(uri) {
 
 	var req = new Request(uri);
 	this.emit('request', req);
-	if (req.uri && !/^data\:/.test(req.uri)) priv.pendingRequests++;
+	if (req.uri) {
+		var protocol = req.uri.split(':', 1).pop();
+		if (protocol == 'http' || protocol == 'https') {
+			priv.pendingRequests++;
+		} else if (protocol != "data" && protocol != "about") {
+			console.info("Request with unknown protocol", protocol);
+			console.info("Please report issue to https://github.com/kapouer/node-webkitgtk/issues");
+		}
+	}
 	return req.uri;
 }
 
