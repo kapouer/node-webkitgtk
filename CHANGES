@@ -1,0 +1,11 @@
+1.2.0
+-----
+
+* add wait() to the chainable API  
+* Breaking change:  
+  png, pdf, html functions are now immediate,  
+  one must call `wait('load')`, `wait('ready')`, `wait('idle')` before,  
+  to make sure it's in an expected state.
+
+
+
