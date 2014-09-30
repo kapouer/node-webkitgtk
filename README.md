@@ -165,7 +165,7 @@ events
 
 All events are on the WebKit instance.
 
-The first four events are like lifecycle events:
+These are lifecycle events:
 
 * ready  
   same as document's DOMContentLoaded event  
@@ -187,7 +187,7 @@ The first four events are like lifecycle events:
   listener()
 
 
-These three events can happen at any moment:
+These events can happen at any moment:
 
 * error  
   this is what is caught by window.onerror  
