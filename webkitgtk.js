@@ -101,15 +101,18 @@ function initialPriv() {
 }
 
 function lifeEventHandler(event) {
-	var willStop = event == "unload" || this.listeners('unload').length == 1 && (
-		event == "idle" || this.listeners('idle').length == 1 && (
-			event == "load" || this.listeners('load').length == 1 &&
-				event == "ready"
-			)
-		);
-	if (willStop && this.priv.loopForLife) {
-		this.priv.loopForLife = false;
-	}
+	setImmediate(function() {
+		var willStop = event == "unload" || this.listeners('unload').length == 1 && (
+			event == "idle" || this.listeners('idle').length == 1 && (
+				event == "load" || this.listeners('load').length == 1 &&
+					event == "ready"
+				)
+			);
+		if (willStop && this.priv.loopForLife && !this.priv.preloading) {
+			// not when preloading because it would stop the second load right after calling it
+			this.priv.loopForLife = false;
+		}
+	}.bind(this));
 }
 
 function authDispatcher(request) {
