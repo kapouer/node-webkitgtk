@@ -14,6 +14,7 @@ The chainable API (requires `chainit`)
 ```js
 WebKit().load('http://github.com')
   .png('github.png')
+  .wait('idle')
   .pdf('github.pdf')
   .html(function(err, html) {
     // the html body as string
@@ -212,7 +213,8 @@ methods
 -------
 
 * new Webkit()  
-  creates a totally unusable object
+  creates an unitialized instance upon which init() must be called.  
+  WebKit is also an EventEmitter.
 
 * WebKit([opts])  
   create an instance with the chainable API using `chainit`.  
@@ -225,6 +227,10 @@ methods
 * load(uri, [opts], [cb])  
   load uri into webview  
   see parameters described above
+
+* wait(event, cb)  
+  analogous to once(event, cb) except that it is usable in the chainable API.  
+  It is useful before calling html, png, pdf methods: `.wait('load').png(...)`.
 
 * run(sync-script, cb)  
   any synchronous script text or global function
@@ -244,15 +250,15 @@ methods
   only arguments errors - it can be omitted if the chainable API isn't used.
 
 * png(writableStream or filename, [cb])  
-  takes a png snapshot of the whole document after it is loaded.  
+  takes a png snapshot of the whole document right now.  
   If invoked with a filename, save the stream to file.  
   Tip: use custom css to cut portions of the document.
 
 * html(cb)  
-  get documentElement.outerHTML when document is ready
+  get documentElement.outerHTML right now.
 
 * pdf(filepath, [opts], [cb])  
-  print page to file  
+  print page to file right now  
   orientation : "landscape" or "portrait", default "portrait"  
   fullpage : boolean, sets margins to 0, default false
 

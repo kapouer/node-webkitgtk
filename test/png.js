@@ -6,7 +6,7 @@ describe("png method", function suite() {
 	it("should wait for load event and save a screenshot to disk", function(done) {
 		this.timeout(10000);
 		var filepath = __dirname + '/shots/test.png';
-		WebKit().load("https://www.debian.org/").png(filepath, function(err) {
+		WebKit().load("https://www.debian.org/").wait('load').png(filepath, function(err) {
 			expect(err).to.not.be.ok();
 			fs.stat(filepath, function(err, stat) {
 				expect(stat.size).to.be.above(50000);

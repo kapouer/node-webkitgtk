@@ -11,7 +11,7 @@ describe("pdf method", function suite() {
 			stylesheet: __dirname + "/../css/png.css"
 		}, function(err) {
 			expect(err).to.not.be.ok();
-		}).pdf(pdfpath, function(err) {
+		}).wait('load').pdf(pdfpath, function(err) {
 			expect(err).to.not.be.ok();
 			fs.stat(pdfpath, function(err, stat) {
 				expect(stat.size).to.be.above(100000);

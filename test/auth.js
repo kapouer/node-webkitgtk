@@ -38,7 +38,7 @@ describe("authenticate event", function suite() {
 			expect(authRequest.port).to.be(8006);
 			expect(authRequest.realm).to.be(realm);
 			authRequest.use('mylog', 'mypass');
-		}).html(function(err, html) {
+		}).wait('ready').html(function(err, html) {
 			expect(html).to.be("<html><head></head><body>User: mylog</body></html>");
 			server.close();
 			done();
