@@ -13,13 +13,13 @@ The chainable API (requires `chainit`)
 
 ```js
 WebKit().load('http://github.com')
+  .wait('ready')
+  .html(function(err, str) { console.log(str); })
+  .wait('load')
   .png('github.png')
   .wait('idle')
   .pdf('github.pdf')
-  .html(function(err, html) {
-    // the html body as string
-    console.log(this.status, html);
-  }).on('authenticate', function(auth) {
+  .on('authenticate', function(auth) {
     auth.use('mylogin', 'mypass');
   }).on('request', function(req) {
     if (/\.js/.test(req.uri)) req.uri = null;
