@@ -13,7 +13,7 @@ describe("runev method", function suite() {
 				if (++count == 3) return;
 				setTimeout(twice, 100);
 			})();
-		}, function(){}).on('testev', function(count, hello) {
+		}).on('testev', function(count, hello) {
 			expect(hello).to.be("hello");
 			expect(countCalls++).to.be(count);
 			if (count == 2) done();
