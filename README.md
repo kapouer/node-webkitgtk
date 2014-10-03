@@ -246,8 +246,6 @@ methods
   be listened using view.on(event, listener).  
   Can be used to listen recurring events, but the gtk loop needs to be
   running, see above.  
-  The cb argument is only there for the chaining API to work, it reports
-  only arguments errors - it can be omitted if the chainable API isn't used.
 
 * png(writableStream or filename, [cb])  
   takes a png snapshot of the whole document right now.  
