@@ -18,6 +18,7 @@ var LOADING = 3;
 
 var ChainableWebKit;
 
+// chainit helper, see below
 function Listener() {}
 Listener.prototype.listen = function() {
 	var args = Array.prototype.slice.call(arguments, 0);
@@ -28,20 +29,30 @@ Listener.prototype.listen = function() {
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
 		var chainit = require('chainit');
+
 		WebKit.prototype.wait = function(obj, cb) {
 			// lstn.args is set, event fired, callback now
 			if (obj.args) cb.apply(null, obj.args);
 			else obj.cb = cb;
 		};
 		if (!ChainableWebKit) ChainableWebKit = chainit(WebKit);
+
 		var inst = new ChainableWebKit();
+
+		// work around https://github.com/vvo/chainit/issues/13
+		var runev = inst.runev;
+		inst.runev = function(fun, cb) {
+			cb = cb || noop;
+			return runev.call(this, fun, cb);
+		};
+
+		// work around https://github.com/vvo/chainit/issues/12
 		var wait = inst.wait;
 		inst.wait = function(ev, cb) {
 			var lstn = new Listener();
 			this.once(ev, lstn.listen.bind(lstn));
-			if (cb) wait.call(this, lstn, cb);
-			else wait.call(this, lstn);
-			return this;
+			if (cb) return wait.call(this, lstn, cb);
+			else return wait.call(this, lstn);
 		};
 		if (cb) return inst.init(opts, cb);
 		else return inst.init(opts);
