@@ -38,6 +38,29 @@ describe("wait for event", function suite() {
 			.wait('load', called.bind(null, 1, "load"))
 			.wait('idle', called.bind(null, 2, "idle"));
 	});
+	it("then chain then wait another event and chain", function(done) {
+		this.timeout(5000);
+		var pngpath = __dirname + '/shots/test4.png';
+		var pdfpath = __dirname + '/shots/test4.pdf';
+		var called = 0;
+		WebKit().load("https://www.debian.org").wait('ready').html(function(err, str) {
+			expect(err).to.not.be.ok();
+			expect(str.length).to.be.above(2000);
+			called++;
+		}).wait('load').pdf(pdfpath, function(err) {
+			expect(err).to.not.be.ok();
+			fs.stat(pdfpath, function(err, stat) {
+				expect(stat.size).to.be.above(50000);
+				called++;
+			});
+		}).wait('idle').png(pngpath, function(err) {
+			fs.stat(pngpath, function(err, stat) {
+				expect(stat.size).to.be.above(50000);
+				expect(called).to.be(2);
+				done();
+			});
+		});
+	});
 });
 
 
