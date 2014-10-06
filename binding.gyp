@@ -14,13 +14,13 @@
           'cflags_cc' : [
               '<!@(pkg-config gtk+-3.0 --cflags)',
               '<!@(pkg-config glib-2.0 --cflags)',
-              '<!@(pkg-config webkit2gtk-3.0 --cflags)',
+              '<!@(pkg-config webkit2gtk-4.0 --cflags)',
               '-I/usr/include/gtk-3.0/unix-print'
           ],
           'libraries':[
               '<!@(pkg-config gtk+-3.0 --libs)',
               '<!@(pkg-config glib-2.0 --libs)',
-              '<!@(pkg-config webkit2gtk-3.0 --libs)'
+              '<!@(pkg-config webkit2gtk-4.0 --libs)'
           ],
           'ldflags': ['-ldl']
         }]
@@ -36,12 +36,12 @@
           'cflags': ['-fPIC'],
           'cflags_cc' : [
               '<!@(pkg-config glib-2.0 --cflags)',
-              '<!@(pkg-config webkit2gtk-3.0 --cflags)',
+              '<!@(pkg-config webkit2gtk-4.0 --cflags)',
               '<!@(pkg-config dbus-glib-1 --cflags)'
           ],
           'libraries':[
               '<!@(pkg-config glib-2.0 --libs)',
-              '<!@(pkg-config webkit2gtk-3.0 --libs)',
+              '<!@(pkg-config webkit2gtk-4.0 --libs)',
               '<!@(pkg-config dbus-glib-1 --libs)',
               '-ldl'
           ]
