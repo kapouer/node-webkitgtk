@@ -72,8 +72,7 @@ WebView::WebView(Handle<Object> opts) {
     }
   }
 
-  WebKitWebViewGroup* group = webkit_web_view_group_new(NULL);
-  view = WEBKIT_WEB_VIEW(webkit_web_view_new_with_group(group));
+  view = WEBKIT_WEB_VIEW(webkit_web_view_new());
 
   window = gtk_offscreen_window_new();
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
@@ -374,17 +373,16 @@ NAN_METHOD(WebView::Load) {
   if (self->content != NULL) delete self->content;
   if (opts->Has(H("content"))) self->content = **(new NanUtf8String(opts->Get(H("content"))));
 
-  WebKitWebViewGroup* group = webkit_web_view_get_group(self->view);
-  webkit_web_view_group_remove_all_user_style_sheets(group);
-  if (opts->Has(H("css"))) webkit_web_view_group_add_user_style_sheet(
-    group,
-    *NanUtf8String(opts->Get(H("css"))),
-    **uri,
-    NULL, // whitelist
-    NULL, // blacklist
-    WEBKIT_INJECTED_CONTENT_FRAMES_TOP_ONLY
-  );
-
+  if (opts->Has(H("css"))) {
+    WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
+    WebKitUserStyleSheet* styleSheet = webkit_user_style_sheet_new(
+      *NanUtf8String(opts->Get(H("css"))),
+      WEBKIT_USER_CONTENT_INJECT_TOP_FRAME,
+      WEBKIT_USER_STYLE_LEVEL_AUTHOR, // or WEBKIT_USER_STYLE_LEVEL_USER
+      NULL, NULL
+    );
+    webkit_user_content_manager_add_style_sheet(contman, styleSheet);
+  }
   gtk_window_set_default_size(GTK_WINDOW(self->window),
     NanUInt32OptionValue(opts, H("width"), 1024),
     NanUInt32OptionValue(opts, H("height"), 768)
