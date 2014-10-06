@@ -61,6 +61,7 @@ WebView::WebView(Handle<Object> opts) {
   WebKitWebContext* context = webkit_web_context_get_default();
   webkit_web_context_set_process_model(context, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
   webkit_web_context_set_cache_model(context, WEBKIT_CACHE_MODEL_WEB_BROWSER);
+  webkit_web_context_set_tls_errors_policy(context, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 
   if (opts->Has(H("webextension"))) {
     NanUtf8String* wePath = new NanUtf8String(opts->Get(H("webextension")));
