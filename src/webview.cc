@@ -213,7 +213,8 @@ gboolean WebView::DecidePolicy(WebKitWebView* web_view, WebKitPolicyDecision* de
   WebView* self = (WebView*)data;
   if (type == WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION) {
     WebKitNavigationPolicyDecision* navDecision = WEBKIT_NAVIGATION_POLICY_DECISION(decision);
-    WebKitURIRequest* navRequest = webkit_navigation_policy_decision_get_request(navDecision);
+    WebKitNavigationAction* navAction = webkit_navigation_policy_decision_get_navigation_action(navDecision);
+    WebKitURIRequest* navRequest = webkit_navigation_action_get_request(navAction);
     Local<String> uri = NanNew<String>(webkit_uri_request_get_uri(navRequest));
     Local<String> type = NanNew<String>("navigation");
     Handle<Value> argv[] = { type, uri };
