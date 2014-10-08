@@ -63,6 +63,18 @@ describe("load method", function suite() {
 		});
 	});
 
+	it("should time out then unload", function(done) {
+		this.timeout(500);
+		WebKit().load('http://google.com', {timeout:50}, function(err) {
+			expect(err).to.be.ok();
+			expect(this.status).to.be(0);
+			this.unload(function(err) {
+				expect(err).to.not.be.ok();
+				done();
+			});
+		});
+	});
+
 	it("should not stop after a stop call", function(done) {
 		this.timeout(21000);
 		WebKit().load('http://google.com', function(err) {

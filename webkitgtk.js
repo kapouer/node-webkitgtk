@@ -339,6 +339,7 @@ function load(uri, opts, cb) {
 		loop.call(this);
 		priv.timeout = setTimeout(stop.bind(this), opts.timeout || 30000);
 		this.webview.load(uri, opts, function(err, status) {
+			priv.state = INITIALIZED;
 			if (priv.timeout) {
 				clearTimeout(priv.timeout);
 				delete priv.timeout;
@@ -350,7 +351,6 @@ function load(uri, opts, cb) {
 				cb(err, this);
 				if (err) return;
 			}
-			priv.state = INITIALIZED;
 			setImmediate(function() {
 				if (priv.state != INITIALIZED) {
 					return;
