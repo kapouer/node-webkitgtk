@@ -53,4 +53,63 @@ describe("load method", function suite() {
 			});
 		});
 	});
+
+	it("should time out", function(done) {
+		this.timeout(500);
+		WebKit().load('http://google.com', {timeout:50}, function(err) {
+			expect(err).to.be.ok();
+			expect(this.status).to.be(0);
+			done();
+		});
+	});
+
+	it("should not stop after a stop call", function(done) {
+		this.timeout(21000);
+		WebKit().load('http://google.com', function(err) {
+			expect(err).to.not.be.ok();
+			this.stop(function(err, wasLoading) {
+				expect(err).to.not.be.ok();
+				expect(wasLoading).to.be(true);
+			});
+		}).wait('load', function(err) {
+			this.stop(function(err, wasLoading) {
+				expect(wasLoading).to.be(false);
+				done();
+			});
+		});
+	});
+	it("should fail gracefully", function(done) {
+		var server = require('http').createServer(function(req, res) {
+			res.statusCode = 501;
+			res.end("fail");
+		}).listen(8011);
+
+		WebKit().load("http://localhost:8011", function(err, view) {
+			expect(err).to.be(501);
+			setImmediate(function() {
+				server.close();
+				done();
+			});
+		});
+	});
+	it("should fail gracefully even with a timeout", function(done) {
+		var server = require('http').createServer(function(req, res) {
+			setTimeout(function() {
+				res.statusCode = 501;
+				res.end("fail");
+			}, 1000);
+		}).listen(8012);
+
+		WebKit().load("http://localhost:8012", {timeout: 500}, function(err, view) {
+			expect(err).not.to.be(501);
+			this.stop(function(err, wasLoading) {
+				expect(err).to.not.be.ok();
+				expect(wasLoading).to.be(false);
+			});
+			setTimeout(function() {
+				server.close();
+				done();
+			}, 1000);
+		});
+	});
 });
