@@ -1,6 +1,6 @@
 {
   "name": "webkitgtk",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Drive webkitgtk from Node.js",
   "keywords": [
     "webkit",
@@ -14,7 +14,7 @@
   "main": "webkitgtk.js",
   "dependencies": {
     "nan": "^1.3.0",
-    "chainit": "https://github.com/kapouer/chainit/archive/3.0.1.tar.gz"
+    "chainit": "https://github.com/kapouer/chainit/archive/3.0.2.tar.gz"
   },
   "optionalDependencies": {
     "headless": "^1.0.0"
