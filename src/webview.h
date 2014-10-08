@@ -73,6 +73,7 @@ private:
   NanUtf8String* printUri = NULL;
 
   NanCallback* loadCallback = NULL;
+  NanCallback* stopCallback = NULL;
   NanCallback* requestCallback = NULL;
   NanCallback* responseCallback = NULL;
   NanCallback* policyCallback = NULL;

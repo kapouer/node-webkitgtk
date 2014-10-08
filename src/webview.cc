@@ -91,10 +91,9 @@ NAN_METHOD(WebView::Stop) {
   WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
   gboolean wasLoading = FALSE;
   if (self->state == DOCUMENT_LOADING) {
-    delete self->loadCallback;
-    self->loadCallback = new NanCallback(args[0].As<Function>());
     wasLoading = TRUE;
   }
+  self->stopCallback = new NanCallback(args[0].As<Function>());
   webkit_web_view_stop_loading(self->view);
   NanReturnValue(NanNew<Boolean>(wasLoading));
 }
@@ -121,7 +120,8 @@ void WebView::destroy() {
   delete printCallback;
   delete printUri;
 
-  delete loadCallback;
+  if (loadCallback != NULL) delete loadCallback;
+  if (stopCallback != NULL) delete stopCallback;
   delete requestCallback;
   delete responseCallback;
   delete policyCallback;
@@ -293,11 +293,15 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
       * same page is performed */
       if (self->state == DOCUMENT_LOADING) {
         self->uri = webkit_web_view_get_uri(web_view);
-        Handle<Value> argv[] = {
-          NanNull(),
-          NanNew<Integer>(getStatusFromView(web_view))
-        };
-        self->loadCallback->Call(2, argv);
+        if (self->loadCallback != NULL) {
+          Handle<Value> argv[] = {
+            NanNull(),
+            NanNew<Integer>(getStatusFromView(web_view))
+          };
+          self->loadCallback->Call(2, argv);
+          delete self->loadCallback;
+          self->loadCallback = NULL;
+        }
       }
     break;
     case WEBKIT_LOAD_FINISHED: // 3
@@ -313,12 +317,22 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gchar* failing_uri, GError* error, gpointer data) {
   WebView* self = (WebView*)data;
   if (self->nextUri == NULL && self->state == DOCUMENT_LOADING && g_strcmp0(failing_uri, self->uri) == 0) {
-    self->state = DOCUMENT_ERROR;
-    Handle<Value> argv[] = {
-      NanError(error->message),
-      NanNew<Integer>(getStatusFromView(web_view))
-    };
-    self->loadCallback->Call(2, argv);
+    if (self->loadCallback != NULL) {
+      self->state = DOCUMENT_ERROR;
+      Handle<Value> argv[] = {
+        NanError(error->message),
+        NanNew<Integer>(getStatusFromView(web_view))
+      };
+      self->loadCallback->Call(2, argv);
+      delete self->loadCallback;
+      self->loadCallback = NULL;
+    }
+    if (self->stopCallback != NULL) {
+      Handle<Value> argvstop[] = {};
+      self->stopCallback->Call(0, argvstop);
+      delete self->stopCallback;
+      self->stopCallback = NULL;
+    }
     return TRUE;
   } else {
     return FALSE;
