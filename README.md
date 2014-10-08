@@ -133,6 +133,10 @@ load() options
 - ua  
   user-agent string, default to "Mozilla/5.0"
 
+- timeout  
+  number, default 30000  
+  timeout for load(), in milliseconds
+
 
 init() options
 --------------
