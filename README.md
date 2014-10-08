@@ -336,7 +336,8 @@ These libraries and their development files must be available in usual
 locations.
 
 ```
-webkit2gtk-3.0 (2.4.x)
+webkit2gtk-3.0 (2.4.x), for node-webkitgtk 1.2.x
+webkit2gtk-4.0 (2.6.x), for node-webkitgtk >= 1.3.0
 dbus-glib-1
 glib-2.0
 gtk+-3.0
@@ -347,7 +348,8 @@ Also usual development tools are needed (pkg-config, gcc, and so on).
 On debian, these packages are needed :
 
 ```
-libwebkit2gtk-3.0-dev
+libwebkit2gtk-3.0-dev (2.4.x), for node-webkitgtk 1.2.x
+libwebkit2gtk-4.0-dev (2.6.x), for node-webkitgtk >= 1.3.0
 libdbus-glib-1-dev
 ```
 
