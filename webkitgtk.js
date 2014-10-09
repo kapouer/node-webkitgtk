@@ -39,13 +39,6 @@ function WebKit(opts, cb) {
 
 		var inst = new ChainableWebKit();
 
-		// work around https://github.com/vvo/chainit/issues/13
-		var runev = inst.runev;
-		inst.runev = function(fun, cb) {
-			cb = cb || noop;
-			return runev.call(this, fun, cb);
-		};
-
 		// work around https://github.com/vvo/chainit/issues/12
 		var wait = inst.wait;
 		inst.wait = function(ev, cb) {
@@ -300,18 +293,17 @@ function errorLoad(state) {
 	else if (state > INITIALIZED) return "cannot call method during loading";
 }
 
-WebKit.prototype.load = function(uri, opts, cb) {
+WebKit.prototype.load = function(uri, cb) {
+	var opts = {};
+	if (typeof cb != "function") {
+		opts = cb;
+		cb = arguments[2];
+	}
+	if (!cb) cb = noop;
 	load.call(this, uri, opts, cb);
 };
 
 function load(uri, opts, cb) {
-	if (!cb && typeof opts == "function") {
-		cb = opts;
-		opts = {};
-	} else if (!opts) {
-		opts = {};
-	}
-	if (!cb) cb = noop;
 	var priv = this.priv;
 	if (priv.state != INITIALIZED) return cb(new Error(errorLoad(priv.state)), this);
 
@@ -604,12 +596,11 @@ WebKit.prototype.html = function(cb) {
 	runcb.call(this, "document.documentElement.outerHTML;", cb);
 };
 
-WebKit.prototype.pdf = function(filepath, opts, cb) {
-	if (!cb && typeof opts == "function") {
-		cb = opts;
-		opts = {};
-	} else if (!opts) {
-		opts = {};
+WebKit.prototype.pdf = function(filepath, cb) {
+	var opts = {};
+	if (typeof cb != "function") {
+		opts = cb;
+		cb = arguments[2];
 	}
 	if (!cb) cb = noop;
 	pdf.call(this, filepath, opts, cb);
