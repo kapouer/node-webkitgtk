@@ -28,7 +28,7 @@ Listener.prototype.listen = function() {
 
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
-		var chainit = require('chainit');
+		var chainit = require('chainit3');
 
 		WebKit.prototype.wait = function(obj, cb) {
 			// lstn.args is set, event fired, callback now
