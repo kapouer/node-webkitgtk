@@ -9,7 +9,7 @@ it doesn't embed static libraries at all.
 usage
 -----
 
-The chainable API (requires `chainit`)
+A chainable API:
 
 ```js
 WebKit().load('http://github.com')
@@ -32,7 +32,7 @@ WebKit().load('http://github.com')
 ```
 
 
-Or the basic one from which the chainable API is built
+which is derived from the basic API using `chainit3`:
 
 ```js
 var WebKit = require('webkitgtk');
