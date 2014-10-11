@@ -38,20 +38,20 @@ which is derived from the basic API using `chainit3`:
 var WebKit = require('webkitgtk');
 var view = new WebKit();
 view.init({
-	width: 1024,
-	height: 768,
-	display: "99"
+  width: 1024,
+  height: 768,
+  display: "99"
 }, function(err, view) {
-	view.load(uri, {
-		stylesheet: "css/png.css"
-	}, function(err) {
-		if (err) console.error(err);
-	}).on('load', function() {
-		this.png().save('test.png', function(err) {
-			if (err) console.error(err);
-			else console.log("screenshot saved", uri);
-		});
-	});
+  view.load(uri, {
+    stylesheet: "css/png.css"
+  }, function(err) {
+    if (err) console.error(err);
+  }).on('load', function() {
+    this.png().save('test.png', function(err) {
+      if (err) console.error(err);
+      else console.log("screenshot saved", uri);
+    });
+  });
 });
 ```
 
@@ -66,8 +66,8 @@ WebKit(98).load("http://google.com")
 
 // use pre-existing display 0 by default
 Webkit().load("http://webkitgtk.org").html(function(err, html) {
-	// dump html
-	console.log(html);
+  // dump html
+  console.log(html);
 });
 ```
 
