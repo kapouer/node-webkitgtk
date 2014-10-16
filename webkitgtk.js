@@ -192,25 +192,21 @@ function Request(uri) {
 function Response(view, binding) {
 	this.binding = binding;
 	this.view = view;
+	this.headers = binding.headers;
 }
-Object.defineProperty(Response.prototype, "uri", {
-  get: function() {
-		if (this._uri == null) this._uri = this.binding.uri;
-		return this._uri;
-	}
-});
-Object.defineProperty(Response.prototype, "status", {
-  get: function() {
-		if (this._status == null) this._status = this.binding.status;
-		return this._status;
-	}
-});
-Object.defineProperty(Response.prototype, "mime", {
-  get: function() {
-		if (this._mime == null) this._mime = this.binding.mime;
-		return this._mime;
-	}
-});
+"uri status mime headers length filename".split(' ').forEach(
+	defineCachedGet.bind(null, Response.prototype, "binding")
+);
+function defineCachedGet(proto, prop, name) {
+	var hname = '_' + name;
+	Object.defineProperty(proto, name, {
+		get: function() {
+			if (this[hname] == undefined) this[hname] = this[prop][name];
+			return this[hname];
+		}
+	});
+}
+
 Response.prototype.data = function(cb) {
 	if (!cb) throw new Error("Missing callback");
 	var view = this.view;

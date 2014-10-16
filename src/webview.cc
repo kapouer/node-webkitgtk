@@ -1,6 +1,7 @@
 #include <JavaScriptCore/JSValueRef.h>
 #include <JavaScriptCore/JSStringRef.h>
 #include "webview.h"
+#include "soupheaders.h"
 #include "webresponse.h"
 #include "webauthrequest.h"
 #include "dbus.h"
@@ -171,7 +172,7 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 
   constructor = Persistent<Function>::New(tpl->GetFunction());
   module->Set(NanNew("exports"), constructor);
-
+  SoupHeaders::Init(exports);
   WebResponse::Init(exports);
   WebAuthRequest::Init(exports);
 }

@@ -202,9 +202,9 @@ These events can happen at any moment:
   If request.uri is set to null or "", the request is cancelled.
 
 * response  
-  listener(response)  
-  response.uri, response.mime, response.status are read-only.  
-  response.data(function(err, buf)) fetches the response data.
+  listener(res)  
+  res have read-only properties uri, mime, status, length, filename, headers.  
+  res.data(function(err, buf)) fetches the response data.
 
 * authenticate  
   listener(request) where request.host, request.port, request.realm are

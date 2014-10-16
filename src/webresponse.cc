@@ -1,5 +1,5 @@
 #include "webresponse.h"
-
+#include "soupheaders.h"
 
 using namespace v8;
 
@@ -31,6 +31,9 @@ void WebResponse::Init(Handle<Object> target) {
   ATTR(tpl, "uri", get_prop, NULL);
   ATTR(tpl, "status", get_prop, NULL);
   ATTR(tpl, "mime", get_prop, NULL);
+  ATTR(tpl, "headers", get_prop, NULL);
+  ATTR(tpl, "length", get_prop, NULL);
+  ATTR(tpl, "filename", get_prop, NULL);
 
   NODE_SET_PROTOTYPE_METHOD(tpl, "data", WebResponse::Data);
 
@@ -96,6 +99,22 @@ NAN_GETTER(WebResponse::get_prop) {
     } else {
       NanReturnValue(NanNew<Integer>(0));
     }
+  } else if (propstr == "headers") {
+    Handle<Object> obj = SoupHeaders::constructor->GetFunction()->NewInstance();
+    SoupHeaders* selfHeaders = node::ObjectWrap::Unwrap<SoupHeaders>(obj);
+    selfHeaders->init(webkit_uri_response_get_http_headers(self->response));
+    NanReturnValue(obj);
+  } else if (propstr == "length") {
+    if (self->response != NULL) {
+      NanReturnValue(NanNew<Integer>(webkit_uri_response_get_content_length(self->response)));
+    } else {
+      NanReturnValue(NanNew<Integer>(0));
+    }
+  } else if (propstr == "filename") {
+    if (self->response == NULL) NanReturnNull();
+    const char* filename = webkit_uri_response_get_suggested_filename(self->response);
+    if (filename == NULL) NanReturnNull();
+    else NanReturnValue(NanNew<String>(filename));
   }
   NanReturnUndefined();
 }
