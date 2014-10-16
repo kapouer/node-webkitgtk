@@ -192,7 +192,6 @@ function Request(uri) {
 function Response(view, binding) {
 	this.binding = binding;
 	this.view = view;
-	this.headers = binding.headers;
 }
 "uri status mime headers length filename".split(' ').forEach(
 	defineCachedGet.bind(null, Response.prototype, "binding")
