@@ -281,8 +281,8 @@ properties
 
 * readyState  
   Read-only: empty, "opening", "loading", "interactive", "complete"  
-  Before the first call to .load() it is empty, and before the callback
-  it is opening.
+  Before the first call to .load(cb) it is empty, and before cb is called it
+  is opening.
 
 
 gtk loop and events
@@ -297,7 +297,7 @@ To allow the gtk loop to stop when running it is no longer useful,
 webkitgtk starts running the gtk loop when these methods are called:
 
 * load
-* run but not the run(fun, event) signature
+* run (but not runev)
 * pdf
 * png
 * html
@@ -312,8 +312,8 @@ and it stops running the gtk loop when these conditions are met:
 For example, if there are no "idle" listeners after "load" is emitted,
 the loop won't be kept running.
 
-Note that calling run(fun, event) won't start the gtk loop, and receiving
-such events won't stop the gtk loop either.
+Note that calling runev() won't start the gtk loop, so one has to add a lifecycle
+event listener to process and receive events sent by runev script.
 
 To keep the gtk loop running forever, just listen to "unload" event.
 
@@ -321,14 +321,14 @@ To keep the gtk loop running forever, just listen to "unload" event.
 about plugins
 -------------
 
-In webkit2gtk ^2.4.4, if there are plugins in `/usr/lib/mozilla/plugins`
-they could be loaded (but not necessarily enabled on the WebView),
+In webkit2gtk >= 2.4.4, if there are plugins in `/usr/lib/mozilla/plugins`
+they are initialized (but not necessarily enabled on the WebView),
 and that could impact first page load time greatly - especially if
 there's a java plugin.
 
 Workaround:
 uninstall the plugin, on my dev machine it was
-/usr/lib/mozilla/plugins/libjavaplugin.so installed by icedtea.
+`/usr/lib/mozilla/plugins/libjavaplugin.so` installed by icedtea.
 
 
 install
