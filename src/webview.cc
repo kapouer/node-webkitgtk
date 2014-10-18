@@ -1,5 +1,6 @@
 #include <JavaScriptCore/JSValueRef.h>
 #include <JavaScriptCore/JSStringRef.h>
+#include "utils.h"
 #include "webview.h"
 #include "soupheaders.h"
 #include "webresponse.h"
@@ -18,9 +19,7 @@ static const GDBusInterfaceVTable interface_vtable = {
 };
 
 WebView::WebView(Handle<Object> opts) {
-  if (opts->Has(H("eventName"))) {
-    this->eventName = **(new NanUtf8String(opts->Get(H("eventName"))));
-  }
+  this->eventName = getStr(opts, "eventName");
   if (opts->Has(H("requestListener"))) {
     this->requestCallback = new NanCallback(opts->Get(H("requestListener")).As<Function>());
   }
@@ -60,17 +59,19 @@ WebView::WebView(Handle<Object> opts) {
   g_signal_connect(this->server, "new-connection", G_CALLBACK(on_new_connection), this);
 
   WebKitWebContext* context = webkit_web_context_get_default();
+  const gchar* cacheDir = getStr(opts, "cacheDir");
+  if (cacheDir == NULL) {
+    cacheDir = g_build_filename(g_get_user_cache_dir(), "node-webkitgtk", NULL);
+  }
+  webkit_web_context_set_disk_cache_directory(context, cacheDir);
   webkit_web_context_set_process_model(context, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
   webkit_web_context_set_cache_model(context, WEBKIT_CACHE_MODEL_WEB_BROWSER);
   webkit_web_context_set_tls_errors_policy(context, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 
-  if (opts->Has(H("webextension"))) {
-    NanUtf8String* wePath = new NanUtf8String(opts->Get(H("webextension")));
-    if (wePath->Size() > 1) {
-      webkit_web_context_set_web_extensions_directory(context, **wePath);
-      this->contextSignalId = g_signal_connect(context, "initialize-web-extensions", G_CALLBACK(WebView::InitExtensions), this);
-      delete wePath;
-    }
+  const gchar* wePath = getStr(opts, "webextension");
+  if (wePath != NULL) {
+    webkit_web_context_set_web_extensions_directory(context, wePath);
+    this->contextSignalId = g_signal_connect(context, "initialize-web-extensions", G_CALLBACK(WebView::InitExtensions), this);
   }
 
   view = WEBKIT_WEB_VIEW(webkit_web_view_new_with_user_content_manager(webkit_user_content_manager_new()));
@@ -384,30 +385,31 @@ NAN_METHOD(WebView::Load) {
   Local<Object> opts = args[1]->ToObject();
 
   if (self->cookie != NULL) delete self->cookie;
-  if (opts->Has(H("cookie"))) self->cookie = **(new NanUtf8String(opts->Get(H("cookie"))));
+  self->cookie = getStr(opts, "cookie");
 
   if (self->content != NULL) delete self->content;
-  if (opts->Has(H("content"))) self->content = **(new NanUtf8String(opts->Get(H("content"))));
+  self->content = getStr(opts, "content");
 
-  if (opts->Has(H("css"))) {
+  const gchar* css = getStr(opts, "css");
+
+  if (css != NULL) {
     WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
     WebKitUserStyleSheet* styleSheet = webkit_user_style_sheet_new(
-      *NanUtf8String(opts->Get(H("css"))),
+      css,
       WEBKIT_USER_CONTENT_INJECT_TOP_FRAME,
       WEBKIT_USER_STYLE_LEVEL_AUTHOR, // or WEBKIT_USER_STYLE_LEVEL_USER
       NULL, NULL
     );
     webkit_user_content_manager_add_style_sheet(contman, styleSheet);
+    delete css;
   }
   gtk_window_set_default_size(GTK_WINDOW(self->window),
     NanUInt32OptionValue(opts, H("width"), 1024),
     NanUInt32OptionValue(opts, H("height"), 768)
   );
   //gtk_window_resize(GTK_WINDOW(self->window), width, height); // useless
-  const gchar* ua;
-  if (opts->Has(H("ua"))) {
-    ua = **(new NanUtf8String(opts->Get(H("ua"))));
-  } else {
+  const gchar* ua = getStr(opts, "ua");
+  if (ua == NULL) {
     ua = "Mozilla/5.0";
   }
 
@@ -601,7 +603,7 @@ NAN_METHOD(WebView::Print) {
 	GtkPaperSize* paper = gtk_paper_size_new(GTK_PAPER_NAME_A4);
   GtkPageOrientation orientation = GTK_PAGE_ORIENTATION_PORTRAIT;
 
-  if (opts->Has(H("orientation")) && g_strcmp0(*String::Utf8Value(opts->Get(H("orientation"))->ToString()), "landscape")) {
+  if (g_strcmp0(getStr(opts, "orientation"), "landscape")) {
     orientation = GTK_PAGE_ORIENTATION_LANDSCAPE;
   }
   gtk_print_settings_set_orientation(settings, orientation);

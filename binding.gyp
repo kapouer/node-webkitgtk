@@ -5,6 +5,7 @@
       'conditions': [
         ['OS=="linux"', {
           'sources': [
+            'src/utils.cc',
             'src/soupheaders.cc',
             'src/webauthrequest.cc',
             'src/webresponse.cc',

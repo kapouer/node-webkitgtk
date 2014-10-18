@@ -9,8 +9,6 @@
 
 using namespace v8;
 
-#define H(name) NanNew<String>(name)
-
 static const GDBusNodeInfo* introspection_data;
 
 class WebView : public node::ObjectWrap {

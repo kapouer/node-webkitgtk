@@ -158,6 +158,10 @@ init() options
   string, null  
   a short-hand notation for passing all these options at once.
 
+- cacheDir  
+  string, $user_cache_dir/node-webkitgtk  
+  path to webkitgtk cache directory.
+
 If width, height, depth options are given, an xvfb instance listening
 given display port will be spawn using `headless` module.
 
