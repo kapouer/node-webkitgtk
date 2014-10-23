@@ -160,7 +160,8 @@ init() options
 
 - cacheDir  
   string, $user_cache_dir/node-webkitgtk  
-  path to webkitgtk cache directory.
+  path to webkitgtk cache directory.  
+  The simplest way to clear the cache is to delete this directory.
 
 If width, height, depth options are given, an xvfb instance listening
 given display port will be spawn using `headless` module.
