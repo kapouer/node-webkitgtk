@@ -316,7 +316,7 @@ function load(uri, opts, cb) {
 			fs.readFile(opts.stylesheet, function(err, css) {
 				if (err) console.error(err);
 				if (opts.css) console.error("stylesheet option overwrites css option");
-				if (css) opts.css = css;
+				if (css) opts.css = css.toString();
 				next();
 			});
 		} else {
