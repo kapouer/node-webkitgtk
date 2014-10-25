@@ -28,4 +28,21 @@ describe("unload method", function suite() {
 			done();
 		});
 	});
+
+	it("should remove all listeners and not fail on next load", function(done) {
+		this.timeout(10000);
+		var v = new WebKit();
+		v.init(0, function(err) {
+			v.load('http://google.com', {allow: "none"});
+			v.on('ready', function() {
+				v.unload(function(err) {
+					v.removeAllListeners();
+					v.load('http://github.com', {allow:"none"});
+					v.on('ready', function() {
+						done();
+					});
+				});
+			});
+		});
+	});
 });
