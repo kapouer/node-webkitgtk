@@ -410,7 +410,7 @@ WebKit.prototype.unload = function(cb) {
 		priv.tickets = {};
 		priv.loopForCallbacks = 0;
 		emitLifeEvent.call(this, 'unload');
-		cb();
+		setImmediate(cb);
 	}.bind(this));
 };
 
