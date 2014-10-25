@@ -52,15 +52,6 @@ function WebKit(opts, cb) {
 	}
 	if (opts) throw new Error("Use WebKit(opts, cb) as short-hand for Webkit().init(opts, cb)");
 	var priv = this.priv = initialPriv();
-	this.on('error', function(msg, uri, line, column) {
-		if (this.listeners('error').length <= 1) {
-			console.error(msg, "\n", uri, "line", line, "column", column);
-		}
-	});
-	this.on('ready', lifeEventHandler.bind(this, 'ready'));
-	this.on('load', lifeEventHandler.bind(this, 'load'));
-	this.on('idle', lifeEventHandler.bind(this, 'idle'));
-	this.on('unload', lifeEventHandler.bind(this, 'unload'));
 }
 util.inherits(WebKit, events.EventEmitter);
 
@@ -125,7 +116,7 @@ function initialPriv() {
 	};
 }
 
-function lifeEventHandler(event) {
+function emitLifeEvent(event) {
 	setImmediate(function() {
 		var willStop = event == "unload" || this.listeners('unload').length == 1 && (
 			event == "idle" || this.listeners('idle').length == 1 && (
@@ -138,6 +129,7 @@ function lifeEventHandler(event) {
 			this.priv.loopForLife = false;
 		}
 	}.bind(this));
+	this.emit(event);
 }
 
 function authDispatcher(request) {
@@ -326,6 +318,13 @@ function load(uri, opts, cb) {
 		priv.loopForLife = true;
 		loop.call(this);
 		priv.timeout = setTimeout(stop.bind(this), opts.timeout || 30000);
+		if (!priv.preloading && this.listeners('error').length == 0) {
+			this.on('error', function(msg, uri, line, column) {
+				if (this.listeners('error').length <= 1) {
+					console.error(msg, "\n", uri, "line", line, "column", column);
+				}
+			});
+		}
 		this.webview.load(uri, opts, function(err, status) {
 			priv.state = INITIALIZED;
 			if (priv.timeout) {
@@ -356,10 +355,10 @@ function load(uri, opts, cb) {
 				}, function(err, result) {
 					if (err) console.error(err);
 					this.readyState = result;
-					var prefix = priv.preloading ? "pre" : "";
-					this.emit(prefix + 'ready');
+					if (!priv.preloading) emitLifeEvent.call(this, 'ready');
 					if (result == "complete") {
-						this.emit(prefix + 'load');
+						if (!priv.preloading) emitLifeEvent.call(this, 'load');
+						else this.emit('preload');
 					}	else {
 						runcb.call(this, function(done) {
 							if (document.readyState == "complete") done(null, document.readyState);
@@ -367,7 +366,8 @@ function load(uri, opts, cb) {
 						}, function(err, result) {
 							if (err) console.error(err);
 							this.readyState = result;
-							this.emit(prefix + 'load');
+							if (!priv.preloading) emitLifeEvent.call(this, 'load');
+							else this.emit('preload');
 						}.bind(this));
 					}
 				}.bind(this));
@@ -409,7 +409,7 @@ WebKit.prototype.unload = function(cb) {
 		priv.state = INITIALIZED;
 		priv.tickets = {};
 		priv.loopForCallbacks = 0;
-		this.emit('unload');
+		emitLifeEvent.call(this, 'unload');
 		cb();
 	}.bind(this));
 };
@@ -452,7 +452,7 @@ function loop(start) {
 
 		if (priv.pendingRequests == 0 && priv.idleCount >= 1 && this.readyState == "complete" && !priv.wasIdle) {
 			priv.wasIdle = true;
-			this.emit('idle');
+			if (!priv.preloading) emitLifeEvent.call(this, 'idle');
 		} else {
 			priv.wasBusy = busy;
 		}
