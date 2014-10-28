@@ -55,7 +55,6 @@ private:
   bool allowDialogs;
 
   char* cookie = NULL;
-  char* css = NULL;
   char* content = NULL;
 
   WebKitWebView* view = NULL;

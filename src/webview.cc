@@ -113,7 +113,6 @@ void WebView::destroy() {
   gtk_widget_destroy(window);
   window = NULL;
   delete[] cookie;
-  delete[] css;
   delete[] content;
 
   delete pngCallback;
