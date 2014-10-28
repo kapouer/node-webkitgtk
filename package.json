@@ -26,7 +26,7 @@
     "headless": "^1.0.0"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha -R spec"
   },
   "repository": "git@github.com:kapouer/node-webkitgtk.git",
   "author": "Jérémy Lal <kapouer@melix.org>",
