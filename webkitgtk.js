@@ -308,7 +308,7 @@ function load(uri, opts, cb) {
 			fs.readFile(opts.stylesheet, function(err, css) {
 				if (err) console.error(err);
 				if (opts.css) console.error("stylesheet option overwrites css option");
-				if (css) opts.css = css.toString();
+				if (css) opts.css = css;
 				next();
 			});
 		} else {
@@ -325,6 +325,8 @@ function load(uri, opts, cb) {
 				}
 			});
 		}
+		if (Buffer.isBuffer(opts.content)) opts.content = opts.content.toString();
+		if (Buffer.isBuffer(opts.css)) opts.css = opts.css.toString();
 		this.webview.load(uri, opts, function(err, status) {
 			priv.state = INITIALIZED;
 			if (priv.timeout) {
@@ -491,7 +493,7 @@ WebKit.prototype.runev = function(script, cb) {
 
 function run(script, message, cb) {
 	var priv = this.priv;
-	if (typeof script == "function") script = script.toString();
+	if (typeof script == "function" || Buffer.isBuffer(script)) script = script.toString();
 	cb = cb || noop;
 	message = message || {};
 
