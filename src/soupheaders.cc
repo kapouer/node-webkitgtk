@@ -24,16 +24,20 @@ static bool PropertyIndexedAccessCheck(Local<Object>, uint32_t, AccessType, Loca
 
 static NAN_PROPERTY_GETTER(GetNamedProperty) {
   NanScope();
+  const char* headerList = NULL;
   SoupHeaders* self = node::ObjectWrap::Unwrap<SoupHeaders>(args.Holder());
-  NanUtf8String* prop = new NanUtf8String(property->ToString());
-  const char* headerList = soup_message_headers_get_list(self->headers, **prop);
-  delete prop;
+  if (self->headers != NULL) {
+    NanUtf8String* prop = new NanUtf8String(property->ToString());
+    headerList = soup_message_headers_get_list(self->headers, **prop);
+    delete prop;
+  }
   if (headerList == NULL) NanReturnUndefined();
   else NanReturnValue(NanNew<String>(headerList));
 }
 static NAN_PROPERTY_SETTER(SetNamedProperty) {
   NanScope();
   SoupHeaders* self = node::ObjectWrap::Unwrap<SoupHeaders>(args.Holder());
+  if (self->headers == NULL) NanReturnUndefined();
   NanUtf8String* prop = new NanUtf8String(property->ToString());
   NanUtf8String* val = new NanUtf8String(value->ToString());
   soup_message_headers_replace(self->headers, **prop, **val);
@@ -43,10 +47,13 @@ static NAN_PROPERTY_SETTER(SetNamedProperty) {
 }
 static NAN_PROPERTY_QUERY(QueryNamedProperty) {
   NanScope();
+  const char* headerOne = NULL;
   SoupHeaders* self = node::ObjectWrap::Unwrap<SoupHeaders>(args.Holder());
-  NanUtf8String* prop = new NanUtf8String(property->ToString());
-  const char* headerOne = soup_message_headers_get_one(self->headers, **prop);
-  delete prop;
+  if (self->headers != NULL) {
+    NanUtf8String* prop = new NanUtf8String(property->ToString());
+    headerOne = soup_message_headers_get_one(self->headers, **prop);
+    delete prop;
+  }
   if (headerOne == NULL) {
     NanReturnValue(NanNew<Integer>(false));
   } else {
@@ -55,11 +62,15 @@ static NAN_PROPERTY_QUERY(QueryNamedProperty) {
 }
 static NAN_PROPERTY_DELETER(DeleteNamedProperty) {
   NanScope();
+  const char* headerOne = NULL;
   SoupHeaders* self = node::ObjectWrap::Unwrap<SoupHeaders>(args.Holder());
-  NanUtf8String* prop = new NanUtf8String(property->ToString());
-  const char* headerOne = soup_message_headers_get_one(self->headers, **prop);
+  NanUtf8String* prop = NULL;
+  if (self->headers != NULL) {
+    prop = new NanUtf8String(property->ToString());
+    headerOne = soup_message_headers_get_one(self->headers, **prop);
+  }
   if (headerOne == NULL) {
-    delete prop;
+    if (prop != NULL) delete prop;
     NanReturnValue(NanNew<Boolean>(false));
   } else {
     soup_message_headers_remove(self->headers, **prop);
@@ -69,10 +80,11 @@ static NAN_PROPERTY_DELETER(DeleteNamedProperty) {
 }
 static NAN_PROPERTY_ENUMERATOR(EnumerateNamedProperties) {
   NanScope();
+  Handle<Array> array = NanNew<Array>();
   SoupHeaders* self = node::ObjectWrap::Unwrap<SoupHeaders>(args.Holder());
+  if (self->headers == NULL) NanReturnValue(array);
   SoupMessageHeadersIter iter;
   soup_message_headers_iter_init(&iter, self->headers);
-  Handle<Array> array = NanNew<Array>();
   int i = 0;
   while (true) {
     const char* name;
