@@ -220,7 +220,7 @@ function requestDispatcher(uri) {
 	} else if (this.allow == "same-origin") {
 		if (url.parse(uri).host != url.parse(this.uri).host) cancel = true;
 	} else if (this.allow instanceof RegExp) {
-		if (!this.allow.test(uri)) cancel = true;
+		if (uri != this.uri && !this.allow.test(uri)) cancel = true;
 	}
 	if (cancel) {
 		return;

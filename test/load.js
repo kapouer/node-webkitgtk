@@ -55,6 +55,19 @@ describe("load method", function suite() {
 		});
 	});
 
+	it("should filter requests by regexp and let the main request go", function(done) {
+		this.timeout(5000);
+		var onlyjs = /\.js/;
+		var hadmain = false;
+		WebKit().on('response', function(res) {
+			if (res.uri == this.uri) hadmain = true;
+		}).load('http://github.com', {allow: onlyjs}).wait('idle', function(err) {
+			expect(err).to.not.be.ok();
+			expect(hadmain).to.be(true);
+			done();
+		});
+	});
+
 	it("should time out", function(done) {
 		this.timeout(500);
 		WebKit().load('http://google.com', {timeout:50}, function(err) {
