@@ -94,11 +94,12 @@ NAN_GETTER(WebResponse::get_prop) {
   } else if (propstr == "mime" && self->response != NULL) {
     NanReturnValue(NanNew<String>(webkit_uri_response_get_mime_type(self->response)));
   } else if (propstr == "status") {
+    guint status = 0;
     if (self->response != NULL) {
-      NanReturnValue(NanNew<Integer>(webkit_uri_response_get_status_code(self->response)));
-    } else {
-      NanReturnValue(NanNew<Integer>(0));
+      status = webkit_uri_response_get_status_code(self->response);
+      if (status == 0 && webkit_uri_response_get_content_length(self->response) > 0) status = 200;
     }
+    NanReturnValue(NanNew<Integer>(status));
   } else if (propstr == "headers") {
     if (self->response == NULL) NanReturnNull();
     Handle<Object> obj = SoupHeaders::constructor->GetFunction()->NewInstance();

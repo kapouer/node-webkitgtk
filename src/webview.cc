@@ -295,9 +295,11 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
       if (self->state == DOCUMENT_LOADING) {
         self->uri = webkit_web_view_get_uri(web_view);
         if (self->loadCallback != NULL) {
+          guint status = getStatusFromView(web_view);
+          if (status == 0 && self->content != NULL) status = 200;
           Handle<Value> argv[] = {
             NanNull(),
-            NanNew<Integer>(getStatusFromView(web_view))
+            NanNew<Integer>(status)
           };
           self->loadCallback->Call(2, argv);
           delete self->loadCallback;
