@@ -243,10 +243,7 @@ function requestDispatcher(uri) {
 function responseDispatcher(binding) {
 	if (this.priv.preloading) return;
 	var res = new Response(this, binding);
-	if (res.status == 0) {
-		// status of cancelled requests OR status of document loaded by opts.content
-		if (this.readyState != "loading" || res.uri != this.uri) return;
-	}
+	if (res.status == 0) return;
 	this.priv.pendingRequests--;
 	this.emit('response', res);
 }
@@ -336,7 +333,6 @@ function load(uri, opts, cb) {
 				clearTimeout(priv.timeout);
 				delete priv.timeout;
 			}
-			if (!status && opts.content) status = 200;
 			this.status = status;
 			if (!priv.preloading) {
 				priv.preloading = null;
