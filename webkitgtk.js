@@ -333,6 +333,7 @@ function load(uri, opts, cb) {
 				clearTimeout(priv.timeout);
 				delete priv.timeout;
 			}
+			if (!status && opts.content) status = 200;
 			this.status = status;
 			if (!priv.preloading) {
 				priv.preloading = null;
