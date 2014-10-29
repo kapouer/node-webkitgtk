@@ -100,6 +100,7 @@ NAN_GETTER(WebResponse::get_prop) {
       NanReturnValue(NanNew<Integer>(0));
     }
   } else if (propstr == "headers") {
+    if (self->response == NULL) NanReturnNull();
     Handle<Object> obj = SoupHeaders::constructor->GetFunction()->NewInstance();
     SoupHeaders* selfHeaders = node::ObjectWrap::Unwrap<SoupHeaders>(obj);
     selfHeaders->init(webkit_uri_response_get_http_headers(self->response));
