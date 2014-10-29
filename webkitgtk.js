@@ -243,7 +243,10 @@ function requestDispatcher(uri) {
 function responseDispatcher(binding) {
 	if (this.priv.preloading) return;
 	var res = new Response(this, binding);
-	if (res.status == 0) return; // was actually cancelled
+	if (res.status == 0) {
+		// status of cancelled requests OR status of document loaded by opts.content
+		if (this.readyState != "loading" || res.uri != this.uri) return;
+	}
 	this.priv.pendingRequests--;
 	this.emit('response', res);
 }

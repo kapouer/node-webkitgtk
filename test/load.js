@@ -19,13 +19,12 @@ describe("load method", function suite() {
 
 	it("should load html content", function(done) {
 		this.timeout(1000);
-		WebKit().load("", {content: '<p>test</p>'}, function(err) {
+		WebKit().load("http://localhost", {content: '<p>test</p>'}, function(err) {
 			expect(err).to.be(null);
 		}).wait('ready').html(function(err, html) {
 			expect(err).to.not.be.ok();
 			expect(html).to.be("<html><head></head><body><p>test</p></body></html>");
-			done();
-		});
+		}).wait('idle', done);
 	});
 
 	it("should callback with error when url cannot be resolved", function(done) {
