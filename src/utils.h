@@ -7,10 +7,13 @@
 
 #include <nan.h>
 #include <glib.h>
+#include <soup.h>
 
 using namespace v8;
 
 gchar* getStr(Handle<Object>, const gchar*);
+void update_soup_headers_with_dict(SoupMessageHeaders*, GVariant*);
+GVariant* soup_headers_to_gvariant_dict(SoupMessageHeaders*);
 
 #endif
 

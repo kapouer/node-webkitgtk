@@ -2,7 +2,7 @@
 #include <JavaScriptCore/JSStringRef.h>
 #include "utils.h"
 #include "webview.h"
-#include "soupheaders.h"
+#include "gvariantproxy.h"
 #include "webresponse.h"
 #include "webauthrequest.h"
 #include "dbus.h"
@@ -144,8 +144,8 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
   "<node>"
   "  <interface name='org.nodejs.WebKitGtk.WebView'>"
   "    <method name='HandleRequest'>"
-  "      <arg type='s' name='uri' direction='in'/>"
-  "      <arg type='s' name='uri' direction='out'/>"
+  "      <arg type='a{sv}' name='dict' direction='in'/>"
+  "      <arg type='a{sv}' name='dict' direction='out'/>"
   "    </method>"
   "    <method name='NotifyEvent'>"
   "      <arg type='s' name='message' direction='in'/>"
@@ -172,7 +172,7 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 
   constructor = Persistent<Function>::New(tpl->GetFunction());
   module->Set(NanNew("exports"), constructor);
-  SoupHeaders::Init(exports);
+  GVariantProxy::Init(exports);
   WebResponse::Init(exports);
   WebAuthRequest::Init(exports);
 }
@@ -436,7 +436,6 @@ NAN_METHOD(WebView::Load) {
   if (self->loadCallback != NULL) delete self->loadCallback;
   self->loadCallback = loadCb;
   webkit_web_view_stop_loading(self->view);
-
   if (self->state == DOCUMENT_AVAILABLE) {
     requestUri(self, **uri);
   } else {
@@ -681,18 +680,19 @@ GDBusMethodInvocation* invocation,
 gpointer data) {
   WebView* self = (WebView*)data;
   if (g_strcmp0(method_name, "HandleRequest") == 0) {
-    const gchar* reqUri;
-    g_variant_get(parameters, "(&s)", &reqUri);
+    GVariant* variant = g_variant_get_child_value(parameters, 0);
+    GVariantDict dict;
+    g_variant_dict_init(&dict, variant);
+    Handle<Object> obj = GVariantProxy::constructor->GetFunction()->NewInstance();
+    GVariantProxy* prox = node::ObjectWrap::Unwrap<GVariantProxy>(obj);
+    prox->init(variant);
     Handle<Value> argv[] = {
-      NanNew(reqUri)
+      obj
     };
-    GVariant* response;
-    Handle<Value> uriVal = self->requestCallback->Call(1, argv);
-    NanUtf8String* uriStr = new NanUtf8String(uriVal->ToString());
-    if (uriVal->IsString()) response = g_variant_new("(s)", **uriStr);
-    else response = g_variant_new("(s)", "");
-    g_dbus_method_invocation_return_value(invocation, response);
-    g_free(uriStr);
+    self->requestCallback->Call(1, argv);
+    GVariant* tuple[1];
+    tuple[0] = g_variant_dict_end(prox->dict);
+    g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(tuple, 1));
   } else if (g_strcmp0(method_name, "NotifyEvent") == 0) {
     const gchar* message;
     g_variant_get(parameters, "(&s)", &message);

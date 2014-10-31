@@ -1,5 +1,5 @@
 #include "webresponse.h"
-#include "soupheaders.h"
+#include "gvariantproxy.h"
 
 using namespace v8;
 
@@ -102,9 +102,9 @@ NAN_GETTER(WebResponse::get_prop) {
     NanReturnValue(NanNew<Integer>(status));
   } else if (propstr == "headers") {
     if (self->response == NULL) NanReturnNull();
-    Handle<Object> obj = SoupHeaders::constructor->GetFunction()->NewInstance();
-    SoupHeaders* selfHeaders = node::ObjectWrap::Unwrap<SoupHeaders>(obj);
-    selfHeaders->init(webkit_uri_response_get_http_headers(self->response));
+    Handle<Object> obj = GVariantProxy::constructor->GetFunction()->NewInstance();
+    GVariantProxy* prox = node::ObjectWrap::Unwrap<GVariantProxy>(obj);
+    prox->init(soup_headers_to_gvariant_dict(webkit_uri_response_get_http_headers(self->response)));
     NanReturnValue(obj);
   } else if (propstr == "length") {
     if (self->response != NULL) {

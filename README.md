@@ -203,8 +203,9 @@ These events can happen at any moment:
   listener(message, url, line, column)
 
 * request  
-  listener(request) where request.uri is read/write.  
-  If request.uri is set to null or "", the request is cancelled.
+  listener(req) where req.uri, req.cancel, req.headers are read/write.  
+  req.cancel stops the request.  
+  The request is not yet sent, so all values can be modified.
 
 * response  
   listener(res)  

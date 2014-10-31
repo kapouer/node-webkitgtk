@@ -178,10 +178,6 @@ Object.defineProperty(WebKit.prototype, "uri", {
 	}
 });
 
-function Request(uri) {
-	this.uri = uri;
-}
-
 function Response(view, binding) {
 	this.binding = binding;
 	this.view = view;
@@ -209,11 +205,26 @@ Response.prototype.data = function(cb) {
 	});
 };
 
-function requestDispatcher(uri) {
+function Request(uri, binding) {
+	this.binding = binding;
+	this.uri = uri;
+	this.cancel = false;
+}
+
+Object.defineProperty(Request.prototype, "headers", {
+	get: function() {
+		return this.binding;
+	}
+});
+
+function requestDispatcher(binding) {
 	var priv = this.priv;
+	var uri = binding.uri;
 	if (priv.preloading && uri != this.uri) {
+		binding.cancel = "1";
 		return;
 	}
+
 	var cancel = false;
 	if (this.allow == "none") {
 		if (uri != this.uri) cancel = true;
@@ -223,11 +234,21 @@ function requestDispatcher(uri) {
 		if (uri != this.uri && !this.allow.test(uri)) cancel = true;
 	}
 	if (cancel) {
+		binding.cancel = "1";
 		return;
 	}
+	var req = new Request(uri, binding);
 
-	var req = new Request(uri);
 	this.emit('request', req);
+
+	if (req.uri == null) { // compat with older versions
+		req.cancel = true;
+	}
+	if (req.cancel) {
+		binding.cancel = "1";
+		return;
+	}
+	binding.uri = req.uri;
 	if (req.uri) {
 		var protocol = req.uri.split(':', 1).pop();
 		if (protocol == 'http' || protocol == 'https') {
@@ -237,7 +258,6 @@ function requestDispatcher(uri) {
 			console.info("Please report issue to https://github.com/kapouer/node-webkitgtk/issues");
 		}
 	}
-	return req.uri;
 }
 
 function responseDispatcher(binding) {
@@ -443,6 +463,10 @@ function loop(start) {
 		if (priv.loopForCallbacks < 0) {
 			console.error("FIXME loopForCallbacks should be >= 0");
 			priv.loopForCallbacks = 0;
+		}
+		if (priv.pendingRequests < 0) {
+			console.error("FIXME pendingRequests should be >= 0");
+			priv.pendingRequests = 0;
 		}
 		if (priv.loopForCallbacks == 0 && !priv.loopForLife || !this.webview) {
 			priv.loopCount = 0;

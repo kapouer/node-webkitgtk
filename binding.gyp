@@ -6,7 +6,7 @@
         ['OS=="linux"', {
           'sources': [
             'src/utils.cc',
-            'src/soupheaders.cc',
+            'src/gvariantproxy.cc',
             'src/webauthrequest.cc',
             'src/webresponse.cc',
             'src/runnable.cc',
@@ -17,6 +17,7 @@
               '<!@(pkg-config gtk+-3.0 --cflags)',
               '<!@(pkg-config glib-2.0 --cflags)',
               '<!@(pkg-config webkit2gtk-4.0 --cflags)',
+              '-I/usr/include/libsoup-2.4/libsoup',
               '-I/usr/include/gtk-3.0/unix-print'
           ],
           'libraries':[
@@ -34,12 +35,13 @@
       'conditions': [
         ['OS=="linux"', {
           'product_extension': 'so',
-          'sources': [ 'src/webextension.cc' ],
+          'sources': [ 'src/utils.cc', 'src/webextension.cc' ],
           'cflags': ['-fPIC'],
           'cflags_cc' : [
               '<!@(pkg-config glib-2.0 --cflags)',
               '<!@(pkg-config webkit2gtk-4.0 --cflags)',
-              '<!@(pkg-config dbus-glib-1 --cflags)'
+              '<!@(pkg-config dbus-glib-1 --cflags)',
+              '-I/usr/include/libsoup-2.4/libsoup'
           ],
           'libraries':[
               '<!@(pkg-config glib-2.0 --libs)',

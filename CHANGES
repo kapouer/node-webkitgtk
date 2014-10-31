@@ -8,3 +8,18 @@ png, pdf, html functions are now immediate,
 one must call `wait('load')`, `wait('ready')`, `wait('idle')` before,  
 to make sure it's in an expected state.
 
+
+1.6.0
+-----
+```
+on('request', function(req) {
+	// use
+	req.cancel = true;
+	// instead of
+	req.uri = null;
+	// or even
+	delete req.uri;
+	// all forms are supported but the first one is safer style
+});
+```
+
