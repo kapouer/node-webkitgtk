@@ -118,9 +118,9 @@ function initialPriv() {
 
 function emitLifeEvent(event) {
 	setImmediate(function() {
-		var willStop = event == "unload" || this.listeners('unload').length == 1 && (
-			event == "idle" || this.listeners('idle').length == 1 && (
-				event == "load" || this.listeners('load').length == 1 &&
+		var willStop = event == "unload" || this.listeners('unload').length == 0 && (
+			event == "idle" || this.listeners('idle').length == 0 && (
+				event == "load" || this.listeners('load').length == 0 &&
 					event == "ready"
 				)
 			);
