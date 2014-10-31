@@ -22,7 +22,8 @@ WebKit().load('http://github.com')
   .on('authenticate', function(auth) {
     auth.use('mylogin', 'mypass');
   }).on('request', function(req) {
-    if (/\.js/.test(req.uri)) req.uri = null;
+    req.cancel = /\.js($|\?)/.test(req.uri) || req.headers.Origin
+      || req.headers.Accept == "*/*";
   }).on('response', function(res) {
     console.log(res.status, res.uri);
     res.data(function(err, data) {
@@ -329,7 +330,7 @@ about plugins
 
 In webkit2gtk >= 2.4.4, if there are plugins in `/usr/lib/mozilla/plugins`
 they are initialized (but not necessarily enabled on the WebView),
-and that could impact first page load time greatly - especially if
+and that could impact first page load time greatly (seconds !) - especially if
 there's a java plugin.
 
 Workaround:
@@ -351,11 +352,12 @@ webkit2gtk-4.0 (2.6.x), for node-webkitgtk >= 1.3.0
 dbus-glib-1
 glib-2.0
 gtk+-3.0
+libsoup2.4
 ```
 
 Also usual development tools are needed (pkg-config, gcc, and so on).
 
-On debian, these packages are needed :
+On debian, these packages will pull necessary dependencies:
 
 ```
 libwebkit2gtk-3.0-dev (2.4.x), for node-webkitgtk 1.2.x
