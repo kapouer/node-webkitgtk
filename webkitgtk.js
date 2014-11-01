@@ -243,14 +243,16 @@ function requestDispatcher(binding) {
 
 	if (req.uri == null) { // compat with older versions
 		req.cancel = true;
+	} else if (uri != req.uri) {
+		uri = req.uri;
+		binding.uri = uri;
 	}
 	if (req.cancel) {
 		binding.cancel = "1";
 		return;
 	}
-	binding.uri = req.uri;
-	if (req.uri) {
-		var protocol = req.uri.split(':', 1).pop();
+	if (uri) {
+		var protocol = uri.split(':', 1).pop();
 		if (protocol == 'http' || protocol == 'https') {
 			priv.pendingRequests++;
 		} else if (protocol != "data" && protocol != "about") {
