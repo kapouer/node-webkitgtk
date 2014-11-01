@@ -121,15 +121,16 @@ load() options
 
 - content  
   string, default null  
-  load this content with the given base uri
+  load this content with the given base uri.
 
-- css  
-  string, default none  
-  a css string applied as user stylesheet.
+- script  
+  string, default null  
+  insert script at the beginning of loaded document.
 
-- stylesheet  
-  string, default none  
-  path to some user stylesheet, overrides css option if any.
+- style  
+  string, default null  
+  insert user stylesheet, see  
+  http://www.w3.org/TR/CSS21/cascade.html#cascading-order
 
 - ua  
   user-agent string, default to "Mozilla/5.0"

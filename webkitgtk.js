@@ -319,76 +319,64 @@ function load(uri, opts, cb) {
 	priv.wasIdle = false;
 
 	preload.call(this, uri, opts, cb);
-	(function(next) {
-		if (opts.stylesheet) {
-			fs.readFile(opts.stylesheet, function(err, css) {
+	priv.loopForLife = true;
+	loop.call(this);
+	priv.timeout = setTimeout(stop.bind(this), opts.timeout || 30000);
+	if (!priv.preloading && this.listeners('error').length == 0) {
+		this.on('error', function(msg, uri, line, column) {
+			if (this.listeners('error').length <= 1) {
+				console.error(msg, "\n", uri, "line", line, "column", column);
+			}
+		});
+	}
+	if (Buffer.isBuffer(opts.content)) opts.content = opts.content.toString();
+	if (Buffer.isBuffer(opts.style)) opts.style = opts.style.toString();
+	if (Buffer.isBuffer(opts.script)) opts.script = opts.script.toString();
+	this.webview.load(uri, opts, function(err, status) {
+		priv.state = INITIALIZED;
+		if (priv.timeout) {
+			clearTimeout(priv.timeout);
+			delete priv.timeout;
+		}
+		this.status = status;
+		if (!priv.preloading) {
+			priv.preloading = null;
+			if (!err && status < 200 || status >= 400) err = status;
+			cb(err, this);
+			if (err) return;
+		}
+		setImmediate(function() {
+			if (priv.state != INITIALIZED) {
+				return;
+			}
+			run.call(this, function(emit) {
+				window.onerror = function() {
+					var ret = Array.prototype.slice.call(arguments, 0);
+					ret.unshift("error");
+					emit.apply(null, ret);
+				};
+			});
+			runcb.call(this, function(done) {
+				if (/interactive|complete/.test(document.readyState)) done(null, document.readyState);
+				else document.addEventListener('DOMContentLoaded', function() { done(null, "interactive"); }, false);
+			}, function(err, result) {
 				if (err) console.error(err);
-				if (opts.css) console.error("stylesheet option overwrites css option");
-				if (css) opts.css = css;
-				next();
-			});
-		} else {
-			next();
-		}
-	})(function() {
-		priv.loopForLife = true;
-		loop.call(this);
-		priv.timeout = setTimeout(stop.bind(this), opts.timeout || 30000);
-		if (!priv.preloading && this.listeners('error').length == 0) {
-			this.on('error', function(msg, uri, line, column) {
-				if (this.listeners('error').length <= 1) {
-					console.error(msg, "\n", uri, "line", line, "column", column);
-				}
-			});
-		}
-		if (Buffer.isBuffer(opts.content)) opts.content = opts.content.toString();
-		if (Buffer.isBuffer(opts.css)) opts.css = opts.css.toString();
-		this.webview.load(uri, opts, function(err, status) {
-			priv.state = INITIALIZED;
-			if (priv.timeout) {
-				clearTimeout(priv.timeout);
-				delete priv.timeout;
-			}
-			this.status = status;
-			if (!priv.preloading) {
-				priv.preloading = null;
-				if (!err && status < 200 || status >= 400) err = status;
-				cb(err, this);
-				if (err) return;
-			}
-			setImmediate(function() {
-				if (priv.state != INITIALIZED) {
-					return;
-				}
-				run.call(this, function(emit) {
-					window.onerror = function() {
-						var ret = Array.prototype.slice.call(arguments, 0);
-						ret.unshift("error");
-						emit.apply(null, ret);
-					};
-				});
-				runcb.call(this, function(done) {
-					if (/interactive|complete/.test(document.readyState)) done(null, document.readyState);
-					else document.addEventListener('DOMContentLoaded', function() { done(null, "interactive"); }, false);
-				}, function(err, result) {
-					if (err) console.error(err);
-					this.readyState = result;
-					if (!priv.preloading) emitLifeEvent.call(this, 'ready');
-					if (result == "complete") {
+				this.readyState = result;
+				if (!priv.preloading) emitLifeEvent.call(this, 'ready');
+				if (result == "complete") {
+					if (!priv.preloading) emitLifeEvent.call(this, 'load');
+					else this.emit('preload');
+				}	else {
+					runcb.call(this, function(done) {
+						if (document.readyState == "complete") done(null, document.readyState);
+						else window.addEventListener('load', function() { done(null, "complete"); }, false);
+					}, function(err, result) {
+						if (err) console.error(err);
+						this.readyState = result;
 						if (!priv.preloading) emitLifeEvent.call(this, 'load');
 						else this.emit('preload');
-					}	else {
-						runcb.call(this, function(done) {
-							if (document.readyState == "complete") done(null, document.readyState);
-							else window.addEventListener('load', function() { done(null, "complete"); }, false);
-						}, function(err, result) {
-							if (err) console.error(err);
-							this.readyState = result;
-							if (!priv.preloading) emitLifeEvent.call(this, 'load');
-							else this.emit('preload');
-						}.bind(this));
-					}
-				}.bind(this));
+					}.bind(this));
+				}
 			}.bind(this));
 		}.bind(this));
 	}.bind(this));

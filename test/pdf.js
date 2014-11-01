@@ -8,7 +8,7 @@ describe("pdf method", function suite() {
 		var pdfpath = __dirname + '/shots/test.pdf';
 		WebKit().load("https://www.debian.org/", {
 			width:800, height:600,
-			stylesheet: __dirname + "/../css/png.css"
+			style: fs.readFileSync(__dirname + "/../css/png.css")
 		}, function(err) {
 			expect(err).to.not.be.ok();
 		}).wait('load').pdf(pdfpath, function(err) {
@@ -20,5 +20,4 @@ describe("pdf method", function suite() {
 		});
 	});
 });
-
 

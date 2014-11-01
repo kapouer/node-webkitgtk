@@ -391,19 +391,31 @@ NAN_METHOD(WebView::Load) {
   if (self->content != NULL) delete self->content;
   self->content = getStr(opts, "content");
 
-  const gchar* css = getStr(opts, "css");
+  WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
 
-  if (css != NULL) {
-    WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
-    WebKitUserStyleSheet* styleSheet = webkit_user_style_sheet_new(
-      css,
+  const gchar* script = getStr(opts, "script");
+  if (script != NULL) {
+    WebKitUserScript* userScript = webkit_user_script_new(script,
       WEBKIT_USER_CONTENT_INJECT_TOP_FRAME,
-      WEBKIT_USER_STYLE_LEVEL_AUTHOR, // or WEBKIT_USER_STYLE_LEVEL_USER
+      WEBKIT_USER_SCRIPT_INJECT_AT_DOCUMENT_START,
+      NULL, NULL
+    );
+    webkit_user_content_manager_add_script(contman, userScript);
+    delete script;
+  }
+
+  const gchar* style = getStr(opts, "style");
+  if (style != NULL) {
+    WebKitUserStyleSheet* styleSheet = webkit_user_style_sheet_new(
+      style,
+      WEBKIT_USER_CONTENT_INJECT_TOP_FRAME,
+      WEBKIT_USER_STYLE_LEVEL_USER,
       NULL, NULL
     );
     webkit_user_content_manager_add_style_sheet(contman, styleSheet);
-    delete css;
+    delete style;
   }
+
   gtk_window_set_default_size(GTK_WINDOW(self->window),
     NanUInt32OptionValue(opts, H("width"), 1024),
     NanUInt32OptionValue(opts, H("height"), 768)

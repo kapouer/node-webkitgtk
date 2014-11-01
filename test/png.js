@@ -20,7 +20,7 @@ describe("png method", function suite() {
 		WebKit().load("https://www.debian.org/", {
 			width: 512,
 			height: 512,
-			stylesheet: __dirname + "/../css/png.css"
+			style: fs.readFileSync(__dirname + "/../css/png.css")
 		}, function(err) {
 			expect(err).to.not.be.ok();
 		}).on("request", function(req) {
@@ -36,5 +36,4 @@ describe("png method", function suite() {
 		});
 	});
 });
-
 

@@ -23,3 +23,12 @@ on('request', function(req) {
 });
 ```
 
+
+1.7.0
+-----
+
+Load options stylesheet and css are now available only as `style`, a Buffer or
+a String, inserted as *user style*.
+The reason is to simplify API and also that it is not up to this module to load
+data from files.
+
