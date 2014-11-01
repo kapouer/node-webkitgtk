@@ -206,16 +206,10 @@ Response.prototype.data = function(cb) {
 };
 
 function Request(uri, binding) {
-	this.binding = binding;
+	this.headers = binding;
 	this.uri = uri;
 	this.cancel = false;
 }
-
-Object.defineProperty(Request.prototype, "headers", {
-	get: function() {
-		return this.binding;
-	}
-});
 
 function requestDispatcher(binding) {
 	var priv = this.priv;
