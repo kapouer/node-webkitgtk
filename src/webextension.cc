@@ -31,7 +31,7 @@ static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest*
 	g_variant_dict_clear(&dictIn);
 
   if (results == NULL) {
-		g_printerr("ERR THERE %s\n", error->message);
+		g_printerr("ERR g_dbus_connection_call_sync %s\n", error->message);
 		g_error_free(error);
 		return FALSE;
 	}
@@ -58,7 +58,6 @@ static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest*
 
 
 static void web_page_created_callback(WebKitWebExtension* extension, WebKitWebPage* web_page, gpointer data) {
-	g_print("creatude");
 	g_signal_connect(web_page, "send-request", G_CALLBACK(web_page_send_request), data);
 }
 
@@ -79,7 +78,6 @@ static gboolean event_listener(WebKitDOMDOMWindow* view, WebKitDOMEvent* event, 
 }
 
 static void window_object_cleared_callback(WebKitScriptWorld* world, WebKitWebPage* page, WebKitFrame* frame, gchar* eventName) {
-	g_print("clearata");
 	WebKitDOMDocument* document = webkit_web_page_get_dom_document(page);
 	WebKitDOMDOMWindow* window = webkit_dom_document_get_default_view(document);
 	webkit_dom_event_target_add_event_listener(WEBKIT_DOM_EVENT_TARGET(window), eventName, G_CALLBACK(event_listener), false, NULL);
