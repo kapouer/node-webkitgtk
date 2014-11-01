@@ -47,9 +47,13 @@ static NAN_PROPERTY_SETTER(SetNamedProperty) {
   if (self->dict == NULL) NanReturnUndefined();
   NanUtf8String* prop = new NanUtf8String(property->ToString());
   NanUtf8String* val = new NanUtf8String(value->ToString());
-  g_variant_dict_insert(self->dict, **prop, "s", **val);
-  delete prop;
+  gchar* valstr = NULL;
+  if (!value->IsUndefined() && !value->IsNull()) {
+    valstr = **val;
+  }
+  g_variant_dict_insert(self->dict, **prop, "s", valstr);
   delete val;
+  delete prop;
   NanReturnUndefined();
 }
 static NAN_PROPERTY_QUERY(QueryNamedProperty) {
