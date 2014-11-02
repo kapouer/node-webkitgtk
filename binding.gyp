@@ -11,7 +11,7 @@
             'src/webresponse.cc',
             'src/webview.cc'
           ],
-          "include_dirs": ["<!(node -e \"require('nan')\")"],
+          'include_dirs': ["<!(node -e \"require('nan')\")"],
           'cflags_cc' : [
               '<!@(pkg-config gtk+-3.0 --cflags)',
               '<!@(pkg-config glib-2.0 --cflags)',
@@ -35,6 +35,7 @@
         ['OS=="linux"', {
           'product_extension': 'so',
           'sources': [ 'src/utils.cc', 'src/webextension.cc' ],
+          'include_dirs': ["<!(node -e \"require('nan')\")"],
           'cflags': ['-fPIC'],
           'cflags_cc' : [
               '<!@(pkg-config glib-2.0 --cflags)',
