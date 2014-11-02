@@ -12,6 +12,7 @@
 using namespace v8;
 
 gchar* getStr(Handle<Object>, const gchar*);
+NanCallback* getCb(Handle<Object>, const gchar*);
 void update_soup_headers_with_dict(SoupMessageHeaders*, GVariant*);
 GVariant* soup_headers_to_gvariant_dict(SoupMessageHeaders*);
 

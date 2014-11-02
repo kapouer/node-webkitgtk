@@ -15,6 +15,17 @@ gchar* getStr(Handle<Object> opts, const gchar* name) {
   }
 }
 
+NanCallback* getCb(Handle<Object> opts, const gchar* name) {
+  NanCallback* cb = NULL;
+  if (opts->Has(H(name))) {
+    Handle<Value> opt = opts->Get(H(name));
+    if (opt->IsFunction()) {
+      cb = new NanCallback(opt.As<Function>());
+    }
+  }
+  return cb;
+}
+
 // actually, the dict is a (key, arrayOfStrings) map
 void update_soup_headers_with_dict(SoupMessageHeaders* headers, GVariant* dict) {
   if (headers == NULL) return;

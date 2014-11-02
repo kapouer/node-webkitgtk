@@ -20,21 +20,11 @@ static const GDBusInterfaceVTable interface_vtable = {
 
 WebView::WebView(Handle<Object> opts) {
   this->eventName = getStr(opts, "eventName");
-  if (opts->Has(H("requestListener"))) {
-    this->requestCallback = new NanCallback(opts->Get(H("requestListener")).As<Function>());
-  }
-  if (opts->Has(H("responseListener"))) {
-    this->responseCallback = new NanCallback(opts->Get(H("responseListener")).As<Function>());
-  }
-  if (opts->Has(H("eventsListener"))) {
-    this->eventsCallback = new NanCallback(opts->Get(H("eventsListener")).As<Function>());
-  }
-  if (opts->Has(H("policyListener"))) {
-    this->policyCallback = new NanCallback(opts->Get(H("policyListener")).As<Function>());
-  }
-  if (opts->Has(H("authListener"))) {
-    this->authCallback = new NanCallback(opts->Get(H("authListener")).As<Function>());
-  }
+  this->requestCallback = getCb(opts, "requestListener");
+  this->responseCallback = getCb(opts, "responseListener");
+  this->eventsCallback = getCb(opts, "eventsListener");
+  this->policyCallback = getCb(opts, "policyListener");
+  this->authCallback = getCb(opts, "authListener");
 
   NanAdjustExternalMemory(100000000);
   gtk_init(0, NULL);
@@ -123,10 +113,11 @@ void WebView::destroy() {
 
   if (loadCallback != NULL) delete loadCallback;
   if (stopCallback != NULL) delete stopCallback;
-  delete requestCallback;
-  delete responseCallback;
-  delete policyCallback;
-  delete authCallback;
+  if (requestCallback != NULL) delete requestCallback;
+  if (responseCallback != NULL) delete responseCallback;
+  if (policyCallback != NULL) delete policyCallback;
+  if (eventsCallback != NULL) delete eventsCallback;
+  if (authCallback != NULL) delete authCallback;
 
   g_dbus_server_stop(server);
   g_object_unref(server);
