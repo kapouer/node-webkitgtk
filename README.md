@@ -139,6 +139,11 @@ load() options
   number, default 30000  
   timeout for load(), in milliseconds
 
+- stall  
+  number, default 1000  
+  requests not receiving data for `stall` milliseconds are not taken into
+  account for deciding `idle` events.
+
 
 init() options
 --------------

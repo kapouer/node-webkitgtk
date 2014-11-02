@@ -25,6 +25,7 @@ public:
   static gboolean DecidePolicy(WebKitWebView*, WebKitPolicyDecision*, WebKitPolicyDecisionType, gpointer);
   static void ResourceLoad(WebKitWebView*, WebKitWebResource*, WebKitURIRequest*, gpointer);
   static void ResourceResponse(WebKitWebResource*, gpointer);
+  static void ResourceReceiveData(WebKitWebResource*, guint64, gpointer);
   static void Change(WebKitWebView*, WebKitLoadEvent, gpointer);
   static gboolean Fail(WebKitWebView*, WebKitLoadEvent, gchar*, GError*, gpointer);
   static gboolean ScriptDialog(WebKitWebView*, WebKitScriptDialog*, gpointer);
@@ -72,6 +73,7 @@ private:
   NanCallback* loadCallback = NULL;
   NanCallback* stopCallback = NULL;
   NanCallback* requestCallback = NULL;
+  NanCallback* receiveDataCallback = NULL;
   NanCallback* responseCallback = NULL;
   NanCallback* policyCallback = NULL;
   NanCallback* authCallback = NULL;

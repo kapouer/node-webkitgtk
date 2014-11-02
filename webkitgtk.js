@@ -86,6 +86,7 @@ WebKit.prototype.init = function(opts, cb) {
 			webextension: __dirname + '/lib/ext',
 			eventName: priv.eventName,
 			requestListener: requestDispatcher.bind(this),
+			receiveDataListener: receiveDataDispatcher.bind(this),
 			responseListener: responseDispatcher.bind(this),
 			eventsListener: eventsDispatcher.bind(this),
 			policyListener: policyDispatcher.bind(this),
@@ -130,6 +131,10 @@ function emitLifeEvent(event) {
 		}
 	}.bind(this));
 	this.emit(event);
+}
+
+function receiveDataDispatcher(uri, length) {
+	if (uri != this.uri) this.priv.uris[uri] = Date.now();
 }
 
 function authDispatcher(request) {
@@ -214,18 +219,21 @@ function Request(uri, binding) {
 function requestDispatcher(binding) {
 	var priv = this.priv;
 	var uri = binding.uri;
-	if (priv.preloading && uri != this.uri) {
-		binding.cancel = "1";
-		return;
+	if (uri != this.uri) {
+		if (priv.uris) priv.uris[uri] = Date.now();
+		if (priv.preloading) {
+			binding.cancel = "1";
+			return;
+		}
 	}
 
 	var cancel = false;
-	if (this.allow == "none") {
+	if (priv.allow == "none") {
 		if (uri != this.uri) cancel = true;
-	} else if (this.allow == "same-origin") {
+	} else if (priv.allow == "same-origin") {
 		if (url.parse(uri).host != url.parse(this.uri).host) cancel = true;
-	} else if (this.allow instanceof RegExp) {
-		if (uri != this.uri && !this.allow.test(uri)) cancel = true;
+	} else if (priv.allow instanceof RegExp) {
+		if (uri != this.uri && !priv.allow.test(uri)) cancel = true;
 	}
 	if (cancel) {
 		binding.cancel = "1";
@@ -245,23 +253,29 @@ function requestDispatcher(binding) {
 		binding.cancel = "1";
 		return;
 	}
-	if (uri) {
-		var protocol = uri.split(':', 1).pop();
-		if (protocol == 'http' || protocol == 'https') {
-			priv.pendingRequests++;
-		} else if (protocol != "data" && protocol != "about") {
-			console.info("Request with unknown protocol", protocol);
-			console.info("Please report issue to https://github.com/kapouer/node-webkitgtk/issues");
-		}
+	if (uri && isNetworkProtocol(uri)) {
+		priv.pendingRequests++;
 	}
 }
 
 function responseDispatcher(binding) {
 	if (this.priv.preloading) return;
 	var res = new Response(this, binding);
+	var uri = res.uri;
+	if (uri && this.priv.uris) delete this.priv.uris[uri];
 	if (res.status == 0) return;
-	this.priv.pendingRequests--;
+	if (uri && isNetworkProtocol(uri)) this.priv.pendingRequests--;
 	this.emit('response', res);
+}
+
+function isNetworkProtocol(uri) {
+	var p = uri.split(':', 1).pop();
+	if (p == 'http' || p == 'https') {
+		return true;
+	} else if (p != "data" && p != "about") {
+		console.info("Unknown protocol in", uri);
+		console.info("Please report issue to https://github.com/kapouer/node-webkitgtk/issues");
+	}
 }
 
 function noop(err) {
@@ -313,8 +327,9 @@ function load(uri, opts, cb) {
 
 	priv.state = LOADING;
 
-	this.allow = opts.allow || "all";
-	this.navigation = opts.navigation || false;
+	priv.allow = opts.allow || "all";
+	priv.stall = opts.stall || 1000;
+	priv.navigation = opts.navigation || false;
 	this.readyState = "loading";
 	priv.wasIdle = false;
 
@@ -332,6 +347,7 @@ function load(uri, opts, cb) {
 	if (Buffer.isBuffer(opts.content)) opts.content = opts.content.toString();
 	if (Buffer.isBuffer(opts.style)) opts.style = opts.style.toString();
 	if (Buffer.isBuffer(opts.script)) opts.script = opts.script.toString();
+	priv.uris = {};
 	this.webview.load(uri, opts, function(err, status) {
 		priv.state = INITIALIZED;
 		if (priv.timeout) {
@@ -432,6 +448,19 @@ WebKit.prototype.destroy = function(cb) {
 	if (cb) setImmediate(cb);
 };
 
+function stalled() {
+	var priv = this.priv;
+	if (priv.preloading) return 0;
+	var now = Date.now();
+	var count = 0;
+	for (var uri in priv.uris) {
+		if (now > priv.uris[uri] + priv.stall) {
+			count++;
+		}
+	}
+	return count;
+}
+
 function loop(start) {
 	var priv = this.priv;
 	if (start) {
@@ -460,9 +489,11 @@ function loop(start) {
 		if (busy) priv.idleCount = 0;
 		else if (!priv.wasBusy) priv.idleCount++;
 
-		if (priv.pendingRequests == 0 && priv.idleCount >= 1 && this.readyState == "complete" && !priv.wasIdle) {
-			priv.wasIdle = true;
-			if (!priv.preloading) emitLifeEvent.call(this, 'idle');
+		if (priv.idleCount >= 1 && this.readyState == "complete" && !priv.wasIdle) {
+			if (priv.pendingRequests <= stalled.call(this)) {
+				priv.wasIdle = true;
+				if (!priv.preloading) emitLifeEvent.call(this, 'idle');
+			}
 		} else {
 			priv.wasBusy = busy;
 		}

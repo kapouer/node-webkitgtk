@@ -21,6 +21,7 @@ static const GDBusInterfaceVTable interface_vtable = {
 WebView::WebView(Handle<Object> opts) {
   this->eventName = getStr(opts, "eventName");
   this->requestCallback = getCb(opts, "requestListener");
+  this->receiveDataCallback = getCb(opts, "receiveDataListener");
   this->responseCallback = getCb(opts, "responseListener");
   this->eventsCallback = getCb(opts, "eventsListener");
   this->policyCallback = getCb(opts, "policyListener");
@@ -114,6 +115,7 @@ void WebView::destroy() {
   if (loadCallback != NULL) delete loadCallback;
   if (stopCallback != NULL) delete stopCallback;
   if (requestCallback != NULL) delete requestCallback;
+  if (receiveDataCallback != NULL) delete receiveDataCallback;
   if (responseCallback != NULL) delete responseCallback;
   if (policyCallback != NULL) delete policyCallback;
   if (eventsCallback != NULL) delete eventsCallback;
@@ -234,6 +236,15 @@ gboolean WebView::DecidePolicy(WebKitWebView* web_view, WebKitPolicyDecision* de
 
 void WebView::ResourceLoad(WebKitWebView* web_view, WebKitWebResource* resource, WebKitURIRequest* request, gpointer data) {
   g_signal_connect(resource, "finished", G_CALLBACK(WebView::ResourceResponse), data);
+  g_signal_connect(resource, "received-data", G_CALLBACK(WebView::ResourceReceiveData), data);
+}
+
+void WebView::ResourceReceiveData(WebKitWebResource* resource, guint64 length, gpointer data) {
+  WebView* self = (WebView*)data;
+  const gchar* uri = webkit_web_resource_get_uri(resource);
+  int argc = 2;
+  Handle<Value> argv[] = { NanNew<String>(uri), NanNew<Integer>(length) };
+  self->receiveDataCallback->Call(argc, argv);
 }
 
 void WebView::ResourceResponse(WebKitWebResource* resource, gpointer data) {
