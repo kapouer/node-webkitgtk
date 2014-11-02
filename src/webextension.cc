@@ -62,8 +62,6 @@ static void web_page_created_callback(WebKitWebExtension* extension, WebKitWebPa
 }
 
 static gboolean event_listener(WebKitDOMDOMWindow* view, WebKitDOMEvent* event, gpointer data) {
-	// find a better way to exchange data between client and here. XHR ?
-	// use CustomEvent, but how is it possible to get event->detail() ?
 	char* message = webkit_dom_keyboard_event_get_key_identifier((WebKitDOMKeyboardEvent*)event);
 	GError* error = NULL;
 	g_dbus_connection_call_sync(connection, NULL, DBUS_OBJECT_WKGTK, DBUS_INTERFACE_WKGTK,
