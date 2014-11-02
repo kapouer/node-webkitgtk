@@ -82,7 +82,7 @@ WebView::WebView(Handle<Object> opts) {
 NAN_METHOD(WebView::Stop) {
   NanScope();
   WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
-  gboolean wasLoading = FALSE;
+  bool wasLoading = FALSE;
   if (self->state == DOCUMENT_LOADING) {
     wasLoading = TRUE;
   }

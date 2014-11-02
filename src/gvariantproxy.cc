@@ -69,7 +69,7 @@ static NAN_PROPERTY_QUERY(QueryNamedProperty) {
 }
 static NAN_PROPERTY_DELETER(DeleteNamedProperty) {
   NanScope();
-  gboolean hasProp = FALSE;
+  bool hasProp = FALSE;
   GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(args.Holder());
   NanUtf8String* prop = NULL;
   if (self->dict != NULL) {
