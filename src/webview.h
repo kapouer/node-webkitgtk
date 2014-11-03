@@ -54,6 +54,7 @@ private:
   int state;
   int authRetryCount;
   bool allowDialogs;
+  bool debug;
 
   char* cookie = NULL;
   char* content = NULL;

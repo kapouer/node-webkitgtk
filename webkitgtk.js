@@ -91,7 +91,8 @@ WebKit.prototype.init = function(opts, cb) {
 			eventsListener: eventsDispatcher.bind(this),
 			policyListener: policyDispatcher.bind(this),
 			authListener: authDispatcher.bind(this),
-			cacheDir: opts.cacheDir
+			cacheDir: opts.cacheDir,
+			debug: !!opts.debug
 		});
 		priv.state = INITIALIZED;
 		cb();

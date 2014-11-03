@@ -169,6 +169,13 @@ init() options
   string, $user_cache_dir/node-webkitgtk  
   path to webkitgtk cache directory.  
   The simplest way to clear the cache is to delete this directory.
+  The cache being shared, it cannot be changed while other webkitgtk threads
+  are running.
+
+- debug  
+  boolean, default false  
+  shows a real window with a web inspector.
+
 
 If width, height, depth options are given, an xvfb instance listening
 given display port will be spawn using `headless` module.
