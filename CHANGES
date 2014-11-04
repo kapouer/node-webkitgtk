@@ -32,3 +32,15 @@ a String, inserted as *user style*.
 The reason is to simplify API and also that it is not up to this module to load
 data from files.
 
+
+1.8.0
+-----
+
+Life events (ready, load, idle, unload) cannot be listened when next event has
+already happened - this is made to prevent waiting for an event that's not
+going to happen.
+If the event already happened but next event has not happened yet, the listener
+is immediately called back.
+If the event loop is stopped and a listener for a future life event is registered,
+it restarts the loop waiting for the next event.
+

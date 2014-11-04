@@ -209,6 +209,13 @@ These are lifecycle events:
   same as window's unload event  
   listener()
 
+These events happen *once* and *in that order*.
+
+Registering a listener for an event that just happened immediately calls the
+new listener.
+
+Registering a listener for a previous event throws an error.
+
 
 These events can happen at any moment:
 

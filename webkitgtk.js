@@ -1,5 +1,5 @@
 var util = require('util');
-var events = require('events');
+var EventEmitter = require('events').EventEmitter;
 var stream = require('stream');
 var fs = require('fs');
 var path = require('path');
@@ -15,6 +15,8 @@ var CREATED = 0;
 var INITIALIZING = 1;
 var INITIALIZED = 2;
 var LOADING = 3;
+
+var RegEvents = /^(ready|load|idle|unload)$/;
 
 var ChainableWebKit;
 
@@ -35,15 +37,21 @@ function WebKit(opts, cb) {
 			if (obj.args) cb.apply(null, obj.args);
 			else obj.cb = cb;
 		};
-		if (!ChainableWebKit) ChainableWebKit = chainit(WebKit);
-
+		if (!ChainableWebKit) {
+			ChainableWebKit = chainit(WebKit);
+		}
 		var inst = new ChainableWebKit();
 
 		// work around https://github.com/vvo/chainit/issues/12
 		var wait = inst.wait;
 		inst.wait = function(ev, cb) {
+			if (!RegEvents.test(ev)) return cb(new Error("call .wait(ev) with ev like " + RegEvents));
 			var lstn = new Listener();
-			this.once(ev, lstn.listen.bind(lstn));
+			try {
+				this.once(ev, lstn.listen.bind(lstn));
+			} catch(e) {
+				return cb(e);
+			}
 			if (cb) return wait.call(this, lstn, cb);
 			else return wait.call(this, lstn);
 		};
@@ -53,7 +61,30 @@ function WebKit(opts, cb) {
 	if (opts) throw new Error("Use WebKit(opts, cb) as short-hand for Webkit().init(opts, cb)");
 	var priv = this.priv = initialPriv();
 }
-util.inherits(WebKit, events.EventEmitter);
+
+function LifeEventEmitter() {}
+util.inherits(LifeEventEmitter, EventEmitter);
+LifeEventEmitter.prototype.once = function(ev, listener) {
+	var priv = this.priv;
+	var lstn = listener;
+	if (RegEvents.test(ev)) {
+		lstn = function() {
+			if (priv.lastEvent) priv.previousEvents[priv.lastEvent] = true;
+			priv.lastEvent = ev;
+			listener();
+		};
+		if (priv.lastEvent == ev) {
+			priv.loopForLife = true;
+			if (!priv.loopImmediate && !priv.loopTimeout) loop.call(this);
+			listener();
+		} else if (priv.previousEvents[ev]) {
+			throw new Error("do not register on an event that already happened:" + ev);
+		}
+	}
+	return EventEmitter.prototype.once.call(this, ev, lstn);
+};
+
+util.inherits(WebKit, LifeEventEmitter);
 
 WebKit.prototype.init = function(opts, cb) {
 	var priv = this.priv;
@@ -114,7 +145,8 @@ function initialPriv() {
 		loopImmediate: null,
 		preloading: null,
 		wasBusy: false,
-		wasIdle: false
+		wasIdle: false,
+		previousEvents: {}
 	};
 }
 
@@ -327,7 +359,7 @@ function load(uri, opts, cb) {
 	if (priv.state != INITIALIZED) return cb(new Error(errorLoad(priv.state)), this);
 
 	priv.state = LOADING;
-
+	priv.previousEvents = {};
 	priv.allow = opts.allow || "all";
 	priv.stall = opts.stall || 1000;
 	priv.navigation = opts.navigation || false;
@@ -667,7 +699,7 @@ function preload(uri, opts, cb) {
 			priv.preloading = false;
 			load.call(this, uri, opts, cb);
 		}.bind(this));
-	});
+	}.bind(this));
 }
 
 module.exports = WebKit;
