@@ -6,6 +6,7 @@ var join = require('path').join;
 
 describe("long polling", function suite() {
 	it("should idle before server sends message", function(done) {
+		this.timeout(6000);
 		var engine = require('engine.io');
 		var server = require('http').createServer(function(req, res) {
 			res.statusCode = 200;
@@ -33,9 +34,9 @@ describe("long polling", function suite() {
 			setTimeout(function() {
 				sent = true;
 				socket.send("some server data");
-			}, 590);
+			}, 3000);
 		});
-		WebKit().load("http://localhost:8019", {stall:550}).wait('idle', function(err) {
+		WebKit().load("http://localhost:8019", {stall:2000}).wait('idle', function(err) {
 			this.run('window.mymessage', function(err, data) {
 				expect(data).to.not.be.ok();
 				setTimeout(function() {
@@ -43,7 +44,7 @@ describe("long polling", function suite() {
 					server.close();
 					engineServer.close();
 					done();
-				}, 300);
+				}, 2000);
 			});
 		});
 	});
