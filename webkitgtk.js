@@ -414,8 +414,14 @@ function load(uri, opts, cb) {
 				};
 			});
 			runcb.call(this, function(done) {
-				if (/interactive|complete/.test(document.readyState)) done(null, document.readyState);
-				else document.addEventListener('DOMContentLoaded', function() { done(null, "interactive"); }, false);
+				function check() {
+					if (/interactive|complete/.test(document.readyState)) done(null, document.readyState);
+					else document.addEventListener('DOMContentLoaded', function() {
+						done(null, "interactive");
+					}, false);
+				}
+				if (window.preloading) setTimeout(check, 0);
+				else check();
 			}, function(err, result) {
 				if (err) console.error(err);
 				this.readyState = result;
@@ -710,16 +716,29 @@ function pdf(filepath, opts, cb) {
 var disableAllScripts = '(' + function() {
 	var disableds = [];
 	var observer = new MutationObserver(function(mutations) {
-		var node, old, list
+		var node, val, list, att;
 		for (var m=0; m < mutations.length; m++) {
 			list = mutations[m].addedNodes;
 			if (!list) continue;
 			for (var i=0; i < list.length; i++) {
 				node = list[i];
 				if (node.nodeType != 1) continue;
-				old = node.type;
-				node.type = "disabled";
-				disableds.push([node, old]);
+				switch (node.nodeName) {
+					case "SCRIPT":
+						att = node.attributes.getNamedItem('type');
+						if (att) val = att.nodeValue;
+						else val = null;
+						node.type = "disabled";
+						disableds.push({node: node, val: val});
+					break;
+					case "BODY":
+						val = node.onload;
+						if (val) {
+							node.onload = "";
+							disableds.push({node: node, val: val});
+						}
+					break;
+				}
 			}
 		}
 	});
@@ -727,12 +746,24 @@ var disableAllScripts = '(' + function() {
 		childList: true,
 		subtree: true
 	});
-	document.addEventListener('DOMContentLoaded', function() {
+	document.addEventListener('DOMContentLoaded', function(e) {
+		window.preloading = true;
 		observer.disconnect();
-		for (var i=0, len=disableds.length; i < len; i++) {
-			disableds[i][0].type = disableds[i][1];
-		}
-	});
+		setTimeout(function() {
+			delete window.preloading;
+			for (var i=0, item, len=disableds.length; i < len; i++) {
+				item = disableds[i];
+				switch (item.node.nodeName) {
+					case "SCRIPT":
+						item.node.type = item.val;
+					break;
+					case "BODY":
+						item.node.onload = item.val;
+					break;
+				}
+			}
+		}, 0);
+	}, true);
 }.toString() + ')();';
 
 module.exports = WebKit;
