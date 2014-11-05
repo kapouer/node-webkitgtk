@@ -113,6 +113,7 @@ WebKit.prototype.init = function(opts, cb) {
 		if (child) priv.xvfb = child;
 		process.env.DISPLAY = ":" + opts.display;
 		var Bindings = require(__dirname + '/lib/webkitgtk.node');
+		this.debug = !!opts.debug;
 		this.webview = new Bindings({
 			webextension: __dirname + '/lib/ext',
 			eventName: priv.eventName,
@@ -123,7 +124,7 @@ WebKit.prototype.init = function(opts, cb) {
 			policyListener: policyDispatcher.bind(this),
 			authListener: authDispatcher.bind(this),
 			cacheDir: opts.cacheDir,
-			debug: !!opts.debug
+			debug: this.debug
 		});
 		priv.state = INITIALIZED;
 		cb();
@@ -545,7 +546,7 @@ function loop(start) {
 		}
 		if (priv.loopForCallbacks == 0 && !priv.loopForLife || !this.webview) {
 			priv.loopCount = 0;
-			return;
+			if (!this.debug) return;
 		}
 		var busy = this.webview.loop(true);
 		if (busy) priv.idleCount = 0;
