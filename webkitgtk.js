@@ -444,7 +444,7 @@ WebKit.prototype.preload = function(uri, cb) {
 		cb = arguments[2];
 	}
 	if (!cb) cb = noop;
-	preload.call(this, uri, nopts, cb);
+	preload.call(this, uri, opts, cb);
 };
 
 function preload(uri, opts, cb) {
