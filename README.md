@@ -96,8 +96,7 @@ load() options
 
 - cookies  
   string | [string], default none  
-  it preloads the document to be able to set document.cookie, all other
-  requests being disabled, then do the actual load with Cookie header.
+  caution: cookies are saved
 
 - width  
   number, 1024
@@ -254,6 +253,12 @@ methods
 * init([opts], cb)  
   see parameters described above  
   *must be invoked first*
+
+* preload(uri, [opts], [cb])  
+  load uri into webview  
+  scripts are not run, resources are not loaded.  
+  These options are not effective: `cookies`, `script`, `allow`.  
+  Only `ready` event is meaningful.
 
 * load(uri, [opts], [cb])  
   load uri into webview  

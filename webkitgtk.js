@@ -143,7 +143,6 @@ function initialPriv() {
 		eventName: "webkitgtk" + Date.now(),
 		loopTimeout: null,
 		loopImmediate: null,
-		preloading: null,
 		wasBusy: false,
 		wasIdle: false,
 		previousEvents: {}
@@ -158,8 +157,7 @@ function emitLifeEvent(event) {
 					event == "ready"
 				)
 			);
-		if (willStop && this.priv.loopForLife && !this.priv.preloading) {
-			// not when preloading because it would stop the second load right after calling it
+		if (willStop && this.priv.loopForLife) {
 			this.priv.loopForLife = false;
 		}
 	}.bind(this));
@@ -254,10 +252,6 @@ function requestDispatcher(binding) {
 	var uri = binding.uri;
 	if (uri != this.uri) {
 		if (priv.uris) priv.uris[uri] = Date.now();
-		if (priv.preloading) {
-			binding.cancel = "1";
-			return;
-		}
 	}
 
 	var cancel = false;
@@ -292,7 +286,6 @@ function requestDispatcher(binding) {
 }
 
 function responseDispatcher(binding) {
-	if (this.priv.preloading) return;
 	var res = new Response(this, binding);
 	var uri = res.uri;
 	if (uri && this.priv.uris) delete this.priv.uris[uri];
@@ -351,26 +344,41 @@ WebKit.prototype.load = function(uri, cb) {
 		cb = arguments[2];
 	}
 	if (!cb) cb = noop;
-	load.call(this, uri, opts, cb);
+	var cookies = opts.cookies;
+	if (cookies) {
+		if (!Array.isArray(cookies)) cookies = [cookies];
+		var script = cookies.map(function(cookie) {
+			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
+		}).join(';') + ';';
+		preload.call(this, uri, {content:"<html></html>"}, function(err) {
+			if (err) return cb(err, this);
+			runcb.call(this, script, function(err) {
+				if (err) return cb(err, this);
+				load.call(this, uri, opts, cb);
+			}.bind(this));
+		}.bind(this));
+	} else {
+		load.call(this, uri, opts, cb);
+	}
 };
 
 function load(uri, opts, cb) {
 	var priv = this.priv;
 	if (priv.state != INITIALIZED) return cb(new Error(errorLoad(priv.state)), this);
 
+	this.readyState = "loading";
 	priv.state = LOADING;
 	priv.previousEvents = {};
+	priv.lastEvent = null;
 	priv.allow = opts.allow || "all";
 	priv.stall = opts.stall || 1000;
 	priv.navigation = opts.navigation || false;
-	this.readyState = "loading";
 	priv.wasIdle = false;
-
-	preload.call(this, uri, opts, cb);
 	priv.loopForLife = true;
-	loop.call(this);
 	priv.timeout = setTimeout(stop.bind(this), opts.timeout || 30000);
-	if (!priv.preloading && this.listeners('error').length == 0) {
+	priv.uris = {};
+
+	if (this.listeners('error').length == 0) {
 		this.on('error', function(msg, uri, line, column) {
 			if (this.listeners('error').length <= 1) {
 				console.error(msg, "\n", uri, "line", line, "column", column);
@@ -380,22 +388,22 @@ function load(uri, opts, cb) {
 	if (Buffer.isBuffer(opts.content)) opts.content = opts.content.toString();
 	if (Buffer.isBuffer(opts.style)) opts.style = opts.style.toString();
 	if (Buffer.isBuffer(opts.script)) opts.script = opts.script.toString();
-	priv.uris = {};
+
+	loop.call(this, true);
 	this.webview.load(uri, opts, function(err, status) {
+		loop.call(this, false);
 		priv.state = INITIALIZED;
 		if (priv.timeout) {
 			clearTimeout(priv.timeout);
 			delete priv.timeout;
 		}
 		this.status = status;
-		if (!priv.preloading) {
-			priv.preloading = null;
-			if (!err && status < 200 || status >= 400) err = status;
-			cb(err, this);
-			if (err) return;
-		}
+		if (!err && status < 200 || status >= 400) err = status;
+		cb(err, this);
+		if (err) return;
 		setImmediate(function() {
 			if (priv.state != INITIALIZED) {
+				console.trace("does this happen ?");
 				return;
 			}
 			run.call(this, function(emit) {
@@ -411,10 +419,9 @@ function load(uri, opts, cb) {
 			}, function(err, result) {
 				if (err) console.error(err);
 				this.readyState = result;
-				if (!priv.preloading) emitLifeEvent.call(this, 'ready');
+				emitLifeEvent.call(this, 'ready');
 				if (result == "complete") {
-					if (!priv.preloading) emitLifeEvent.call(this, 'load');
-					else this.emit('preload');
+					emitLifeEvent.call(this, 'load');
 				}	else {
 					runcb.call(this, function(done) {
 						if (document.readyState == "complete") done(null, document.readyState);
@@ -422,14 +429,31 @@ function load(uri, opts, cb) {
 					}, function(err, result) {
 						if (err) console.error(err);
 						this.readyState = result;
-						if (!priv.preloading) emitLifeEvent.call(this, 'load');
-						else this.emit('preload');
+						emitLifeEvent.call(this, 'load');
 					}.bind(this));
 				}
 			}.bind(this));
 		}.bind(this));
 	}.bind(this));
+}
+
+WebKit.prototype.preload = function(uri, cb) {
+	var opts = {};
+	if (typeof cb != "function") {
+		opts = cb;
+		cb = arguments[2];
+	}
+	if (!cb) cb = noop;
+	preload.call(this, uri, nopts, cb);
 };
+
+function preload(uri, opts, cb) {
+	var nopts = {};
+	for (var key in opts) nopts[key] = opts[key];
+	nopts.allow = "none";
+	nopts.script = disableAllScripts;
+	load.call(this, uri, nopts, cb);
+}
 
 function stop(cb) {
 	var priv = this.priv;
@@ -483,7 +507,6 @@ WebKit.prototype.destroy = function(cb) {
 
 function stalled() {
 	var priv = this.priv;
-	if (priv.preloading) return 0;
 	var now = Date.now();
 	var count = 0;
 	for (var uri in priv.uris) {
@@ -525,7 +548,7 @@ function loop(start) {
 		if (priv.idleCount >= 1 && this.readyState == "complete" && !priv.wasIdle) {
 			if (priv.pendingRequests <= stalled.call(this)) {
 				priv.wasIdle = true;
-				if (!priv.preloading) emitLifeEvent.call(this, 'idle');
+				emitLifeEvent.call(this, 'idle');
 			}
 		} else {
 			priv.wasBusy = busy;
@@ -684,22 +707,32 @@ function pdf(filepath, opts, cb) {
 	}.bind(this));
 }
 
-function preload(uri, opts, cb) {
-	var priv = this.priv;
-	if (!opts.cookies || priv.preloading !== null) return;
-	priv.preloading = true;
-	this.once('preload', function() {
-		var cookies = opts.cookies;
-		if (!Array.isArray(cookies)) cookies = [cookies];
-		var script = cookies.map(function(cookie) {
-			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
-		}).join(';') + ';';
-		runcb.call(this, script, function(err) {
-			if (err) return cb(err);
-			priv.preloading = false;
-			load.call(this, uri, opts, cb);
-		}.bind(this));
-	}.bind(this));
-}
+var disableAllScripts = '(' + function() {
+	var disableds = [];
+	var observer = new MutationObserver(function(mutations) {
+		var node, old, list
+		for (var m=0; m < mutations.length; m++) {
+			list = mutations[m].addedNodes;
+			if (!list) continue;
+			for (var i=0; i < list.length; i++) {
+				node = list[i];
+				if (node.nodeType != 1) continue;
+				old = node.type;
+				node.type = "disabled";
+				disableds.push([node, old]);
+			}
+		}
+	});
+	observer.observe(document, {
+		childList: true,
+		subtree: true
+	});
+	document.addEventListener('DOMContentLoaded', function() {
+		observer.disconnect();
+		for (var i=0, len=disableds.length; i < len; i++) {
+			disableds[i][0].type = disableds[i][1];
+		}
+	});
+}.toString() + ')();';
 
 module.exports = WebKit;
