@@ -107,13 +107,18 @@ WebKit.prototype.init = function(opts, cb) {
 	} else if (!opts) {
 		opts = {};
 	}
+	if (opts.offscreen == null) opts.offscreen = true;
+	if (opts.debug) {
+		priv.debug = true;
+		opts.offscreen = false;
+		opts.inspector = true;
+	}
 	opts.display = opts.display || 0;
 	display.call(this, opts, function(err, child) {
 		if (err) return cb(err);
 		if (child) priv.xvfb = child;
 		process.env.DISPLAY = ":" + opts.display;
 		var Bindings = require(__dirname + '/lib/webkitgtk.node');
-		this.debug = !!opts.debug;
 		this.webview = new Bindings({
 			webextension: __dirname + '/lib/ext',
 			eventName: priv.eventName,
@@ -123,8 +128,10 @@ WebKit.prototype.init = function(opts, cb) {
 			eventsListener: eventsDispatcher.bind(this),
 			policyListener: policyDispatcher.bind(this),
 			authListener: authDispatcher.bind(this),
+			inspectorClosedListener: inspectorClosedListener.bind(this),
 			cacheDir: opts.cacheDir,
-			debug: this.debug
+			offscreen: opts.offscreen,
+			inspector: opts.inspector
 		});
 		priv.state = INITIALIZED;
 		cb();
@@ -163,6 +170,10 @@ function emitLifeEvent(event) {
 		}
 	}.bind(this));
 	this.emit(event);
+}
+
+function inspectorClosedListener() {
+	this.priv.inspecting = false;
 }
 
 function receiveDataDispatcher(uri, length) {
@@ -378,6 +389,7 @@ function load(uri, opts, cb) {
 	priv.loopForLife = true;
 	priv.timeout = setTimeout(stop.bind(this), opts.timeout || 30000);
 	priv.uris = {};
+	if (priv.debug) priv.inspecting = true;
 
 	if (this.listeners('error').length == 0) {
 		this.on('error', function(msg, uri, line, column) {
@@ -402,22 +414,36 @@ function load(uri, opts, cb) {
 		if (!err && status < 200 || status >= 400) err = status;
 		cb(err, this);
 		if (err) return;
-		setImmediate(function() {
-			if (priv.state != INITIALIZED) {
-				console.trace("does this happen ?");
-				return;
-			}
-			run.call(this, function(emit) {
-				window.onerror = function() {
-					var ret = Array.prototype.slice.call(arguments, 0);
-					ret.unshift("error");
-					emit.apply(null, ret);
-				};
-			});
+
+		run.call(this, function(emit) {
+			window.onerror = function() {
+				var ret = Array.prototype.slice.call(arguments, 0);
+				ret.unshift("error");
+				emit.apply(null, ret);
+			};
+		});
+		if (priv.inspecting) {
+			console.info("Loading inspector and pausing execution...");
+			var check = function() {
+				var start = Date.now();
+				runcb.call(this, function(done) {
+					done();
+				}, function() {
+					if (Date.now() - start > 500) detectEvents();
+					else setTimeout(check, 100);
+				});
+			}.bind(this);
+			check();
+		} else {
+			setImmediate(detectEvents);
+		}
+
+		var detectEvents = function() {
 			runcb.call(this, function(done) {
 				function check() {
-					if (/interactive|complete/.test(document.readyState)) done(null, document.readyState);
-					else document.addEventListener('DOMContentLoaded', function() {
+					if (/interactive|complete/.test(document.readyState)) {
+						done(null, document.readyState);
+					} else document.addEventListener('DOMContentLoaded', function() {
 						done(null, "interactive");
 					}, false);
 				}
@@ -440,7 +466,7 @@ function load(uri, opts, cb) {
 					}.bind(this));
 				}
 			}.bind(this));
-		}.bind(this));
+		}.bind(this);
 	}.bind(this));
 }
 
@@ -546,8 +572,9 @@ function loop(start) {
 		}
 		if (priv.loopForCallbacks == 0 && !priv.loopForLife || !this.webview) {
 			priv.loopCount = 0;
-			if (!this.debug) return;
+			if (!priv.debug || !priv.inspecting) return;
 		}
+
 		var busy = this.webview.loop(true);
 		if (busy) priv.idleCount = 0;
 		else if (!priv.wasBusy) priv.idleCount++;
@@ -622,7 +649,7 @@ function run(script, message, cb) {
 	setImmediate(function() {
 		if (mode == RUN_SYNC) {
 			if (/^\s*function(\s+\w+)?\s*\(\s*\)/.test(script)) script = '(' + script + ')()';
-			else script = '(function() { return ' + script + '; })()';
+			else script = '(function() { debugger; return ' + script + '; })()';
 			var wrap = '\
 			(function() { \
 				var message = ' + initialMessage + '; \
@@ -647,7 +674,7 @@ function run(script, message, cb) {
 				} \
 				' + dispatcher + '\
 			}';
-			var wrap = '(' + script + ')(' + fun + ');';
+			var wrap = '(' + script.replace('{', '{\ndebugger;\n') + ')(' + fun + ');';
 			// events work only if webview is alive, see lifecycle events
 			this.webview.run(wrap, initialMessage);
 			if (message.ticket) loop.call(this, true);

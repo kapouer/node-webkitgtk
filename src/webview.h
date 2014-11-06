@@ -20,6 +20,7 @@ public:
   static void Init(Handle<Object>, Handle<Object>);
   static void Exit(void*);
 
+  static void InspectorClosed(WebKitWebInspector*, gpointer);
   static gboolean Authenticate(WebKitWebView*, WebKitAuthenticationRequest*, gpointer);
   static void InitExtensions(WebKitWebContext*, gpointer);
   static gboolean DecidePolicy(WebKitWebView*, WebKitPolicyDecision*, WebKitPolicyDecisionType, gpointer);
@@ -54,13 +55,14 @@ private:
   int state;
   int authRetryCount;
   bool allowDialogs;
-  bool debug;
+  bool offscreen;
 
   char* cookie = NULL;
   char* content = NULL;
 
   WebKitWebView* view = NULL;
   GtkWidget* window = NULL;
+  WebKitWebInspector* inspector = NULL;
 
   NanCallback* eventsCallback = NULL;
   char* eventName = NULL;
@@ -78,6 +80,7 @@ private:
   NanCallback* responseCallback = NULL;
   NanCallback* policyCallback = NULL;
   NanCallback* authCallback = NULL;
+  NanCallback* inspectorClosedCallback = NULL;
 
   const char* uri = NULL;
   const char* nextUri = NULL;

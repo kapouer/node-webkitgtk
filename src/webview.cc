@@ -26,8 +26,10 @@ WebView::WebView(Handle<Object> opts) {
   this->eventsCallback = getCb(opts, "eventsListener");
   this->policyCallback = getCb(opts, "policyListener");
   this->authCallback = getCb(opts, "authListener");
+  this->inspectorClosedCallback = getCb(opts, "inspectorClosedListener");
 
-  debug = opts->Get(H("debug"))->BooleanValue();
+  this->offscreen = opts->Get(H("offscreen"))->BooleanValue();
+  bool hasInspector = opts->Get(H("inspector"))->BooleanValue();
 
   NanAdjustExternalMemory(100000000);
   gtk_init(0, NULL);
@@ -69,13 +71,21 @@ WebView::WebView(Handle<Object> opts) {
 
   view = WEBKIT_WEB_VIEW(webkit_web_view_new_with_user_content_manager(webkit_user_content_manager_new()));
 
-  if (debug) {
+  if (!this->offscreen) {
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   } else {
     window = gtk_offscreen_window_new();
   }
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
   gtk_widget_show_all(window);
+
+  if (hasInspector) {
+    g_object_set(G_OBJECT(webkit_web_view_get_settings(view)), "enable-developer-extras", TRUE, NULL);
+    this->inspector = webkit_web_view_get_inspector(view);
+    g_signal_connect(this->inspector, "closed", G_CALLBACK(WebView::InspectorClosed), this);
+  } else {
+    g_object_set(G_OBJECT(webkit_web_view_get_settings(view)), "enable-developer-extras", FALSE, NULL);
+  }
 
   g_signal_connect(view, "authenticate", G_CALLBACK(WebView::Authenticate), this);
   g_signal_connect(view, "load-failed", G_CALLBACK(WebView::Fail), this);
@@ -106,6 +116,10 @@ NAN_METHOD(WebView::Destroy) {
 
 void WebView::destroy() {
   if (window == NULL) return;
+  if (inspector != NULL) {
+    webkit_web_inspector_close(inspector);
+    inspector = NULL;
+  }
   view = NULL;
   gtk_widget_destroy(window);
   window = NULL;
@@ -126,6 +140,7 @@ void WebView::destroy() {
   if (policyCallback != NULL) delete policyCallback;
   if (eventsCallback != NULL) delete eventsCallback;
   if (authCallback != NULL) delete authCallback;
+  if (inspectorClosedCallback != NULL) delete inspectorClosedCallback;
 
   g_dbus_server_stop(server);
   g_object_unref(server);
@@ -174,6 +189,12 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
   GVariantProxy::Init(exports);
   WebResponse::Init(exports);
   WebAuthRequest::Init(exports);
+}
+
+void WebView::InspectorClosed(WebKitWebInspector* inspector, gpointer data) {
+  WebView* self = (WebView*)data;
+  Handle<Value> argv[] = { };
+  self->inspectorClosedCallback->Call(0, argv);
 }
 
 gboolean WebView::Authenticate(WebKitWebView* view, WebKitAuthenticationRequest* request, gpointer data) {
@@ -436,7 +457,6 @@ NAN_METHOD(WebView::Load) {
 
   WebKitSettings* settings = webkit_web_view_get_settings(self->view);
   g_object_set(settings,
-    "enable-developer-extras", self->debug,
     "enable-plugins", FALSE,
 		"print-backgrounds", TRUE,
 		"enable-javascript", TRUE,
@@ -478,7 +498,9 @@ void WebView::requestUri(WebView* self, const char* uri) {
   } else {
     webkit_web_view_load_request(self->view, webkit_uri_request_new(uri));
   }
-  if (self->debug) webkit_web_inspector_show(webkit_web_view_get_inspector(self->view));
+  if (self->inspector) {
+    webkit_web_inspector_show(self->inspector);
+  }
 }
 
 void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) {
