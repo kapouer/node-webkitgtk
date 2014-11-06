@@ -4,7 +4,7 @@ var fs = require('fs');
 
 
 describe("cookies option", function suite() {
-	it("should set Cookie HTTP header on second request", function(done) {
+	it("should set Cookie HTTP header on first request", function(done) {
 		var count = 0;
 		var cookiestr = "mycookie=myvalue";
 		var server = require('http').createServer(function(req, res) {
