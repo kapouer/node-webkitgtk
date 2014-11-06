@@ -174,8 +174,9 @@ function emitLifeEvent(event) {
 
 function closedListener(what) {
 	var priv = this.priv;
-	if (what == "inspector") priv.inspecting = false;
-	else if (what == "window") {
+	if (what == "inspector") {
+		priv.inspecting = false;
+	}	else if (what == "window") {
 		if (priv.loopTimeout) {
 			clearTimeout(priv.loopTimeout);
 			priv.loopTimeout = null;
@@ -594,7 +595,7 @@ function loop(start) {
 		else if (!priv.wasBusy) priv.idleCount++;
 
 		if (priv.idleCount >= 1 && this.readyState == "complete" && !priv.wasIdle) {
-			if (priv.pendingRequests <= stalled.call(this)) {
+			if (!priv.inspecting && priv.pendingRequests <= stalled.call(this)) {
 				priv.wasIdle = true;
 				emitLifeEvent.call(this, 'idle');
 			}
