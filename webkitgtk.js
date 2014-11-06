@@ -427,6 +427,7 @@ function load(uri, opts, cb) {
 			var check = function() {
 				var start = Date.now();
 				runcb.call(this, function(done) {
+					debugger;
 					done();
 				}, function() {
 					if (Date.now() - start > 500) detectEvents();
@@ -649,7 +650,7 @@ function run(script, message, cb) {
 	setImmediate(function() {
 		if (mode == RUN_SYNC) {
 			if (/^\s*function(\s+\w+)?\s*\(\s*\)/.test(script)) script = '(' + script + ')()';
-			else script = '(function() { debugger; return ' + script + '; })()';
+			else script = '(function() { return ' + script + '; })()';
 			var wrap = '\
 			(function() { \
 				var message = ' + initialMessage + '; \
@@ -674,7 +675,7 @@ function run(script, message, cb) {
 				} \
 				' + dispatcher + '\
 			}';
-			var wrap = '(' + script.replace('{', '{\ndebugger;\n') + ')(' + fun + ');';
+			var wrap = '(' + script + ')(' + fun + ');';
 			// events work only if webview is alive, see lifecycle events
 			this.webview.run(wrap, initialMessage);
 			if (message.ticket) loop.call(this, true);
