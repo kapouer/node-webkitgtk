@@ -629,7 +629,6 @@ function run(script, message, cb) {
 
 	var mode = RUN_SYNC;
 	if (/^\s*function(\s+\w+)?\s*\(\s*\w+\s*\)/.test(script)) mode = RUN_ASYNC;
-	else if (/^(file|http|https):/.test(script)) mode = RUN_PATH;
 
 	if (mode != RUN_ASYNC && !message.ticket) {
 		return cb(new Error("cannot call runev without function(emit) {} script signature"));
@@ -680,8 +679,6 @@ function run(script, message, cb) {
 			this.webview.run(wrap, initialMessage);
 			if (message.ticket) loop.call(this, true);
 			else setImmediate(cb);
-		} else if (mode == RUN_PATH) {
-			console.log("TODO");
 		}
 	}.bind(this));
 };
