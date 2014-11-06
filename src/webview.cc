@@ -26,7 +26,7 @@ WebView::WebView(Handle<Object> opts) {
   this->eventsCallback = getCb(opts, "eventsListener");
   this->policyCallback = getCb(opts, "policyListener");
   this->authCallback = getCb(opts, "authListener");
-  this->inspectorClosedCallback = getCb(opts, "inspectorClosedListener");
+  this->closeCallback = getCb(opts, "closedListener");
 
   this->offscreen = opts->Get(H("offscreen"))->BooleanValue();
   bool hasInspector = opts->Get(H("inspector"))->BooleanValue();
@@ -73,6 +73,7 @@ WebView::WebView(Handle<Object> opts) {
 
   if (!this->offscreen) {
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    g_signal_connect(window, "destroy", G_CALLBACK(WebView::WindowClosed), this);
   } else {
     window = gtk_offscreen_window_new();
   }
@@ -115,22 +116,18 @@ NAN_METHOD(WebView::Destroy) {
 }
 
 void WebView::destroy() {
-  if (window == NULL) return;
-  if (inspector != NULL) {
-    webkit_web_inspector_close(inspector);
-    inspector = NULL;
-  }
+//  if (window == NULL) return;
+  inspector = NULL;
   view = NULL;
-  gtk_widget_destroy(window);
-  window = NULL;
-  delete[] cookie;
-  delete[] content;
+  if (window != NULL) gtk_widget_destroy(window);
+  if (cookie != NULL) delete[] cookie;
+  if (content != NULL) delete[] content;
 
-  delete pngCallback;
-  delete pngFilename;
+  if (pngCallback != NULL) delete pngCallback;
+  if (pngFilename != NULL) delete pngFilename;
 
-  delete printCallback;
-  delete printUri;
+  if (printCallback != NULL) delete printCallback;
+  if (printUri != NULL) delete printUri;
 
   if (loadCallback != NULL) delete loadCallback;
   if (stopCallback != NULL) delete stopCallback;
@@ -140,7 +137,7 @@ void WebView::destroy() {
   if (policyCallback != NULL) delete policyCallback;
   if (eventsCallback != NULL) delete eventsCallback;
   if (authCallback != NULL) delete authCallback;
-  if (inspectorClosedCallback != NULL) delete inspectorClosedCallback;
+  if (closeCallback != NULL) delete closeCallback;
 
   g_dbus_server_stop(server);
   g_object_unref(server);
@@ -193,8 +190,16 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 
 void WebView::InspectorClosed(WebKitWebInspector* inspector, gpointer data) {
   WebView* self = (WebView*)data;
-  Handle<Value> argv[] = { };
-  self->inspectorClosedCallback->Call(0, argv);
+  Handle<Value> argv[] = { NanNew<String>("inspector") };
+  self->closeCallback->Call(1, argv);
+}
+
+void WebView::WindowClosed(GtkWidget* window, gpointer data) {
+  WebView* self = (WebView*)data;
+  self->view = NULL;
+  self->window = NULL;
+  Handle<Value> argv[] = { NanNew<String>("window") };
+  self->closeCallback->Call(1, argv);
 }
 
 gboolean WebView::Authenticate(WebKitWebView* view, WebKitAuthenticationRequest* request, gpointer data) {
@@ -535,14 +540,15 @@ NAN_METHOD(WebView::Run) {
   NanUtf8String* script = new NanUtf8String(args[0]);
   NanUtf8String* message = new NanUtf8String(args[1]);
   SelfMessage* data = new SelfMessage(self, **message);
-  webkit_web_view_run_javascript(
-    self->view,
-    **script,
-    NULL,
-    WebView::RunFinished,
-    data
-  );
-
+  if (self->view != NULL) {
+    webkit_web_view_run_javascript(
+      self->view,
+      **script,
+      NULL,
+      WebView::RunFinished,
+      data
+    );
+  }
   delete script;
 
   NanReturnUndefined();

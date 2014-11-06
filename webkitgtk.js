@@ -128,7 +128,7 @@ WebKit.prototype.init = function(opts, cb) {
 			eventsListener: eventsDispatcher.bind(this),
 			policyListener: policyDispatcher.bind(this),
 			authListener: authDispatcher.bind(this),
-			inspectorClosedListener: inspectorClosedListener.bind(this),
+			closedListener: closedListener.bind(this),
 			cacheDir: opts.cacheDir,
 			offscreen: opts.offscreen,
 			inspector: opts.inspector
@@ -172,8 +172,20 @@ function emitLifeEvent(event) {
 	this.emit(event);
 }
 
-function inspectorClosedListener() {
-	this.priv.inspecting = false;
+function closedListener(what) {
+	var priv = this.priv;
+	if (what == "inspector") priv.inspecting = false;
+	else if (what == "window") {
+		if (priv.loopTimeout) {
+			clearTimeout(priv.loopTimeout);
+			priv.loopTimeout = null;
+		}
+		if (priv.loopImmediate) {
+			clearImmediate(priv.loopImmediate);
+			priv.loopImmediate = null;
+		}
+		this.destroy();
+	}
 }
 
 function receiveDataDispatcher(uri, length) {

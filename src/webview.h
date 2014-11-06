@@ -21,6 +21,7 @@ public:
   static void Exit(void*);
 
   static void InspectorClosed(WebKitWebInspector*, gpointer);
+  static void WindowClosed(GtkWidget*, gpointer);
   static gboolean Authenticate(WebKitWebView*, WebKitAuthenticationRequest*, gpointer);
   static void InitExtensions(WebKitWebContext*, gpointer);
   static gboolean DecidePolicy(WebKitWebView*, WebKitPolicyDecision*, WebKitPolicyDecisionType, gpointer);
@@ -80,7 +81,7 @@ private:
   NanCallback* responseCallback = NULL;
   NanCallback* policyCallback = NULL;
   NanCallback* authCallback = NULL;
-  NanCallback* inspectorClosedCallback = NULL;
+  NanCallback* closeCallback = NULL;
 
   const char* uri = NULL;
   const char* nextUri = NULL;
