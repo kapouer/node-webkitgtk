@@ -434,22 +434,6 @@ function load(uri, opts, cb) {
 				emit.apply(null, ret);
 			};
 		});
-		if (priv.inspecting) {
-			console.info("Loading inspector and pausing execution...");
-			var check = function() {
-				var start = Date.now();
-				runcb.call(this, function(done) {
-					debugger;
-					done();
-				}, function() {
-					if (Date.now() - start > 500) detectEvents();
-					else setTimeout(check, 100);
-				});
-			}.bind(this);
-			check();
-		} else {
-			setImmediate(detectEvents);
-		}
 
 		var detectEvents = function() {
 			runcb.call(this, function(done) {
@@ -480,6 +464,23 @@ function load(uri, opts, cb) {
 				}
 			}.bind(this));
 		}.bind(this);
+
+		if (priv.inspecting) {
+			var checkDebugger = function() {
+				var start = Date.now();
+				runcb.call(this, function(done) {
+					debugger;
+					done();
+				}, function() {
+					if (Date.now() - start > 500) detectEvents();
+					else setTimeout(checkDebugger, 100);
+				});
+			}.bind(this);
+			checkDebugger();
+		} else {
+			setImmediate(detectEvents);
+		}
+
 	}.bind(this));
 }
 
