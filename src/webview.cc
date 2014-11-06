@@ -116,9 +116,9 @@ NAN_METHOD(WebView::Destroy) {
 }
 
 void WebView::destroy() {
-//  if (window == NULL) return;
-  inspector = NULL;
+  if (view == NULL) return;
   view = NULL;
+  inspector = NULL;
   if (window != NULL) gtk_widget_destroy(window);
   if (cookie != NULL) delete[] cookie;
   if (content != NULL) delete[] content;
@@ -196,7 +196,6 @@ void WebView::InspectorClosed(WebKitWebInspector* inspector, gpointer data) {
 
 void WebView::WindowClosed(GtkWidget* window, gpointer data) {
   WebView* self = (WebView*)data;
-  self->view = NULL;
   self->window = NULL;
   Handle<Value> argv[] = { NanNew<String>("window") };
   self->closeCallback->Call(1, argv);
@@ -540,7 +539,7 @@ NAN_METHOD(WebView::Run) {
   NanUtf8String* script = new NanUtf8String(args[0]);
   NanUtf8String* message = new NanUtf8String(args[1]);
   SelfMessage* data = new SelfMessage(self, **message);
-  if (self->view != NULL) {
+  if (self->window != NULL) {
     webkit_web_view_run_javascript(
       self->view,
       **script,
