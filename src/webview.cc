@@ -423,6 +423,7 @@ NAN_METHOD(WebView::Load) {
 
   WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
 
+  webkit_user_content_manager_remove_all_scripts(contman);
   const gchar* script = getStr(opts, "script");
   if (script != NULL) {
     WebKitUserScript* userScript = webkit_user_script_new(script,
@@ -434,6 +435,7 @@ NAN_METHOD(WebView::Load) {
     delete script;
   }
 
+  webkit_user_content_manager_remove_all_style_sheets(contman);
   const gchar* style = getStr(opts, "style");
   if (style != NULL) {
     WebKitUserStyleSheet* styleSheet = webkit_user_style_sheet_new(
