@@ -5,7 +5,8 @@ describe("preload method", function suite() {
 	it("should not run scripts", function(done) {
 		var doc = '<html><head><script>\
 		document.writeln("<meta name=\'test\'></meta>");\
-		</script>\<script type="text/javascript" src="test.js"></script></head>\
+		</script>\<script type="text/javascript" src="test.js"></script>\
+		<script src="test.js"></script></head>\
 		<body onload="document.body.appendChild(document.createTextNode(\'toto\'))">\
 		<script type="text/javascript">document.writeln("<p>there</p>");</script>\
 		</body></html>'
