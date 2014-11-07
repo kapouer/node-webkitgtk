@@ -120,7 +120,6 @@ void WebView::destroy() {
   view = NULL;
   inspector = NULL;
   if (window != NULL) gtk_widget_destroy(window);
-  if (cookie != NULL) delete[] cookie;
   if (content != NULL) delete[] content;
 
   if (pngCallback != NULL) delete pngCallback;
@@ -418,9 +417,6 @@ NAN_METHOD(WebView::Load) {
   NanUtf8String* uri = new NanUtf8String(args[0]);
 
   Local<Object> opts = args[1]->ToObject();
-
-  if (self->cookie != NULL) delete self->cookie;
-  self->cookie = getStr(opts, "cookie");
 
   if (self->content != NULL) delete self->content;
   self->content = getStr(opts, "content");

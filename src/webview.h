@@ -58,7 +58,6 @@ private:
   bool allowDialogs;
   bool offscreen;
 
-  char* cookie = NULL;
   char* content = NULL;
 
   WebKitWebView* view = NULL;
