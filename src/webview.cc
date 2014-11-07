@@ -421,32 +421,8 @@ NAN_METHOD(WebView::Load) {
   if (self->content != NULL) delete self->content;
   self->content = getStr(opts, "content");
 
-  WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
-
-  webkit_user_content_manager_remove_all_scripts(contman);
-  const gchar* script = getStr(opts, "script");
-  if (script != NULL) {
-    WebKitUserScript* userScript = webkit_user_script_new(script,
-      WEBKIT_USER_CONTENT_INJECT_TOP_FRAME,
-      WEBKIT_USER_SCRIPT_INJECT_AT_DOCUMENT_START,
-      NULL, NULL
-    );
-    webkit_user_content_manager_add_script(contman, userScript);
-    delete script;
-  }
-
-  webkit_user_content_manager_remove_all_style_sheets(contman);
-  const gchar* style = getStr(opts, "style");
-  if (style != NULL) {
-    WebKitUserStyleSheet* styleSheet = webkit_user_style_sheet_new(
-      style,
-      WEBKIT_USER_CONTENT_INJECT_TOP_FRAME,
-      WEBKIT_USER_STYLE_LEVEL_USER,
-      NULL, NULL
-    );
-    webkit_user_content_manager_add_style_sheet(contman, styleSheet);
-    delete style;
-  }
+  self->script = getStr(opts, "script");
+  self->style = getStr(opts, "style");
 
   gtk_window_set_default_size(GTK_WINDOW(self->window),
     NanUInt32OptionValue(opts, H("width"), 1024),
@@ -493,6 +469,34 @@ void WebView::requestUri(WebView* self, const char* uri) {
   self->uri = uri;
   self->nextUri = NULL;
   gboolean isEmpty = g_strcmp0(uri, "") == 0;
+
+  WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
+
+  webkit_user_content_manager_remove_all_scripts(contman);
+  if (self->script != NULL) {
+    WebKitUserScript* userScript = webkit_user_script_new(self->script,
+      WEBKIT_USER_CONTENT_INJECT_TOP_FRAME,
+     WEBKIT_USER_SCRIPT_INJECT_AT_DOCUMENT_START,
+     NULL, NULL
+    );
+    webkit_user_content_manager_add_script(contman, userScript);
+    delete self->script;
+    self->script = NULL;
+  }
+
+  webkit_user_content_manager_remove_all_style_sheets(contman);
+  if (self->style != NULL) {
+    WebKitUserStyleSheet* styleSheet = webkit_user_style_sheet_new(
+      self->style,
+      WEBKIT_USER_CONTENT_INJECT_TOP_FRAME,
+      WEBKIT_USER_STYLE_LEVEL_USER,
+      NULL, NULL
+    );
+    webkit_user_content_manager_add_style_sheet(contman, styleSheet);
+    delete self->style;
+    self->style = NULL;
+  }
+
   if (isEmpty || self->content != NULL) {
     const char* content = self->content;
     if (content == NULL) content = "";

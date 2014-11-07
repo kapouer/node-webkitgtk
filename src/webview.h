@@ -59,6 +59,8 @@ private:
   bool offscreen;
 
   char* content = NULL;
+  char* script = NULL;
+  char* style = NULL;
 
   WebKitWebView* view = NULL;
   GtkWidget* window = NULL;
