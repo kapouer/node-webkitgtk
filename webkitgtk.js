@@ -444,7 +444,13 @@ function load(uri, opts, cb) {
 			}	else {
 				runcb.call(this, function(done) {
 					if (document.readyState == "complete") done(null, document.readyState);
-					else window.addEventListener('load', function() { done(null, "complete"); }, false);
+					else {
+						function loadListener() {
+							window.removeEventListener('load', loadListener, false);
+							done(null, "complete");
+						}
+						window.addEventListener('load', loadListener, false);
+					}
 				}, function(err, result) {
 					if (err) console.error(err);
 					this.readyState = result;
@@ -455,15 +461,19 @@ function load(uri, opts, cb) {
 
 		setImmediate(function() {
 			runcb.call(this, function(done) {
-				function check() {
-					if (/interactive|complete/.test(document.readyState)) {
-						done(null, document.readyState);
-					} else document.addEventListener('DOMContentLoaded', function() {
-						done(null, "interactive");
-					}, false);
+				function after(state) {
+					if (window.preloading) setTimeout(after, 10);
+					else setTimeout(done.bind(window, null, state), 0);
 				}
-				if (window.preloading) setTimeout(check, 10);
-				else check();
+				if (/interactive|complete/.test(document.readyState)) {
+					after(document.readyState);
+				} else {
+					function readyListener() {
+						document.removeEventListener('DOMContentLoaded', readyListener, false);
+						after("interactive");
+					}
+					document.addEventListener('DOMContentLoaded', readyListener, false);
+				}
 			}, function(err, result) {
 				if (err) console.error(err);
 				if (priv.inspecting) {
@@ -795,27 +805,29 @@ var disableAllScripts = '(' + function() {
 			}
 		}
 	});
+	function prereadyListener(e) {
+		document.removeEventListener('DOMContentLoaded', prereadyListener, false);
+		observer.disconnect();
+		for (var i=0, item, len=disableds.length; i < len; i++) {
+			item = disableds[i];
+			switch (item.node.nodeName) {
+				case "SCRIPT":
+					item.node.type = item.val;
+				break;
+				case "BODY":
+					setTimeout(function(item) {
+						item.node.onload = item.val;
+					}.bind(window, item), 0);
+				break;
+			}
+		}
+		delete window.preloading;
+	}
+	document.addEventListener('DOMContentLoaded', prereadyListener, false);
 	observer.observe(document, {
 		childList: true,
 		subtree: true
 	});
-	document.addEventListener('DOMContentLoaded', function(e) {
-		observer.disconnect();
-		setTimeout(function() {
-			for (var i=0, item, len=disableds.length; i < len; i++) {
-				item = disableds[i];
-				switch (item.node.nodeName) {
-					case "SCRIPT":
-						item.node.type = item.val;
-					break;
-					case "BODY":
-						item.node.onload = item.val;
-					break;
-				}
-			}
-			delete window.preloading;
-		}, 0);
-	}, true);
 }.toString() + ')();';
 
 module.exports = WebKit;
