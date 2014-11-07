@@ -478,8 +478,6 @@ function load(uri, opts, cb) {
 				if (err) console.error(err);
 				if (priv.inspecting) {
 					this.webview.inspect();
-					this.webview.loop(true);
-
 					var checkDebugger = function() {
 						if (!priv.inspecting) {
 							console.error("Inspector crashed, please try again.\nContinuing page load...");
