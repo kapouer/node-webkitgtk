@@ -436,7 +436,24 @@ function load(uri, opts, cb) {
 			};
 		});
 
-		var detectEvents = function() {
+		var emitEvents = function(result) {
+			this.readyState = result;
+			emitLifeEvent.call(this, 'ready');
+			if (result == "complete") {
+				emitLifeEvent.call(this, 'load');
+			}	else {
+				runcb.call(this, function(done) {
+					if (document.readyState == "complete") done(null, document.readyState);
+					else window.addEventListener('load', function() { done(null, "complete"); }, false);
+				}, function(err, result) {
+					if (err) console.error(err);
+					this.readyState = result;
+					emitLifeEvent.call(this, 'load');
+				}.bind(this));
+			}
+		}.bind(this);
+
+		setImmediate(function() {
 			runcb.call(this, function(done) {
 				function check() {
 					if (/interactive|complete/.test(document.readyState)) {
@@ -445,42 +462,35 @@ function load(uri, opts, cb) {
 						done(null, "interactive");
 					}, false);
 				}
-				if (window.preloading) setTimeout(check, 0);
+				if (window.preloading) setTimeout(check, 10);
 				else check();
 			}, function(err, result) {
 				if (err) console.error(err);
-				this.readyState = result;
-				emitLifeEvent.call(this, 'ready');
-				if (result == "complete") {
-					emitLifeEvent.call(this, 'load');
-				}	else {
-					runcb.call(this, function(done) {
-						if (document.readyState == "complete") done(null, document.readyState);
-						else window.addEventListener('load', function() { done(null, "complete"); }, false);
-					}, function(err, result) {
-						if (err) console.error(err);
-						this.readyState = result;
-						emitLifeEvent.call(this, 'load');
-					}.bind(this));
+				if (priv.inspecting) {
+					this.webview.inspect();
+					this.webview.loop(true);
+
+					var checkDebugger = function() {
+						if (!priv.inspecting) {
+							console.error("Inspector crashed, please try again.\nContinuing page load...");
+							return emitEvents(result);
+						}
+						var start = Date.now();
+						runcb.call(this, function test(done) {
+							debugger;
+							done();
+						}, function() {
+							if (Date.now() - start > 2000) emitEvents(result);
+							else setTimeout(checkDebugger, 10);
+						});
+					}.bind(this);
+					checkDebugger();
+				} else {
+					emitEvents(result);
 				}
 			}.bind(this));
-		}.bind(this);
+		}.bind(this));
 
-		if (priv.inspecting) {
-			var checkDebugger = function() {
-				var start = Date.now();
-				runcb.call(this, function(done) {
-					debugger;
-					done();
-				}, function() {
-					if (Date.now() - start > 500) detectEvents();
-					else setTimeout(checkDebugger, 100);
-				});
-			}.bind(this);
-			checkDebugger();
-		} else {
-			setImmediate(detectEvents);
-		}
 
 	}.bind(this));
 }
@@ -585,7 +595,8 @@ function loop(start) {
 			console.error("FIXME pendingRequests should be >= 0");
 			priv.pendingRequests = 0;
 		}
-		if (priv.loopForCallbacks == 0 && !priv.loopForLife || !this.webview) {
+		if (!this.webview) return;
+		if (priv.loopForCallbacks == 0 && !priv.loopForLife) {
 			priv.loopCount = 0;
 			if (!priv.debug || !priv.inspecting) return;
 		}
@@ -661,6 +672,7 @@ function run(script, message, cb) {
 	var initialMessage = JSON.stringify(message);
 
 	setImmediate(function() {
+		if (!this.webview) return;
 		if (mode == RUN_SYNC) {
 			if (/^\s*function(\s+\w+)?\s*\(\s*\)/.test(script)) script = '(' + script + ')()';
 			else script = '(function() { return ' + script + '; })()';
@@ -755,6 +767,7 @@ function pdf(filepath, opts, cb) {
 
 var disableAllScripts = '(' + function() {
 	var disableds = [];
+	window.preloading = true;
 	var observer = new MutationObserver(function(mutations) {
 		var node, val, list, att;
 		for (var m=0; m < mutations.length; m++) {
@@ -787,10 +800,8 @@ var disableAllScripts = '(' + function() {
 		subtree: true
 	});
 	document.addEventListener('DOMContentLoaded', function(e) {
-		window.preloading = true;
 		observer.disconnect();
 		setTimeout(function() {
-			delete window.preloading;
 			for (var i=0, item, len=disableds.length; i < len; i++) {
 				item = disableds[i];
 				switch (item.node.nodeName) {
@@ -802,6 +813,7 @@ var disableAllScripts = '(' + function() {
 					break;
 				}
 			}
+			delete window.preloading;
 		}, 0);
 	}, true);
 }.toString() + ')();';

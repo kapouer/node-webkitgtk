@@ -82,8 +82,8 @@ WebView::WebView(Handle<Object> opts) {
 
   if (hasInspector) {
     g_object_set(G_OBJECT(webkit_web_view_get_settings(view)), "enable-developer-extras", TRUE, NULL);
-    this->inspector = webkit_web_view_get_inspector(view);
-    g_signal_connect(this->inspector, "closed", G_CALLBACK(WebView::InspectorClosed), this);
+    inspector = webkit_web_view_get_inspector(view);
+    g_signal_connect(inspector, "closed", G_CALLBACK(WebView::InspectorClosed), this);
   } else {
     g_object_set(G_OBJECT(webkit_web_view_get_settings(view)), "enable-developer-extras", FALSE, NULL);
   }
@@ -178,6 +178,7 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
   NODE_SET_PROTOTYPE_METHOD(tpl, "pdf", WebView::Print);
   NODE_SET_PROTOTYPE_METHOD(tpl, "stop", WebView::Stop);
   NODE_SET_PROTOTYPE_METHOD(tpl, "destroy", WebView::Destroy);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "inspect", WebView::Inspect);
 
   ATTR(tpl, "uri", get_prop, NULL);
 
@@ -502,9 +503,6 @@ void WebView::requestUri(WebView* self, const char* uri) {
   } else {
     webkit_web_view_load_request(self->view, webkit_uri_request_new(uri));
   }
-  if (self->inspector) {
-    webkit_web_inspector_show(self->inspector);
-  }
 }
 
 void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) {
@@ -707,6 +705,15 @@ NAN_METHOD(WebView::Loop) {
     if (!block) break;
   }
   NanReturnValue(NanNew<Integer>(pendings));
+}
+
+NAN_METHOD(WebView::Inspect) {
+  NanScope();
+  WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
+  if (self->inspector != NULL) {
+    webkit_web_inspector_show(self->inspector);
+  }
+  NanReturnUndefined();
 }
 
 gboolean WebView::on_new_connection(GDBusServer* server, GDBusConnection* connection, gpointer data) {

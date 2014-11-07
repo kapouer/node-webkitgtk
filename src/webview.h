@@ -94,6 +94,7 @@ private:
   static NAN_METHOD(Print);
   static NAN_METHOD(Stop);
   static NAN_METHOD(Destroy);
+  static NAN_METHOD(Inspect);
 
   static NAN_GETTER(get_prop);
 };
