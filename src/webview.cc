@@ -392,7 +392,7 @@ NAN_METHOD(WebView::Load) {
   }
   NanCallback* loadCb = new NanCallback(args[2].As<Function>());
 
-  if (self->state == DOCUMENT_LOADING && self->nextUri != NULL) {
+  if (self->nextUri != NULL) {
     Handle<Value> argv[] = {
       NanError("A document is already being loaded")
     };
@@ -467,7 +467,6 @@ NAN_METHOD(WebView::Load) {
 void WebView::requestUri(WebView* self, const char* uri) {
   self->state = DOCUMENT_LOADING;
   self->uri = uri;
-  self->nextUri = NULL;
   gboolean isEmpty = g_strcmp0(uri, "") == 0;
 
   WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
@@ -496,6 +495,8 @@ void WebView::requestUri(WebView* self, const char* uri) {
     delete self->style;
     self->style = NULL;
   }
+
+  self->nextUri = NULL;
 
   if (isEmpty || self->content != NULL) {
     const char* content = self->content;
