@@ -671,30 +671,38 @@ function run(script, message, cb) {
 		if (mode == RUN_SYNC) {
 			if (/^\s*function(\s+\w+)?\s*\(\s*\)/.test(script)) script = '(' + script + ')()';
 			else script = '(function() { return ' + script + '; })()';
-			var wrap = '\
-			(function() { \
-				var message = ' + initialMessage + '; \
-				try { \
-					message.result = ' + script + '; \
-				} catch(e) { \
-					message.error = e; \
-				} \
-				' + dispatcher + '\
-			})()';
+
+			var wrap = function() {
+				var message = INITIAL_MESSAGE;
+				try {
+					message.result = SCRIPT;
+				} catch(e) {
+					message.error = e;
+				}
+				DISPATCHER
+			}.toString()
+			.replace('INITIAL_MESSAGE', initialMessage)
+			.replace('SCRIPT', script)
+			.replace('DISPATCHER', dispatcher);
+
+			wrap = '(' + wrap + ')()';
 			loop.call(this, true);
 			this.webview.run(wrap, initialMessage);
 		} else if (mode == RUN_ASYNC) {
-			var fun = 'function(err, result) {\
-				var message = ' + initialMessage + ';\
-				if (!message.ticket) { \
-					message.event = err; \
-					message.args = Array.prototype.slice.call(arguments, 1); \
-				} else { \
-					if (err) message.error = err; \
-					message.result = result; \
-				} \
-				' + dispatcher + '\
-			}';
+			var fun = function(err, result) {
+				var message = INITIAL_MESSAGE;
+				if (!message.ticket) {
+					message.event = err;
+					message.args = Array.prototype.slice.call(arguments, 1);
+				} else {
+					if (err) message.error = err;
+					message.result = result;
+				}
+				DISPATCHER
+			}.toString()
+			.replace('INITIAL_MESSAGE', initialMessage)
+			.replace('DISPATCHER', dispatcher);
+
 			var wrap = '(' + script + ')(' + fun + ');';
 			// this does not work if response has HTTP Header Content-Security-Policy
 			if (priv.debug) wrap = 'eval(' + JSON.stringify(wrap) + ');';
