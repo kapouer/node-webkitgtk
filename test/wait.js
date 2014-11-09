@@ -62,7 +62,7 @@ describe("wait for event", function suite() {
 		});
 	});
 	it("in any order and detect wrong order", function(done) {
-		this.timeout(1000);
+		this.timeout(3000);
 		WebKit().load("https://www.debian.org/").wait("ready", function(err) {
 			expect(err).to.not.be.ok();
 			this.wait('idle', function(err) {
