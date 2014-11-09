@@ -20,41 +20,41 @@ var RegEvents = /^(ready|load|idle|unload)$/;
 
 var ChainableWebKit;
 
-// chainit helper, see below
-function Listener() {}
-Listener.prototype.listen = function() {
-	var args = Array.prototype.slice.call(arguments, 0);
-	if (this.cb) this.cb.apply(null, args);
-	else this.args = args;
-};
-
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
 		var chainit = require('chainit3');
 
-		WebKit.prototype.wait = function(obj, cb) {
-			// lstn.args is set, event fired, callback now
-			if (obj.args) cb.apply(null, obj.args);
-			else obj.cb = cb;
-		};
 		if (!ChainableWebKit) {
 			ChainableWebKit = chainit(WebKit);
+			chainit.add(ChainableWebKit, "wait", function(ev, cb) {
+				var priv = this.priv;
+				if (priv.lastEvent == ev) return (cb || noop)();
+				else if (priv.previousEvents[ev]) {
+					throw new Error("do not wait() an event that already happened:" + ev);
+				} else {
+					EventEmitter.prototype.once.call(this, ev, cb);
+				}
+			}, function(ev, cb) {
+				if (!RegEvents.test(ev)) return cb(new Error("call .wait(ev) with ev like " + RegEvents));
+				if (!this.chainState) return cb(new Error("call .wait(ev) after .load(...)"));
+				this.chainState[ev] = true;
+			});
+			chainit.add(ChainableWebKit, "load", function(uri, cb) {
+				WebKit.prototype.load.apply(this, Array.prototype.slice.call(arguments));
+				this.priv.nextEvents = this.chainState;
+			}, function(uri, cb) {
+				this.chainState = {};
+			});
+			chainit.add(ChainableWebKit, "preload", function(uri, cb) {
+				WebKit.prototype.preload.apply(this, Array.prototype.slice.call(arguments));
+				this.priv.nextEvents = this.chainState;
+			}, function(uri, cb) {
+				this.chainState = {};
+			});
 		}
+
 		var inst = new ChainableWebKit();
 
-		// work around https://github.com/vvo/chainit/issues/12
-		var wait = inst.wait;
-		inst.wait = function(ev, cb) {
-			if (!RegEvents.test(ev)) return cb(new Error("call .wait(ev) with ev like " + RegEvents));
-			var lstn = new Listener();
-			try {
-				this.once(ev, lstn.listen.bind(lstn));
-			} catch(e) {
-				return cb(e);
-			}
-			if (cb) return wait.call(this, lstn, cb);
-			else return wait.call(this, lstn);
-		};
 		if (cb) return inst.init(opts, cb);
 		else return inst.init(opts);
 	}
@@ -62,29 +62,7 @@ function WebKit(opts, cb) {
 	var priv = this.priv = initialPriv();
 }
 
-function LifeEventEmitter() {}
-util.inherits(LifeEventEmitter, EventEmitter);
-LifeEventEmitter.prototype.once = function(ev, listener) {
-	var priv = this.priv;
-	var lstn = listener;
-	if (RegEvents.test(ev)) {
-		lstn = function() {
-			if (priv.lastEvent) priv.previousEvents[priv.lastEvent] = true;
-			priv.lastEvent = ev;
-			listener();
-		};
-		if (priv.lastEvent == ev) {
-			priv.loopForLife = true;
-			if (!priv.loopImmediate && !priv.loopTimeout) loop.call(this);
-			listener();
-		} else if (priv.previousEvents[ev]) {
-			throw new Error("do not register on an event that already happened:" + ev);
-		}
-	}
-	return EventEmitter.prototype.once.call(this, ev, lstn);
-};
-
-util.inherits(WebKit, LifeEventEmitter);
+util.inherits(WebKit, EventEmitter);
 
 WebKit.prototype.init = function(opts, cb) {
 	var priv = this.priv;
@@ -158,15 +136,19 @@ function initialPriv() {
 }
 
 function emitLifeEvent(event) {
+	var priv = this.priv;
+	if (priv.lastEvent) priv.previousEvents[priv.lastEvent] = true;
+	priv.lastEvent = event;
 	setImmediate(function() {
-		var willStop = event == "unload" || this.listeners('unload').length == 0 && (
-			event == "idle" || this.listeners('idle').length == 0 && (
-				event == "load" || this.listeners('load').length == 0 &&
+		var ne = priv.nextEvents || {}; // in case load or preload wasn't called
+		var willStop = event == "unload" || this.listeners('unload').length == 0 && !ne.unload && (
+			event == "idle" || this.listeners('idle').length == 0 && !ne.idle && (
+				event == "load" || this.listeners('load').length == 0 && !ne.load &&
 					event == "ready"
 				)
 			);
-		if (willStop && this.priv.loopForLife) {
-			this.priv.loopForLife = false;
+		if (willStop && priv.loopForLife) {
+			priv.loopForLife = false;
 		}
 	}.bind(this));
 	this.emit(event);
@@ -709,6 +691,7 @@ function run(script, message, cb) {
 				' + dispatcher + '\
 			}';
 			var wrap = '(' + script + ')(' + fun + ');';
+			wrap = 'eval(' + JSON.stringify(wrap) + ');';
 			// events work only if webview is alive, see lifecycle events
 			this.webview.run(wrap, initialMessage);
 			if (message.ticket) loop.call(this, true);
