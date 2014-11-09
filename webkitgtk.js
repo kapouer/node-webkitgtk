@@ -696,8 +696,8 @@ function run(script, message, cb) {
 				' + dispatcher + '\
 			}';
 			var wrap = '(' + script + ')(' + fun + ');';
-			wrap = 'eval(' + JSON.stringify(wrap) + ');';
-			// events work only if webview is alive, see lifecycle events
+			// this does not work if response has HTTP Header Content-Security-Policy
+			if (priv.debug) wrap = 'eval(' + JSON.stringify(wrap) + ');';
 			this.webview.run(wrap, initialMessage);
 			if (message.ticket) loop.call(this, true);
 			else setImmediate(cb);
