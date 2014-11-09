@@ -189,6 +189,7 @@ function policyDispatcher(type, uri) {
 }
 
 function eventsDispatcher(err, json) {
+	if (err) return console.error("Error in event dispatcher", err, json);
 	var obj = JSON.parse(json);
 	if (!obj) {
 		console.error("received invalid event", json);
