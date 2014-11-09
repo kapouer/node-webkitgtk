@@ -445,8 +445,12 @@ function load(uri, opts, cb) {
 		setImmediate(function() {
 			runcb.call(this, function(done) {
 				function after(state) {
-					if (window.preloading) setTimeout(after, 10);
-					else setTimeout(done.bind(window, null, state), 0);
+					if (window.preloading) setTimeout(function() {
+						after(state);
+					}, 10);
+					else setTimeout(function() {
+						done(null, state);
+					}, 0);
 				}
 				if (/interactive|complete/.test(document.readyState)) {
 					after(document.readyState);
