@@ -211,7 +211,7 @@ function eventsDispatcher(err, json) {
 }
 
 Object.defineProperty(WebKit.prototype, "uri", {
-  get: function() {
+	get: function() {
 		if (this.webview) {
 			var uri = this.webview.uri;
 			if (uri == "about:blank") uri = "";
@@ -608,7 +608,7 @@ function loop(start) {
 		} else {
 			priv.wasBusy = busy;
 		}
-		if (busy)	{
+		if (busy) {
 			priv.loopImmediate = setImmediate(loopFun);
 		} else {
 			var delay = (priv.idleCount + 1) * 5;

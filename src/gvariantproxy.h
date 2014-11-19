@@ -9,18 +9,18 @@ using namespace v8;
 
 class GVariantProxy : public node::ObjectWrap {
 public:
-  static Persistent<FunctionTemplate> constructor;
-  static void Init(Handle<Object>);
-  static NAN_METHOD(New);
+	static Persistent<FunctionTemplate> constructor;
+	static void Init(Handle<Object>);
+	static NAN_METHOD(New);
 
-  GVariantDict* dict = NULL;
-  GVariant* variant = NULL;
+	GVariantDict* dict = NULL;
+	GVariant* variant = NULL;
 
-  GVariantProxy();
-  void init(GVariant*);
+	GVariantProxy();
+	void init(GVariant*);
 
 private:
-  ~GVariantProxy();
+	~GVariantProxy();
 };
 
 #endif

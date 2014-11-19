@@ -10,22 +10,22 @@ using namespace v8;
 
 class WebAuthRequest : public node::ObjectWrap {
 public:
-  static Persistent<FunctionTemplate> constructor;
-  static void Init(Handle<Object>);
-  static NAN_METHOD(New);
+	static Persistent<FunctionTemplate> constructor;
+	static void Init(Handle<Object>);
+	static NAN_METHOD(New);
 
-  WebKitAuthenticationRequest* request = NULL;
+	WebKitAuthenticationRequest* request = NULL;
 
-  WebAuthRequest();
-  void init(WebKitAuthenticationRequest*);
+	WebAuthRequest();
+	void init(WebKitAuthenticationRequest*);
 
 private:
-  ~WebAuthRequest();
+	~WebAuthRequest();
 
-  static NAN_GETTER(get_prop);
+	static NAN_GETTER(get_prop);
 
-  static NAN_METHOD(Use);
-  static NAN_METHOD(Ignore);
+	static NAN_METHOD(Use);
+	static NAN_METHOD(Ignore);
 };
 
 #endif

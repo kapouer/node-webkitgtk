@@ -10,25 +10,25 @@ using namespace v8;
 
 class WebResponse : public node::ObjectWrap {
 public:
-  static Persistent<FunctionTemplate> constructor;
-  static void Init(Handle<Object>);
-  static NAN_METHOD(New);
-  static void DataFinished(GObject*, GAsyncResult*, gpointer);
+	static Persistent<FunctionTemplate> constructor;
+	static void Init(Handle<Object>);
+	static NAN_METHOD(New);
+	static void DataFinished(GObject*, GAsyncResult*, gpointer);
 
-  WebKitURIResponse* response = NULL;
-  WebKitWebResource* resource = NULL;
+	WebKitURIResponse* response = NULL;
+	WebKitWebResource* resource = NULL;
 
-  WebResponse();
-  void init(WebKitWebResource*, WebKitURIResponse*);
+	WebResponse();
+	void init(WebKitWebResource*, WebKitURIResponse*);
 
 private:
-  ~WebResponse();
-  NanCallback* dataCallback = NULL;
+	~WebResponse();
+	NanCallback* dataCallback = NULL;
 
-  static NAN_GETTER(get_prop);
-  // static NAN_SETTER(set_prop);
+	static NAN_GETTER(get_prop);
+	// static NAN_SETTER(set_prop);
 
-  static NAN_METHOD(Data);
+	static NAN_METHOD(Data);
 };
 
 #endif

@@ -30,7 +30,7 @@ static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest*
 
 	g_variant_dict_clear(&dictIn);
 
-  if (results == NULL) {
+	if (results == NULL) {
 		g_printerr("ERR g_dbus_connection_call_sync %s\n", error->message);
 		g_error_free(error);
 		return FALSE;
@@ -95,7 +95,7 @@ extern "C" {
 		connection = g_dbus_connection_new_for_address_sync(address, G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT, NULL, NULL, &error);
 		if (connection == NULL) {
 			g_printerr("Failed to open connection to bus: %s\n", error->message);
-      g_error_free(error);
-    }
+			g_error_free(error);
+		}
 	}
 }
