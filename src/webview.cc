@@ -648,16 +648,28 @@ NAN_METHOD(WebView::Print) {
   Local<Object> opts = args[1]->ToObject();
 
   WebKitPrintOperation* op = webkit_print_operation_new(self->view);
+
+  GtkPageSetup* setup = gtk_page_setup_new();
+  const gchar* paper = getStr(opts, "paper");
+  if (paper == NULL) paper = gtk_paper_size_get_default();
+  GtkPaperSize* paperSize = gtk_paper_size_new(paper);
+  gtk_page_setup_set_paper_size_and_default_margins(setup, paperSize);
+  if (NanBooleanOptionValue(opts, H("fullpage"), false)) {
+    gtk_page_setup_set_right_margin(setup, 0, GTK_UNIT_POINTS);
+    gtk_page_setup_set_left_margin(setup, 0, GTK_UNIT_POINTS);
+    gtk_page_setup_set_top_margin(setup, 0, GTK_UNIT_POINTS);
+    gtk_page_setup_set_bottom_margin(setup, 0, GTK_UNIT_POINTS);
+  }
+  webkit_print_operation_set_page_setup(op, setup);
+
   // settings
   GtkPrintSettings* settings = gtk_print_settings_new();
-	GtkPaperSize* paper = gtk_paper_size_new(GTK_PAPER_NAME_A4);
   GtkPageOrientation orientation = GTK_PAGE_ORIENTATION_PORTRAIT;
 
   if (g_strcmp0(getStr(opts, "orientation"), "landscape")) {
     orientation = GTK_PAGE_ORIENTATION_LANDSCAPE;
   }
   gtk_print_settings_set_orientation(settings, orientation);
-	gtk_print_settings_set_paper_size(settings, paper);
 	gtk_print_settings_set_quality(settings, GTK_PRINT_QUALITY_HIGH);
 
   char* printer = NULL;
@@ -667,15 +679,6 @@ NAN_METHOD(WebView::Print) {
   gtk_print_settings_set(settings, GTK_PRINT_SETTINGS_OUTPUT_URI, **self->printUri);
 
 	webkit_print_operation_set_print_settings(op, settings);
-
-  // page setup
-  GtkPageSetup* setup = webkit_print_operation_get_page_setup(op);
-  if (NanBooleanOptionValue(opts, H("fullpage"), false)) {
-    gtk_page_setup_set_right_margin(setup, 0, GTK_UNIT_NONE);
-    gtk_page_setup_set_left_margin(setup, 0, GTK_UNIT_NONE);
-    gtk_page_setup_set_top_margin(setup, 0, GTK_UNIT_NONE);
-    gtk_page_setup_set_bottom_margin(setup, 0, GTK_UNIT_NONE);
-	}
 
   // print
   g_signal_connect(op, "failed", G_CALLBACK(WebView::PrintFailed), self);
