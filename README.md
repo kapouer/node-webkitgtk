@@ -38,13 +38,14 @@ which is derived from the basic API using `chainit3`:
 ```js
 var WebKit = require('webkitgtk');
 var view = new WebKit();
+var fs = require('fs');
 view.init({
   width: 1024,
   height: 768,
   display: "99"
 }, function(err, view) {
   view.load(uri, {
-    stylesheet: "css/png.css"
+    style: fs.readFileSync('css/png.css') // useful stylesheet for snapshots
   }, function(err) {
     if (err) console.error(err);
   }).on('load', function() {
