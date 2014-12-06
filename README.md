@@ -182,6 +182,30 @@ given display port will be spawn using `headless` module.
 It is advised and safer to monitor xvfb using a proper daemon tool.
 
 
+pdf() options
+-------------
+
+- orientation  
+  landscape | portrait, default to portrait
+
+- paper (string)  
+  typical values are iso_a3, iso_a4, iso_a5, iso_b5,
+  na_letter, na_executive, na_legal, see  
+  https://developer.gnome.org/gtk3/stable/GtkPaperSize.html
+
+- paper (object)  
+  unit : string, mm|in|pt, default "pt"  
+  width : number, default 0  
+  height : number, default 0  
+
+- margins (number)  
+  in units of points, default implied by paper size
+
+- margins (object)  
+  unit : string, mm|in|pt, default "pt"  
+  left, top, right, bottom : number, default 0
+
+
 events
 ------
 
@@ -248,11 +272,11 @@ methods
 
 * WebKit([opts])  
   create an instance with the chainable API using `chainit`.  
-  If arguments are given, equals `WebKit().init(opts)`
+  If arguments are given, equals `WebKit().init(opts)`.
 
 * init([opts], cb)  
   see parameters described above  
-  *must be invoked first*
+  *must be invoked first*.
 
 * preload(uri, [opts], [cb])  
   load uri into webview  
@@ -262,18 +286,18 @@ methods
 
 * load(uri, [opts], [cb])  
   load uri into webview  
-  see parameters described above
+  see parameters described above.
 
 * wait(event, cb)  
   analogous to once(event, cb) except that it is usable in the chainable API.  
   It is useful before calling html, png, pdf methods: `.wait('load').png(...)`.
 
 * run(sync-script, cb)  
-  any synchronous script text or global function
+  any synchronous script text or global function.
 
 * run(async-script, cb)  
   async-script must be a function that calls its first and only argument,  
-  like `function(done) { done(err, str); }`
+  like `function(done) { done(err, str); }`.
 
 * runev(async-script, cb)  
   async-script must be a function that calls its first and only argument,  
@@ -293,18 +317,7 @@ methods
 
 * pdf(filepath, [opts], [cb])  
   print page to file right now  
-  orientation : "landscape" or "portrait", default "portrait"  
-  paper : string, typical values are iso_a3, iso_a4, iso_a5, iso_b5,
-    na_letter, na_executive, na_legal, see
-    https://developer.gnome.org/gtk3/stable/GtkPaperSize.html  
-  paper : object,  
-    unit : string, mm|in|pt, default "pt"  
-    width : number, default 0  
-    height : number, default 0  
-  margins : number, points unit, default implied by paper size  
-  margins : object,  
-    unit : string, mm|in|pt, default "pt"  
-    left, top, right, bottom : number, default 0
+  see parameters described above.
 
 * unload(cb)  
   Sets current view to an empty document and uri.  
