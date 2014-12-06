@@ -298,13 +298,13 @@ methods
     na_letter, na_executive, na_legal, see
     https://developer.gnome.org/gtk3/stable/GtkPaperSize.html  
   paper : object,  
-    + unit : string, mm|in|pt, default "pt"
-    + width : number, default 0
-    + height : number, default 0
+    unit : string, mm|in|pt, default "pt"  
+    width : number, default 0  
+    height : number, default 0  
   margins : number, points unit, default implied by paper size  
   margins : object,  
-    + unit : string, mm|in|pt, default "pt"
-    + left, top, right, bottom : number, default 0
+    unit : string, mm|in|pt, default "pt"  
+    left, top, right, bottom : number, default 0
 
 * unload(cb)  
   Sets current view to an empty document and uri.  
