@@ -627,6 +627,16 @@ static gboolean find_file_printer(GtkPrinter* printer, char** data) {
 	return FALSE;
 }
 
+static GtkUnit getUnit(gchar* name) {
+	if (g_strcmp0(name, "mm") == 0) {
+		return GTK_UNIT_MM;
+	} else if (g_strcmp0(name, "in") == 0) {
+		return GTK_UNIT_INCH;
+	} else {
+		return GTK_UNIT_POINTS;
+	}
+}
+
 NAN_METHOD(WebView::Print) {
 	NanScope();
 	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
@@ -650,16 +660,48 @@ NAN_METHOD(WebView::Print) {
 	WebKitPrintOperation* op = webkit_print_operation_new(self->view);
 
 	GtkPageSetup* setup = gtk_page_setup_new();
-	const gchar* paper = getStr(opts, "paper");
-	if (paper == NULL) paper = gtk_paper_size_get_default();
-	GtkPaperSize* paperSize = gtk_paper_size_new(paper);
-	gtk_page_setup_set_paper_size_and_default_margins(setup, paperSize);
-	if (NanBooleanOptionValue(opts, H("fullpage"), false)) {
-		gtk_page_setup_set_right_margin(setup, 0, GTK_UNIT_POINTS);
-		gtk_page_setup_set_left_margin(setup, 0, GTK_UNIT_POINTS);
-		gtk_page_setup_set_top_margin(setup, 0, GTK_UNIT_POINTS);
-		gtk_page_setup_set_bottom_margin(setup, 0, GTK_UNIT_POINTS);
+
+	GtkPaperSize* paperSize;
+	Local<Value> paperVal = opts->Get(H("paper"));
+	if (paperVal->IsString()) {
+		paperSize = gtk_paper_size_new(getStr(opts, "paper"));
+	} else if (paperVal->IsObject()) {
+		Local<Object> paperObj = paperVal->ToObject();
+		paperSize = gtk_paper_size_new_custom(
+			"custom",
+			"custom",
+			NanUInt32OptionValue(paperObj, H("width"), 0),
+			NanUInt32OptionValue(paperObj, H("height"), 0),
+			getUnit(getStr(paperObj, "unit"))
+		);
+	} else {
+		paperSize = gtk_paper_size_new(gtk_paper_size_get_default());
 	}
+
+	gtk_page_setup_set_paper_size_and_default_margins(setup, paperSize);
+
+	Local<Value> marginsVal = opts->Get(H("margins"));
+	GtkUnit marginUnit = GTK_UNIT_POINTS;
+	gdouble defaultMargin = 0;
+	Local<Object> marginsObj;
+	if (marginsVal->IsNumber()) {
+		defaultMargin = marginsVal->NumberValue();
+	} else if (marginsVal->IsObject()) {
+		marginsObj = marginsVal->ToObject();
+	}
+	gtk_page_setup_set_left_margin(setup,
+		NanUInt32OptionValue(marginsObj, H("left"), defaultMargin),
+		marginUnit);
+	gtk_page_setup_set_top_margin(setup,
+		NanUInt32OptionValue(marginsObj, H("top"), defaultMargin),
+		marginUnit);
+	gtk_page_setup_set_right_margin(setup,
+		NanUInt32OptionValue(marginsObj, H("right"), defaultMargin),
+		marginUnit);
+	gtk_page_setup_set_bottom_margin(setup,
+		NanUInt32OptionValue(marginsObj, H("bottom"), defaultMargin),
+		marginUnit);
+
 	webkit_print_operation_set_page_setup(op, setup);
 
 	// settings
