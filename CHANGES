@@ -44,3 +44,9 @@ is immediately called back.
 If the event loop is stopped and a listener for a future life event is registered,
 it restarts the loop waiting for the next event.
 
+
+1.9.0
+-----
+
+pdf options replaces {fullpage: true} by {margins: 0}.
+
