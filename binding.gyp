@@ -94,7 +94,7 @@
                 '<@(SHARED_LIB_DIR)/webextension.so'
               ],
               'outputs': [
-                'lib/webextension'
+                'lib/ext/webextension'
               ],
               'action': ['cp', '<@(SHARED_LIB_DIR)/webextension.so', 'lib/ext/']
             }
