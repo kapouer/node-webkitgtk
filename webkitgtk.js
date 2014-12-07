@@ -5,11 +5,6 @@ var fs = require('fs');
 var path = require('path');
 var url = require('url');
 
-// different ways of running commands
-var RUN_SYNC = 0;
-var RUN_ASYNC = 1;
-var RUN_PATH = 2;
-
 // internal state, does not match readyState
 var CREATED = 0;
 var INITIALIZING = 1;
@@ -394,10 +389,31 @@ function load(uri, opts, cb) {
 			}
 		});
 	}
+	if (opts.console && this.listeners('console').length == 0) {
+		this.on('console', function(level) {
+			if (this.listeners('console').length <= 1) {
+				var args = Array.prototype.slice.call(arguments, 0);
+				var level = args.shift();
+				console[level].apply(null, args);
+			}
+		});
+	}
 	if (Buffer.isBuffer(opts.content)) opts.content = opts.content.toString();
 	if (Buffer.isBuffer(opts.style)) opts.style = opts.style.toString();
 	if (Buffer.isBuffer(opts.script)) opts.script = opts.script.toString();
-
+	if (opts.console) {
+		if (!opts.script) opts.script = "";
+		opts.script += "\n" + prepareRun(function(emit) {
+			['log', 'error', 'info', 'warn'].forEach(function(meth) {
+				console[meth] = function() {
+					var args = Array.prototype.slice.call(arguments, 0);
+					args.unshift(meth);
+					args.unshift('console');
+					emit.apply(null, args);
+				};
+			});
+		}, null, priv).script;
+	}
 	loop.call(this, true);
 	this.webview.load(uri, opts, function(err, status) {
 		loop.call(this, false);
@@ -630,32 +646,42 @@ WebKit.prototype.run = function(script, cb) {
 };
 
 function runcb(script, cb) {
-	var message = {
-		ticket: (this.priv.ticket++).toString()
-	};
-	this.priv.tickets[message.ticket] = cb;
-	run.call(this, script, message, cb);
+	var ticket = (this.priv.ticket++).toString();
+	this.priv.tickets[ticket] = cb;
+	run.call(this, script, ticket, cb);
 }
 
 WebKit.prototype.runev = function(script, cb) {
-	run.call(this, script, {}, cb);
+	run.call(this, script, null, cb);
 };
 
-function run(script, message, cb) {
-	var priv = this.priv;
-	if (typeof script == "function" || Buffer.isBuffer(script)) script = script.toString();
+function run(script, ticket, cb) {
 	cb = cb || noop;
-	message = message || {};
-
-	var mode = RUN_SYNC;
-	if (/^\s*function(\s+\w+)?\s*\(\s*\w+\s*\)/.test(script)) mode = RUN_ASYNC;
-
-	if (mode != RUN_ASYNC && !message.ticket) {
-		return cb(new Error("cannot call runev without function(emit) {} script signature"));
+	var obj;
+	try {
+		obj = prepareRun(script, ticket, this.priv);
+	} catch(e) {
+		return cb(e);
 	}
+	setImmediate(function() {
+		if (!this.webview) return cb(new Error("WebKit uninitialized"));
+		if (obj.sync) {
+			loop.call(this, true);
+			this.webview.run(obj.script, obj.ticket);
+		} else {
+			this.webview.run(obj.script, obj.ticket);
+			if (obj.ticket) loop.call(this, true);
+			else setImmediate(cb);
+		}
+	}.bind(this));
+}
 
-	message.mode = mode;
-
+function prepareRun(script, ticket, priv) {
+	if (typeof script == "function" || Buffer.isBuffer(script)) script = script.toString();
+	var async = /^\s*function(\s+\w+)?\s*\(\s*\w+\s*\)/.test(script);
+	if (!async && !ticket) {
+		throw new Error("cannot call runev without function(emit) {} script signature");
+	}
 	// KeyboardEvent is the only event that can carry an arbitrary string
 	// If it isn't supported any more, send an empty event and make the webextension fetch
 	// the data (stored in a global window variable).
@@ -664,54 +690,48 @@ function run(script, message, cb) {
 		evt.initKeyboardEvent("' + priv.eventName + '", false, true, null, JSON.stringify(message)); \
 		window.dispatchEvent(evt); \
 		';
-	var initialMessage = JSON.stringify(message);
-
-	setImmediate(function() {
-		if (!this.webview) return;
-		if (mode == RUN_SYNC) {
-			if (/^\s*function(\s+\w+)?\s*\(\s*\)/.test(script)) script = '(' + script + ')()';
-			else script = '(function() { return ' + script + '; })()';
-
-			var wrap = function() {
-				var message = INITIAL_MESSAGE;
-				try {
-					message.result = SCRIPT;
-				} catch(e) {
-					message.error = e;
-				}
-				DISPATCHER
-			}.toString()
-			.replace('INITIAL_MESSAGE', initialMessage)
-			.replace('SCRIPT', script)
-			.replace('DISPATCHER', dispatcher);
-
-			wrap = '(' + wrap + ')()';
-			loop.call(this, true);
-			this.webview.run(wrap, initialMessage);
-		} else if (mode == RUN_ASYNC) {
-			var fun = function(err, result) {
-				var message = INITIAL_MESSAGE;
-				if (!message.ticket) {
-					message.event = err;
-					message.args = Array.prototype.slice.call(arguments, 1);
-				} else {
-					if (err) message.error = err;
-					message.result = result;
-				}
-				DISPATCHER
-			}.toString()
-			.replace('INITIAL_MESSAGE', initialMessage)
-			.replace('DISPATCHER', dispatcher);
-
-			var wrap = '(' + script + ')(' + fun + ');';
-			// this does not work if response has HTTP Header Content-Security-Policy
-			if (priv.debug) wrap = 'eval(' + JSON.stringify(wrap) + ');';
-			this.webview.run(wrap, initialMessage);
-			if (message.ticket) loop.call(this, true);
-			else setImmediate(cb);
-		}
-	}.bind(this));
-};
+	var obj = {
+		sync: !async,
+		ticket: ticket
+	};
+	if (!async) {
+		if (/^\s*function(\s+\w+)?\s*\(\s*\)/.test(script)) script = '(' + script + ')()';
+		else script = '(function() { return ' + script + '; })()';
+		var wrap = function() {
+			var message = {};
+			if (TICKET) message.ticket = TICKET;
+			try {
+				message.result = SCRIPT;
+			} catch(e) {
+				message.error = e;
+			}
+			DISPATCHER
+		}.toString()
+		.replace(/TICKET/g, JSON.stringify(ticket))
+		.replace('SCRIPT', script)
+		.replace('DISPATCHER', dispatcher);
+		obj.script = '(' + wrap + ')()';
+	} else {
+		var wrap = function(err, result) {
+			var message = {};
+			if (!TICKET) {
+				message.event = err;
+				message.args = Array.prototype.slice.call(arguments, 1);
+			} else {
+				message.ticket = TICKET;
+				if (err) message.error = err;
+				message.result = result;
+			}
+			DISPATCHER
+		}.toString()
+		.replace(/TICKET/g, JSON.stringify(ticket))
+		.replace('DISPATCHER', dispatcher);
+		obj.script = '(' + script + ')(' + wrap + ');';
+		// this does not work if response has HTTP Header Content-Security-Policy
+		if (priv.debug) obj.script = 'eval(' + JSON.stringify(obj.script) + ');';
+	}
+	return obj;
+}
 
 WebKit.prototype.png = function(obj, cb) {
 	var wstream;

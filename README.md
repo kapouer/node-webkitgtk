@@ -144,6 +144,12 @@ load() options
   requests not receiving data for `stall` milliseconds are not taken into
   account for deciding `idle` events.
 
+- console  
+  boolean, default false  
+  Send `console` events (see below).  
+  Default listener outputs everything and is disabled by registering a custom
+  listener.
+
 
 init() options
 --------------
@@ -261,6 +267,14 @@ These events can happen at any moment:
   read-only.  
   request.use(username, password) authenticates asynchronously,  
   request.ignore() ignores request asynchronously.
+
+* console  
+  listener(level, ...) where level is 'log', 'error', 'warn' or 'info'.  
+  Remaining arguments are the arguments of the corresponding calls to
+  console[level] inside the page.  
+  Logging everything that comes out of web pages can be annoying, so this is
+  disabled by default.  
+  Use `console` load option to enable.
 
 
 methods

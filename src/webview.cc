@@ -529,17 +529,12 @@ NAN_METHOD(WebView::Run) {
 	NanScope();
 	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
 	if (!args[0]->IsString()) {
-		NanThrowError("run(script, message) missing script argument");
-		NanReturnUndefined();
-	}
-	if (!args[1]->IsString()) {
-		NanThrowError("run(script, message) missing message argument");
+		NanThrowError("run(script, ticket) missing script argument");
 		NanReturnUndefined();
 	}
 
 	NanUtf8String* script = new NanUtf8String(args[0]);
-	NanUtf8String* message = new NanUtf8String(args[1]);
-	SelfMessage* data = new SelfMessage(self, **message);
+	SelfMessage* data = new SelfMessage(self, args[1]->IsString() ? **(new NanUtf8String(args[1])) : NULL);
 	if (self->window != NULL) {
 		webkit_web_view_run_javascript(
 			self->view,

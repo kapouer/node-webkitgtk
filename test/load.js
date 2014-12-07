@@ -172,4 +172,15 @@ describe("load method", function suite() {
 			}, 100);
 		});
 	});
+	it("should receive console events", function(done) {
+		WebKit().load('http://localhost', {
+			content: '<html><body><script type="text/javascript">console.log(window.navigator, "two");</script></body></html>',
+			console: true
+		}).on('console', function(level, nav, two) {
+			expect(level).to.be('log');
+			expect(nav.appName).to.be('Netscape');
+			expect(two).to.be('two');
+			done();
+		});
+	});
 });
