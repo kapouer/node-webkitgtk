@@ -91,12 +91,12 @@
             {
               'action_name': 'move_ext',
               'inputs': [
-                '<@(SHARED_LIB_DIR)/webextension.so'
+                '<@(LIB_DIR)/webextension.so'
               ],
               'outputs': [
                 'lib/ext/webextension'
               ],
-              'action': ['cp', '<@(SHARED_LIB_DIR)/webextension.so', 'lib/ext/']
+              'action': ['cp', '<@(LIB_DIR)/webextension.so', 'lib/ext/']
             }
           ]
         }]
