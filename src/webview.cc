@@ -363,7 +363,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 
 gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gchar* failing_uri, GError* error, gpointer data) {
 	WebView* self = (WebView*)data;
-	g_print("fail %d %d %s %s\n", load_event, self->state, self->uri, failing_uri);
+	// g_print("fail %d %d %s %s\n", load_event, self->state, self->uri, failing_uri);
 	if (self->nextUri == NULL && self->state == DOCUMENT_LOADING && g_strcmp0(failing_uri, self->uri) == 0) {
 		if (self->loadCallback != NULL) {
 			self->state = DOCUMENT_ERROR;
