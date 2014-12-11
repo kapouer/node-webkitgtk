@@ -513,10 +513,13 @@ void WebView::requestUri(WebView* self, const char* uri) {
 	if (isEmpty || self->content != NULL) {
 		const char* content = self->content;
 		if (content == NULL) content = "";
-		if (isEmpty) uri = NULL;
-		webkit_web_view_load_html(self->view, content, uri);
+		if (isEmpty) {
+			g_free(self->uri);
+			self->uri = NULL;
+		}
+		webkit_web_view_load_html(self->view, content, self->uri);
 	} else {
-		webkit_web_view_load_request(self->view, webkit_uri_request_new(uri));
+		webkit_web_view_load_request(self->view, webkit_uri_request_new(self->uri));
 	}
 }
 
