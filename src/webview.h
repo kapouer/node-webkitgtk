@@ -53,6 +53,9 @@ private:
 	GDBusServer* server;
 	guint contextSignalId;
 
+	gchar* uri = NULL;
+	void updateUri(const gchar*);
+
 	int state;
 	int authRetryCount;
 	bool allowDialogs;
@@ -84,8 +87,7 @@ private:
 	NanCallback* authCallback = NULL;
 	NanCallback* closeCallback = NULL;
 
-	const char* uri = NULL;
-	const char* nextUri = NULL;
+	gchar* nextUri = NULL;
 
 	static NAN_METHOD(New);
 	static NAN_METHOD(Load);

@@ -122,6 +122,9 @@ void WebView::destroy() {
 	if (window != NULL) gtk_widget_destroy(window);
 	if (content != NULL) delete[] content;
 
+	if (uri != NULL) g_free(uri);
+	if (nextUri != NULL) delete nextUri;
+
 	if (pngCallback != NULL) delete pngCallback;
 	if (pngFilename != NULL) delete pngFilename;
 
@@ -306,19 +309,27 @@ guint getStatusFromView(WebKitWebView* web_view) {
 	return 0;
 }
 
+void WebView::updateUri(const gchar* uri) {
+	if (uri != NULL) {
+		if (this->uri != NULL) g_free(this->uri);
+		this->uri = g_strdup(uri);
+	}
+}
+
 void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpointer data) {
 	WebView* self = (WebView*)data;
+	const gchar* uri = webkit_web_view_get_uri(web_view);
 	switch (load_event) {
 		case WEBKIT_LOAD_STARTED: // 0
 			/* New load, we have now a provisional URI */
 			// provisional_uri = webkit_web_view_get_uri (web_view);
 			/* Here we could start a spinner or update the
 			* location bar with the provisional URI */
-			self->uri = webkit_web_view_get_uri(web_view);
+			self->updateUri(uri);
 		break;
 		case WEBKIT_LOAD_REDIRECTED: // 1
 			// redirected_uri = webkit_web_view_get_uri (web_view);
-			self->uri = webkit_web_view_get_uri(web_view);
+			self->updateUri(uri);
 		break;
 		case WEBKIT_LOAD_COMMITTED: // 2
 			/* The load is being performed. Current URI is
@@ -326,7 +337,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 			* load is requested or a navigation within the
 			* same page is performed */
 			if (self->state == DOCUMENT_LOADING) {
-				self->uri = webkit_web_view_get_uri(web_view);
+				self->updateUri(uri);
 				if (self->loadCallback != NULL) {
 					guint status = getStatusFromView(web_view);
 					if (status == 0 && self->content != NULL) status = 200;
@@ -352,6 +363,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 
 gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gchar* failing_uri, GError* error, gpointer data) {
 	WebView* self = (WebView*)data;
+	g_print("fail %d %d %s %s\n", load_event, self->state, self->uri, failing_uri);
 	if (self->nextUri == NULL && self->state == DOCUMENT_LOADING && g_strcmp0(failing_uri, self->uri) == 0) {
 		if (self->loadCallback != NULL) {
 			self->state = DOCUMENT_ERROR;
@@ -466,7 +478,7 @@ NAN_METHOD(WebView::Load) {
 
 void WebView::requestUri(WebView* self, const char* uri) {
 	self->state = DOCUMENT_LOADING;
-	self->uri = uri;
+	self->updateUri(uri);
 	gboolean isEmpty = g_strcmp0(uri, "") == 0;
 
 	WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
@@ -495,7 +507,7 @@ void WebView::requestUri(WebView* self, const char* uri) {
 		delete self->style;
 		self->style = NULL;
 	}
-
+	if (self->nextUri != NULL) delete self->nextUri;
 	self->nextUri = NULL;
 
 	if (isEmpty || self->content != NULL) {
