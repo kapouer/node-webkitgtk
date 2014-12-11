@@ -183,4 +183,13 @@ describe("load method", function suite() {
 			done();
 		});
 	});
+	it("should fail to load immediately", function(done) {
+		// for super weird reasons this test fails because of the particular
+		// way the url is crafted (length of each component is critical).
+		// it won't fail after 8745c188, though
+		WebKit().load('http://localhost:16724/aaaaa/bbbbb?cccc=c', function(err) {
+			expect(err).to.be.ok();
+			done();
+		});
+	});
 });
