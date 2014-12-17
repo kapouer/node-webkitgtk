@@ -16,6 +16,8 @@ describe("changing request uri in listener", function suite() {
 		}).on("load", function() {
 			expect(cancelledRequests).to.be.greaterThan(3);
 			done();
+		}).on("error", function() {
+			// just ignore errors here
 		});
 	});
 });
