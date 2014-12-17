@@ -87,10 +87,10 @@ WebKit.prototype.init = function(opts, cb) {
 		opts.inspector = true;
 	}
 	opts.display = opts.display || 0;
-	display.call(this, opts, function(err, child) {
+	display.call(this, opts, function(err, child, newDisplay) {
 		if (err) return cb(err);
 		if (child) priv.xvfb = child;
-		process.env.DISPLAY = ":" + opts.display;
+		process.env.DISPLAY = ":" + newDisplay;
 		var Bindings = require(__dirname + '/lib/webkitgtk.node');
 		this.webview = new Bindings({
 			webextension: __dirname + '/lib/ext',
@@ -326,7 +326,8 @@ function display(opts, cb) {
 		}, display, function(err, child, display) {
 			if (err) cb(err);
 			else {
-				cb(null, child);
+				console.log("Spawned xvfb on DISPLAY=:" + display);
+				cb(null, child, display);
 				process.on('exit', function() {
 					child.kill();
 				});
