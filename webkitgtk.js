@@ -316,7 +316,6 @@ function display(opts, cb) {
 	fs.exists('/tmp/.X' + display + '-lock', function(exists) {
 		if (exists) return cb(null, null, display);
 		if (display == 0) return cb("Error - do not spawn xvfb on DISPLAY 0");
-		console.log("Spawning xvfb on DISPLAY=:" + display);
 		require('headless')({
 			display: {
 				width: opts.width || 1024,
