@@ -310,14 +310,17 @@ methods
   any synchronous script text or global function.
 
 * run(async-script, arg0, arg1, ..., cb)  
-  async-script must be a function that calls its last argument,  
-  like `function(arg0, arg1, ..., done) { done(err, str); }`.
+  async-script must be a function that calls back its last argument, which
+  accepts any number of arguments itself (with the convention that the first
+  argument represents an error) as long as they are stringifyable.  
+  `function(arg0, arg1, ..., done) { done(err, rarg0, rarg1, ...); }`.
 
-* runev(async-script, aeg0, arg1, ..., cb)  
+* runev(async-script, arg0, arg1, ..., cb)  
   async-script must be a function that calls its last argument,  
-  like `function(arg0, arg1, ..., emit) { emit(eventName); }`  
+  like `function(arg0, arg1, ..., emit) { emit(eventName, any, other, args); }`  
   and each call emits the named event on current view object, which can
   be listened using view.on(event, listener).  
+  The listener receives additional arguments as long as they're stringifyable.  
   Can be used to listen recurring events, but the gtk loop needs to be
   running, see above.  
 

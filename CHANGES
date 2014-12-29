@@ -50,3 +50,14 @@ it restarts the loop waiting for the next event.
 
 pdf options replaces {fullpage: true} by {margins: 0}.
 
+
+1.10.0
+------
+
+Facilitate arguments passing with run(
+  function(any, number, of, args, cb),
+  {a:1}, 34, "number", [],
+  function(err, some, returned, args) {
+  }
+);
+

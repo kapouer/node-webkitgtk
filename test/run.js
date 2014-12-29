@@ -43,12 +43,12 @@ describe("run method", function suite() {
 	});
 	it("should throw error when passing non-stringifyable custom argument", function(done) {
 		WebKit().load("http://localhost", {content:'<html></html>'}).run(function(obj, arr, str, done) {
-			done(null, [obj.a, arr[1], str]);
-		}, {a:1}, ["a", 4], "testé\n", function(err, results) {
+			done(null, obj.a, arr[1], str);
+		}, {a:1}, ["a", 4], "testé\n", function(err, a1, b4, ctest) {
 			expect(err).to.not.be.ok();
-			expect(results[0]).to.be(1);
-			expect(results[1]).to.be(4);
-			expect(results[2]).to.be("testé\n");
+			expect(a1).to.be(1);
+			expect(b4).to.be(4);
+			expect(ctest).to.be("testé\n");
 			done();
 		}).on('unload', function() {});
 	});

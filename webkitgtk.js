@@ -184,7 +184,14 @@ function policyDispatcher(type, uri) {
 }
 
 function eventsDispatcher(err, json) {
-	if (err) return console.error("Error in event dispatcher\nCheck HTTP Header Content-Security-Policy", err, json);
+	var priv = this.priv;
+	if (err) {
+		console.error("Error in event dispatcher", err, json);
+		if (priv.debug) {
+			console.info("This error might occur because of HTTP response Header Content-Security-Policy");
+		}
+		return;
+	}
 	var obj = JSON.parse(json);
 	if (!obj) {
 		console.error("received invalid event", json);
@@ -194,13 +201,15 @@ function eventsDispatcher(err, json) {
 		obj.args.unshift(obj.event);
 		this.emit.apply(this, obj.args);
 	} else if (obj.ticket) {
-		var cb = this.priv.tickets[obj.ticket];
+		var cb = priv.tickets[obj.ticket];
 		if (cb) {
 			loop.call(this, false);
-			delete this.priv.tickets[obj.ticket];
-			cb(obj.error, obj.result);
+			delete priv.tickets[obj.ticket];
+			obj.args.unshift(obj.error);
+			cb.apply(this, obj.args);
 		} else {
 			// could be reached by dropped events
+			console.notice("event without pending ticket", json);
 		}
 	}
 }
@@ -392,9 +401,7 @@ function load(uri, opts, cb) {
 	if (opts.console && this.listeners('console').length == 0) {
 		this.on('console', function(level) {
 			if (this.listeners('console').length <= 1) {
-				var args = Array.prototype.slice.call(arguments, 0);
-				var level = args.shift();
-				console[level].apply(null, args);
+				console[level].apply(null, Array.prototype.slice.call(arguments, 1));
 			}
 		});
 	}
@@ -711,7 +718,7 @@ function prepareRun(script, ticket, args, priv) {
 			var message = {};
 			if (TICKET) message.ticket = TICKET;
 			try {
-				message.result = SCRIPT;
+				message.args = [ SCRIPT ];
 			} catch(e) {
 				message.error = e;
 			}
@@ -724,13 +731,12 @@ function prepareRun(script, ticket, args, priv) {
 	} else {
 		var wrap = function(err, result) {
 			var message = {};
+			message.args = Array.prototype.slice.call(arguments, 1);
 			if (!TICKET) {
 				message.event = err;
-				message.args = Array.prototype.slice.call(arguments, 1);
 			} else {
 				message.ticket = TICKET;
 				if (err) message.error = err;
-				message.result = result;
 			}
 			DISPATCHER
 		}.toString()
