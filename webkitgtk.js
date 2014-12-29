@@ -355,7 +355,7 @@ WebKit.prototype.load = function(uri, cb) {
 		}).join(';') + ';';
 		preload.call(this, uri, {content:"<html></html>"}, function(err) {
 			if (err) return cb(err, this);
-			runcb.call(this, script, function(err) {
+			runcb.call(this, script, null, function(err) {
 				if (err) return cb(err, this);
 				load.call(this, uri, opts, cb);
 			}.bind(this));
@@ -412,7 +412,7 @@ function load(uri, opts, cb) {
 					emit.apply(null, args);
 				};
 			});
-		}, null, priv).script;
+		}, null, null, priv).script;
 	}
 	loop.call(this, true);
 	this.webview.load(uri, opts, function(err, status) {
@@ -450,7 +450,7 @@ function load(uri, opts, cb) {
 						}
 						window.addEventListener('load', loadListener, false);
 					}
-				}, function(err, result) {
+				}, null, function(err, result) {
 					if (err) console.error(err);
 					this.readyState = result;
 					emitLifeEvent.call(this, 'load');
@@ -477,7 +477,7 @@ function load(uri, opts, cb) {
 					}
 					document.addEventListener('DOMContentLoaded', readyListener, false);
 				}
-			}, function(err, result) {
+			}, null, function(err, result) {
 				if (err) console.error(err);
 				if (priv.inspecting) {
 					this.webview.inspect();
@@ -490,7 +490,7 @@ function load(uri, opts, cb) {
 						runcb.call(this, function test(done) {
 							debugger;
 							done();
-						}, function() {
+						}, null, function() {
 							if (Date.now() - start > 2000) emitEvents(result);
 							else setTimeout(checkDebugger, 10);
 						});
@@ -642,24 +642,28 @@ function loop(start) {
 }
 
 WebKit.prototype.run = function(script, cb) {
-	runcb.call(this, script, cb);
+	var args = Array.prototype.slice.call(arguments, 1);
+	if (args.length > 0 && typeof args[args.length-1] == "function") cb = args.pop();
+	runcb.call(this, script, args, cb);
 };
-
-function runcb(script, cb) {
-	var ticket = (this.priv.ticket++).toString();
-	this.priv.tickets[ticket] = cb;
-	run.call(this, script, ticket, cb);
-}
 
 WebKit.prototype.runev = function(script, cb) {
-	run.call(this, script, null, cb);
+	var args = Array.prototype.slice.call(arguments, 1);
+	if (args.length > 0 && typeof args[args.length-1] == "function") cb = args.pop();
+	run.call(this, script, null, args, cb);
 };
 
-function run(script, ticket, cb) {
+function runcb(script, args, cb) {
+	var ticket = (this.priv.ticket++).toString();
+	this.priv.tickets[ticket] = cb;
+	run.call(this, script, ticket, args, cb);
+}
+
+function run(script, ticket, args, cb) {
 	cb = cb || noop;
 	var obj;
 	try {
-		obj = prepareRun(script, ticket, this.priv);
+		obj = prepareRun(script, ticket, args, this.priv);
 	} catch(e) {
 		return cb(e);
 	}
@@ -676,9 +680,15 @@ function run(script, ticket, cb) {
 	}.bind(this));
 }
 
-function prepareRun(script, ticket, priv) {
+function prepareRun(script, ticket, args, priv) {
+	args = args || [];
+	args = args.map(function(val) {
+		var str = JSON.stringify(val);
+		if (str === undefined) throw new Error("impossible to pass argument to script " + val);
+		return str;
+	});
 	if (typeof script == "function" || Buffer.isBuffer(script)) script = script.toString();
-	var async = /^\s*function(\s+\w+)?\s*\(\s*\w+\s*\)/.test(script);
+	var async = /^\s*function(\s+\w+)?\s*\((\s*\w+\s*,)*(\s*\w+\s*)\)/.test(script);
 	if (!async && !ticket) {
 		throw new Error("cannot call runev without function(emit) {} script signature");
 	}
@@ -726,7 +736,8 @@ function prepareRun(script, ticket, priv) {
 		}.toString()
 		.replace(/TICKET/g, JSON.stringify(ticket))
 		.replace('DISPATCHER', dispatcher);
-		obj.script = '(' + script + ')(' + wrap + ');';
+		args.push(wrap);
+		obj.script = '(' + script + ')(' + args.join(', ') + ');';
 		// this does not work if response has HTTP Header Content-Security-Policy
 		if (priv.debug) obj.script = 'eval(' + JSON.stringify(obj.script) + ');';
 	}
@@ -768,7 +779,7 @@ function png(wstream, cb) {
 }
 
 WebKit.prototype.html = function(cb) {
-	runcb.call(this, "document.documentElement.outerHTML;", cb);
+	runcb.call(this, "document.documentElement.outerHTML;", null, cb);
 };
 
 WebKit.prototype.pdf = function(filepath, cb) {
