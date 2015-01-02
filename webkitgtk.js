@@ -197,16 +197,17 @@ function eventsDispatcher(err, json) {
 		console.error("received invalid event", json);
 		return;
 	}
+	var args = obj.args || [];
 	if (obj.event) {
-		obj.args.unshift(obj.event);
-		this.emit.apply(this, obj.args);
+		args.unshift(obj.event);
+		this.emit.apply(this, args);
 	} else if (obj.ticket) {
 		var cb = priv.tickets[obj.ticket];
 		if (cb) {
 			loop.call(this, false);
 			delete priv.tickets[obj.ticket];
-			obj.args.unshift(obj.error);
-			cb.apply(this, obj.args);
+			args.unshift(obj.error);
+			cb.apply(this, args);
 		} else {
 			// could be reached by dropped events
 			console.notice("event without pending ticket", json);
