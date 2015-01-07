@@ -786,7 +786,19 @@ function png(wstream, cb) {
 }
 
 WebKit.prototype.html = function(cb) {
-	runcb.call(this, "document.documentElement.outerHTML;", null, cb);
+	runcb.call(this, function() {
+		var dtd = document.doctype;
+		var html = "";
+		if (dtd) {
+			html = "<!DOCTYPE "	+ dtd.name
+			+ (dtd.publicId ? ' PUBLIC "' + dtd.publicId + '"' : '')
+			+ (!dtd.publicId && dtd.systemId ? ' SYSTEM' : '')
+			+ (dtd.systemId ? ' "' + dtd.systemId + '"' : '')
+			+ '>\n';
+		}
+		html += document.documentElement.outerHTML;
+		return html;
+	}, null, cb);
 };
 
 WebKit.prototype.pdf = function(filepath, cb) {

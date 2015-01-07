@@ -330,7 +330,7 @@ methods
   Tip: use custom css to cut portions of the document.
 
 * html(cb)  
-  get documentElement.outerHTML right now.
+  get the whole document html, prepended with its doctype, right now.
 
 * pdf(filepath, [opts], [cb])  
   print page to file right now  
