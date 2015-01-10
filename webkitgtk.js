@@ -635,8 +635,8 @@ function loop(start) {
 		if (busy) {
 			priv.loopImmediate = setImmediate(loopFun);
 		} else {
-			var delay = (priv.idleCount + 1) * 5;
-			priv.loopTimeout = setTimeout(loopFun, Math.min(delay, 1000));
+			var delay = priv.idleCount * 4;
+			priv.loopTimeout = setTimeout(loopFun, Math.min(delay, 300));
 		}
 	}.bind(this);
 
