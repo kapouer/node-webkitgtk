@@ -1,0 +1,18 @@
+language: cpp
+
+node_js: "0.10"
+
+os: linux
+
+compiler: gcc
+
+before_install:
+  - sudo apt-get update
+
+install:
+  - sudo apt-get install libwebkit2gtk-3.0-dev libglib2.0-dev libgtk-3-dev xvfb
+  - npm install
+
+script:
+  - npm test
+
