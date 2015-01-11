@@ -111,6 +111,10 @@ load() options
   bypassing 'request' event.  
   This does not allow requests that are rejected by cross-origin policy.
 
+- images  
+  boolean, default true  
+  Load images automatically.
+
 - navigation  
   boolean, default false  
   allow navigation within the webview (changing document.location).
