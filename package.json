@@ -14,7 +14,7 @@
   "main": "webkitgtk.js",
   "dependencies": {
     "chainit3": "^3.1.0",
-    "nan": "^1.4.3"
+    "nan": "1.4.x"
   },
   "optionalDependencies": {
     "headless": "^1.0.0"
