@@ -63,30 +63,27 @@ WebKit.prototype.init = function(opts, cb) {
 	var priv = this.priv;
 	if (priv.state >= INITIALIZING) return cb(new Error("init must not be called twice"), this);
 	priv.state = INITIALIZING;
-	if (typeof opts == "string") {
-		var match = /^(\d+)x(\d+)x(\d+)\:(\d+)$/.exec(opts);
-		if (!match) {
-			var ndis = parseInt(opts);
-			if (!isNaN(ndis)) opts = ndis;
-		} else opts = {
-			width: match[1],
-			height: match[2],
-			depth: match[3],
-			display: match[4]
-		};
+	if (opts == null) opts = {};
+	else if (typeof opts != "object") opts = {display: opts};
+	var ndis = opts.display != null ? opts.display : process.env.DISPLAY;
+	if (typeof ndis == "string") {
+		var match = /^(?:(\d+)x(\d+)x(\d+))?\:(\d+)$/.exec(ndis);
+		if (match) {
+			if (match[1] != null) opts.width = match[1];
+			if (match[2] != null) opts.height = match[2];
+			if (match[3] != null) opts.depth = match[3];
+			if (match[4] != null) ndis = match[4];
+		}
 	}
-	if (typeof opts == "number") {
-		opts = { display: opts };
-	} else if (!opts) {
-		opts = {};
-	}
+	ndis = parseInt(ndis);
+	if (isNaN(ndis)) ndis = 0;
+	opts.display = ndis;
 	if (opts.offscreen == null) opts.offscreen = true;
 	if (opts.debug) {
 		priv.debug = true;
 		opts.offscreen = false;
 		opts.inspector = true;
 	}
-	opts.display = opts.display || 0;
 	display.call(this, opts, function(err, child, newDisplay) {
 		if (err) return cb(err);
 		if (child) priv.xvfb = child;
