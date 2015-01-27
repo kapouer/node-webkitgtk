@@ -158,9 +158,12 @@ load() options
 init() options
 --------------
 
+`init(display)` can be called instead of passing an object.
+
 - display  
-  number, 0  
+  number for port, or string, (WIDTHxHEIGHTxDEPTH):PORT, default env.DISPLAY  
   checks an X display or framebuffer is listening on that port
+  init(display)
 
 - width  
   number, 1024
@@ -170,10 +173,6 @@ init() options
 - depth  
   number, 32
   Framebuffer pixel depth
-
-- WIDTHxHEIGHTxDEPTH:PORT  
-  string, null  
-  a short-hand notation for passing all these options at once.
 
 - cacheDir  
   string, $user_cache_dir/node-webkitgtk  
