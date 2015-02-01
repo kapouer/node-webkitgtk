@@ -702,7 +702,7 @@ function prepareRun(script, ticket, args, priv) {
 	// the data (stored in a global window variable).
 	var dispatcher = '\
 		var evt = document.createEvent("KeyboardEvent"); \
-		evt.initKeyboardEvent("' + priv.eventName + '", false, true, null, JSON.stringify(message)); \
+		evt.initKeyboardEvent("' + priv.eventName + '", false, true, null, JSON.stringify(message, function(key, val) { if (typeof val == "function") return val.toString(); else return val; })); \
 		window.dispatchEvent(evt); \
 		';
 	var obj = {
