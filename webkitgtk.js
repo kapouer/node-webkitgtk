@@ -789,7 +789,7 @@ function consoleEmitter(emit) {
 	});
 }
 
-function stateTracker(eventName, staleXhrTimeout, collapseTimeout, collapseInterval, emit) {
+function stateTracker(eventName, staleXhrTimeout, stallTimeout, stallInterval, emit) {
 	var lastEvent = "";
 
 	window.addEventListener('load', loadListener, false);
@@ -825,7 +825,7 @@ function stateTracker(eventName, staleXhrTimeout, collapseTimeout, collapseInter
 			if (timeouts[id].stall) timeouts.stall--;
 			delete timeouts[id];
 			timeouts.len--;
-			if (timeouts.len == 0) {
+			if (timeouts.len <= timeouts.stall) {
 				check();
 			}
 		}
@@ -833,9 +833,7 @@ function stateTracker(eventName, staleXhrTimeout, collapseTimeout, collapseInter
 	window.setTimeout = function setTimeout(fn, timeout) {
 		var args = Array.prototype.slice.call(arguments, 0);
 		var stall = false;
-		if (timeout < collapseTimeout) {
-			args[1] = 1; // collapse timeouts
-		} else {
+		if (timeout >= stallTimeout) {
 			stall = true;
 			timeouts.stall++;
 		}
@@ -867,9 +865,7 @@ function stateTracker(eventName, staleXhrTimeout, collapseTimeout, collapseInter
 	window.setInterval = function(fn, interval) {
 		var args = Array.prototype.slice.call(arguments, 0);
 		var stall = false;
-	  if (interval < collapseInterval) {
-	  	args[1] = 1; // collapse intervals
-	  } else {
+	  if (interval >= stallInterval) {
 			stall = true;
 			intervals.stall++;
 		}
@@ -883,7 +879,7 @@ function stateTracker(eventName, staleXhrTimeout, collapseTimeout, collapseInter
 			if (intervals[id].stall) intervals.stall--;
 			delete intervals[id];
 			intervals.len--;
-			if (intervals.len == 0) {
+			if (intervals.len <= intervals.stall) {
 				check();
 			}
 		}
@@ -984,7 +980,7 @@ function stateTracker(eventName, staleXhrTimeout, collapseTimeout, collapseInter
 
 	function check() {
 		w.setTimeout.call(window, function() {
-			if (lastEvent, timeouts.len <= timeouts.stall && intervals.len == intervals.stall && frames.len == 0) {
+			if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall && frames.len == 0) {
 				if (lastEvent == "load" && requests.len <= requests.stall) {
 					lastEvent = "idle";
 					emitNextFrame("idle");
