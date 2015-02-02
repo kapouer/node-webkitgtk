@@ -24,7 +24,9 @@ function WebKit(opts, cb) {
 			chainit.add(ChainableWebKit, "wait", function(ev, cb) {
 				var priv = this.priv;
 				if (priv.lastEvent == ev) return (cb || noop)();
-				else if (priv.previousEvents[ev]) {
+				else if (this.readyState == "stop") {
+					throw new Error("Loading was stopped");
+				} else if (priv.previousEvents[ev]) {
 					throw new Error("do not wait() an event that already happened:" + ev);
 				} else {
 					EventEmitter.prototype.once.call(this, ev, cb);
@@ -543,6 +545,11 @@ function stop(cb) {
 	wasLoading = this.webview.stop(fincb);
 	// immediately returned
 	if (!wasLoading) setImmediate(fincb);
+	this.readyState = "stop";
+	if (!priv.lastEvent) emitLifeEvent.call(this, 'ready');
+	if (priv.lastEvent == "ready") emitLifeEvent.call(this, 'load');
+	if (priv.lastEvent == "load") emitLifeEvent.call(this, 'idle');
+	if (priv.lastEvent == "idle") emitLifeEvent.call(this, 'unload');
 }
 
 WebKit.prototype.stop = function(cb) {

@@ -111,11 +111,14 @@ describe("load method", function suite() {
 		WebKit().load('http://google.com', function(err) {
 			expect(err).to.not.be.ok();
 			this.stop(function(err, wasLoading) {
+				expect(this.readyState).to.be('stop');
 				expect(err).to.not.be.ok();
 				expect(wasLoading).to.be(true);
 			});
 		}).wait('load', function(err) {
+			expect(err).to.be.ok();
 			this.stop(function(err, wasLoading) {
+				expect(err).to.not.be.ok();
 				expect(wasLoading).to.be(false);
 				done();
 			});
