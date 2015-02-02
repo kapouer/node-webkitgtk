@@ -199,7 +199,20 @@ function eventsDispatcher(err, json) {
 	var args = obj.args || [];
 	if (obj.event) {
 		args.unshift(obj.event);
-		this.emit.apply(this, args);
+		if (obj.event == "ready") {
+			this.readyState = "interactive";
+			emitLifeEvent.call(this, obj.event);
+		} else  if (obj.event == "load") {
+			this.readyState = "complete";
+			emitLifeEvent.call(this, obj.event);
+		} else if (obj.event == "idle") {
+			priv.idling = true;
+		} else if (obj.event == "busy") {
+			// not a life event
+			this.emit(obj.event);
+		} else {
+			this.emit.apply(this, args);
+		}
 	} else if (obj.ticket) {
 		var cb = priv.tickets[obj.ticket];
 		if (cb) {
@@ -412,19 +425,13 @@ function load(uri, opts, cb) {
 	if (Buffer.isBuffer(opts.content)) opts.content = opts.content.toString();
 	if (Buffer.isBuffer(opts.style)) opts.style = opts.style.toString();
 	if (Buffer.isBuffer(opts.script)) opts.script = opts.script.toString();
-	if (opts.console) {
-		if (!opts.script) opts.script = "";
-		opts.script += "\n" + prepareRun(function(emit) {
-			['log', 'error', 'info', 'warn'].forEach(function(meth) {
-				console[meth] = function() {
-					var args = Array.prototype.slice.call(arguments, 0);
-					args.unshift(meth);
-					args.unshift('console');
-					emit.apply(null, args);
-				};
-			});
-		}, null, null, priv).script;
-	}
+	var scripts = [errorEmitter];
+	if (opts.console) scripts.push(consoleEmitter);
+	scripts.push({fn: stateTracker, args: [priv.stall]});
+	if (!opts.script) opts.script = "";
+	opts.script += '\n' + scripts.map(function(fn) {
+		return prepareRun(fn.fn || fn, null, fn.args || null, priv).script;
+	}).join('\n');
 	loop.call(this, true);
 	this.webview.load(uri, opts, function(err, status) {
 		loop.call(this, false);
@@ -437,83 +444,9 @@ function load(uri, opts, cb) {
 		if (!err && status < 200 || status >= 400) err = status;
 		cb(err, this);
 		if (err) return;
-
-		run.call(this, function(emit) {
-			window.onerror = function() {
-				var ret = Array.prototype.slice.call(arguments, 0);
-				ret.unshift("error");
-				emit.apply(null, ret);
-			};
-		});
-
-		var emitEvents = function(result) {
-			this.readyState = result;
-			emitLifeEvent.call(this, 'ready');
-			if (result == "complete") {
-				emitLifeEvent.call(this, 'load');
-			}	else {
-				runcb.call(this, function(done) {
-					if (document.readyState == "complete") done(null, document.readyState);
-					else {
-						function loadListener() {
-							window.removeEventListener('load', loadListener, false);
-							done(null, "complete");
-						}
-						window.addEventListener('load', loadListener, false);
-					}
-				}, null, function(err, result) {
-					if (err) console.error(err);
-					this.readyState = result;
-					emitLifeEvent.call(this, 'load');
-				}.bind(this));
-			}
-		}.bind(this);
-
-		setImmediate(function() {
-			runcb.call(this, function(done) {
-				function after(state) {
-					if (window.preloading) setTimeout(function() {
-						after(state);
-					}, 10);
-					else setTimeout(function() {
-						done(null, state);
-					}, 0);
-				}
-				if (/interactive|complete/.test(document.readyState)) {
-					after(document.readyState);
-				} else {
-					function readyListener() {
-						document.removeEventListener('DOMContentLoaded', readyListener, false);
-						after("interactive");
-					}
-					document.addEventListener('DOMContentLoaded', readyListener, false);
-				}
-			}, null, function(err, result) {
-				if (err) console.error(err);
-				if (priv.inspecting) {
-					this.webview.inspect();
-					var checkDebugger = function() {
-						if (!priv.inspecting) {
-							console.error("Inspector crashed, please try again.\nContinuing page load...");
-							return emitEvents(result);
-						}
-						var start = Date.now();
-						runcb.call(this, function test(done) {
-							debugger;
-							done();
-						}, null, function() {
-							if (Date.now() - start > 2000) emitEvents(result);
-							else setTimeout(checkDebugger, 10);
-						});
-					}.bind(this);
-					checkDebugger();
-				} else {
-					emitEvents(result);
-				}
-			}.bind(this));
-		}.bind(this));
-
-
+		if (priv.inspecting) {
+			this.webview.inspect();
+		}
 	}.bind(this));
 }
 
@@ -634,19 +567,18 @@ function loop(start) {
 			priv.loopCount = 0;
 			if (!priv.debug || !priv.inspecting) return;
 		}
-
 		var busy = this.webview.loop(true);
-		if (busy) priv.idleCount = 0;
-		else if (!priv.wasBusy) priv.idleCount++;
-
-		if (priv.idleCount >= 1 && this.readyState == "complete" && !priv.wasIdle) {
-			if (!priv.inspecting && priv.pendingRequests <= stalled.call(this)) {
-				priv.wasIdle = true;
-				emitLifeEvent.call(this, 'idle');
-			}
-		} else {
-			priv.wasBusy = busy;
+		if (busy) {
+			priv.idleCount = 0;
+		} else if (!priv.wasBusy) {
+			priv.idleCount++;
 		}
+		if (priv.idling && !priv.wasIdle && !priv.inspecting && priv.idleCount > 0) {
+			priv.wasIdle = true;
+			this.readyState = "idling";
+			emitLifeEvent.call(this, 'idle');
+		}
+		priv.wasBusy = busy;
 		if (busy) {
 			priv.loopImmediate = setImmediate(loopFun);
 		} else {
@@ -719,8 +651,9 @@ function prepareRun(script, ticket, args, priv) {
 	// If it isn't supported any more, send an empty event and make the webextension fetch
 	// the data (stored in a global window variable).
 	var dispatcher = '\
-		var evt = document.createEvent("KeyboardEvent"); \
-		evt.initKeyboardEvent("' + priv.eventName + '", false, true, null, JSON.stringify(message, function(key, val) { if (typeof val == "function") return val.toString(); else return val; })); \
+		var msg, evt = document.createEvent("KeyboardEvent"); \
+		try { msg = JSON.stringify(message); } catch (e) { msg = JSON.stringify(message + "");} \
+		evt.initKeyboardEvent("' + priv.eventName + '", false, true, null, msg); \
 		window.dispatchEvent(evt); \
 		';
 	var obj = {
@@ -760,8 +693,6 @@ function prepareRun(script, ticket, args, priv) {
 		.replace('DISPATCHER', dispatcher);
 		args.push(wrap);
 		obj.script = '(' + script + ')(' + args.join(', ') + ');';
-		// this does not work if response has HTTP Header Content-Security-Policy
-		if (priv.debug) obj.script = 'eval(' + JSON.stringify(obj.script) + ');';
 	}
 	return obj;
 }
@@ -832,6 +763,217 @@ function pdf(filepath, opts, cb) {
 		loop.call(this, false);
 		cb(err);
 	}.bind(this));
+}
+
+function errorEmitter(emit) {
+	window.onerror = function() {
+		var ret = Array.prototype.slice.call(arguments, 0);
+		ret.unshift("error");
+		emit.apply(null, ret);
+	};
+}
+
+function consoleEmitter(emit) {
+	['log', 'error', 'info', 'warn'].forEach(function(meth) {
+		console[meth] = function() {
+			var args = Array.prototype.slice.call(arguments, 0);
+			args.unshift(meth);
+			args.unshift('console');
+			emit.apply(null, args);
+		};
+	});
+}
+
+function stateTracker(staleXhrTimeout, emit) {
+	var lastEvent = "";
+
+	window.addEventListener('load', loadListener, false);
+	document.addEventListener('DOMContentLoaded', readyListener, false);
+
+	function loadListener() {
+		if (lastEvent == "ready") {
+			lastEvent = "load";
+			window.removeEventListener('load', loadListener, false);
+			emitNextFrame("load");
+			check(); // this one makes it crash
+		}
+	}
+	function readyListener() {
+		if (lastEvent == "") {
+			lastEvent = "ready";
+			document.removeEventListener('DOMContentLoaded', readyListener, false);
+			emitNextFrame("ready");
+		}
+	}
+
+	var w = {};
+	['setTimeout', 'clearTimeout',
+	'setInterval', 'clearInterval',
+	'XMLHttpRequest', 'WebSocket',
+	'requestAnimationFrame', 'cancelAnimationFrame'].forEach(function(meth) {
+		w[meth] = window[meth];
+	});
+
+	var timeouts = {len: 0, stall: 0};
+	function doneTimeout(id) {
+		if (id && timeouts[id]) {
+			if (timeouts[id].stall) timeouts.stall--;
+			delete timeouts[id];
+			timeouts.len--;
+			if (timeouts.len == 0) {
+				check();
+			}
+		}
+	}
+	window.setTimeout = function setTimeout(fn, timeout) {
+		var args = Array.prototype.slice.call(arguments, 0);
+		var stall = false;
+		if (timeout < 200) args[1] = 0; // collapse timeouts
+		else {
+			stall = true;
+			timeouts.stall++;
+		}
+		timeouts.len++;
+		var obj = {
+			fn: fn
+		};
+		args[0] = function(obj) {
+			var err;
+			try {
+				obj.fn.apply(null, Array.prototype.slice.call(arguments, 1));
+			} catch (e) {
+				err = e;
+			}
+			doneTimeout(obj.id);
+			if (err) throw err; // rethrow
+		}.bind(null, obj);
+		var id = w.setTimeout.apply(window, args);
+		timeouts[id] = {stall: stall};
+		obj.id = id;
+		return id;
+	};
+	window.clearTimeout = function(id) {
+		doneTimeout(id);
+		return w.clearTimeout.call(window, id);
+	};
+
+	var intervals = {len: 0};
+	window.setInterval = function(fn, interval) {
+		var args = Array.prototype.slice.call(arguments, 0);
+	  if (interval < 200) args[1] = 0; // collapse intervals
+		intervals.len++;
+		var id = w.setInterval.apply(window, args);
+		intervals[id] = true;
+		return id;
+	};
+	window.clearInterval = function(id) {
+		if (id && intervals[id]) {
+			delete intervals[id];
+			intervals.len--;
+			if (intervals.len == 0) {
+				check();
+			}
+		}
+		return w.clearInterval.call(window, id);
+	};
+
+	var frames = {len: 0};
+	function doneFrame(id) {
+		if (id && frames[id]) {
+			delete frames[id];
+			frames.len--;
+			if (frames.len == 0) {
+				check();
+			}
+		}
+	}
+	window.requestAnimationFrame = function(fn) {
+		frames.len++;
+		var id = w.requestAnimationFrame.call(window, function(ts) {
+			var err;
+			try {
+				fn(ts);
+			} catch (e) {
+				err = e;
+			}
+			doneFrame(id);
+			if (err) throw err; // rethrow
+		});
+		frames[id] = true;
+		return id;
+	};
+	window.cancelAnimationFrame = function(id) {
+		doneFrame(id);
+		return w.cancelAnimationFrame.call(window, id);
+	};
+
+	var requests = {len: 0, stall: 0};
+	var wopen = window.XMLHttpRequest.prototype.open;
+	window.XMLHttpRequest.prototype.open = function(method, url, async) {
+		if (this.url) xhrClean.call(this);
+		this.addEventListener("progress", xhrProgress);
+		this.addEventListener("load", xhrChange);
+		this.addEventListener("error", xhrClean);
+		this.addEventListener("abort", xhrClean);
+		this.addEventListener("timeout", xhrClean);
+		this.url = url;
+		return wopen.apply(this, Array.prototype.slice.call(arguments, 0));
+	};
+	var wsend = window.XMLHttpRequest.prototype.send;
+	window.XMLHttpRequest.prototype.send = function() {
+		try {
+			wsend.apply(this, Array.prototype.slice.call(arguments, 0));
+		} catch (e) {
+			xhrClean.call(this);
+			return;
+		}
+		requests[this.url] = w.setTimeout.call(window, function(url) {
+			requests.stall++;
+			delete requests[url];
+			check();
+		}.bind(null, this.url), staleXhrTimeout);
+		requests.len++;
+	};
+	function xhrProgress(e) {
+		if (e.totalSize > 0 && requests[this.url]) {
+			w.clearTimeout.call(window, requests[this.url]);
+			delete requests[this.url];
+		}
+	}
+	function xhrChange(e) {
+		if (this.readyState != this.DONE) return;
+		xhrClean.call(this);
+	}
+	function xhrClean() {
+		if (!this.url) return;
+		this.removeEventListener("progress", xhrProgress);
+		this.removeEventListener("load", xhrChange);
+		this.removeEventListener("abort", xhrClean);
+		this.removeEventListener("error", xhrClean);
+		this.removeEventListener("timeout", xhrClean);
+		delete this.url;
+		requests.len--;
+		if (requests.len == 0) check();
+	}
+
+	function check() {
+		w.setTimeout.call(window, function() {
+			if (timeouts.len <= timeouts.stall && intervals.len == 0 && frames.len == 0) {
+				if (lastEvent == "load" && requests.len <= requests.stall) {
+					lastEvent = "idle";
+					emitNextFrame("idle");
+				} else if (lastEvent == "idle" && requests.len == 0) {
+					emitNextFrame("busy");
+				}
+			}
+		}, 0);
+	}
+
+	function emitNextFrame(ev) {
+		w.requestAnimationFrame.call(window, function(ts) {
+			emit(ev);
+		});
+	}
 }
 
 var disableAllScripts = '(' + function() {
