@@ -403,6 +403,7 @@ function load(uri, opts, cb) {
 	priv.stall = opts.stall || 1000;
 	priv.navigation = opts.navigation || false;
 	priv.wasIdle = false;
+	priv.idling = false;
 	priv.loopForLife = true;
 	priv.timeout = setTimeout(stop.bind(this), opts.timeout || 30000);
 	priv.uris = {};
@@ -576,6 +577,7 @@ function loop(start) {
 		if (priv.idling && !priv.wasIdle && !priv.inspecting && priv.idleCount > 0) {
 			priv.wasIdle = true;
 			this.readyState = "idling";
+			priv.idling = false;
 			emitLifeEvent.call(this, 'idle');
 		}
 		priv.wasBusy = busy;
