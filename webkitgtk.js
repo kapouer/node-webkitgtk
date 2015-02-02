@@ -301,8 +301,12 @@ function responseDispatcher(binding) {
 	var res = new Response(this, binding);
 	var uri = res.uri;
 	if (uri && this.priv.uris) delete this.priv.uris[uri];
-	if (res.status == 0) return;
-	if (uri && isNetworkProtocol(uri)) this.priv.pendingRequests--;
+	if (res.status == 0) {
+		return;
+	}
+	if (uri && isNetworkProtocol(uri)) {
+		this.priv.pendingRequests--;
+	}
 	this.emit('response', res);
 }
 
@@ -609,7 +613,9 @@ function loop(start) {
 		priv.loopForCallbacks--;
 	}
 	var loopFun = function() {
-		if (!priv.loopImmediate && !priv.loopTimeout) return;
+		if (!priv.loopImmediate && !priv.loopTimeout) {
+			return;
+		}
 		priv.loopImmediate = null;
 		priv.loopTimeout = null;
 		priv.loopCount++;
@@ -621,7 +627,9 @@ function loop(start) {
 			console.error("FIXME pendingRequests should be >= 0");
 			priv.pendingRequests = 0;
 		}
-		if (!this.webview) return;
+		if (!this.webview) {
+			return;
+		}
 		if (priv.loopForCallbacks == 0 && !priv.loopForLife) {
 			priv.loopCount = 0;
 			if (!priv.debug || !priv.inspecting) return;
