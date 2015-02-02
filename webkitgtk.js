@@ -920,6 +920,17 @@ function stateTracker(eventName, staleXhrTimeout, collapseTimeout, collapseInter
 		return w.cancelAnimationFrame.call(window, id);
 	};
 
+	window.WebSocket = function() {
+		var ws = new w.WebSocket(Array.prototype.slice.call(arguments, 0));
+		ws.addEventListener('message', check);
+		function uncheck() {
+			this.removeEventListener('message', check);
+			this.removeEventListener('close', uncheck);
+		}
+		ws.addEventListener('close', uncheck);
+		return ws;
+	};
+
 	var requests = {len: 0, stall: 0};
 	var wopen = window.XMLHttpRequest.prototype.open;
 	window.XMLHttpRequest.prototype.open = function(method, url, async) {
