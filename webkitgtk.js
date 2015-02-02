@@ -225,7 +225,7 @@ function eventsDispatcher(err, json) {
 			cb.apply(this, args);
 		} else {
 			// could be reached by dropped events
-			console.notice("event without pending ticket", json);
+			console.warn("event without pending ticket", json);
 		}
 	}
 }
