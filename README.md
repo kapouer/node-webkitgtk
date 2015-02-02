@@ -182,7 +182,7 @@ init() options
 
 - debug  
   boolean, default false  
-  shows a real window with a web inspector and breaks as early as possible.  
+  shows a real window with a web inspector.  
   As a commodity, *the inspector must be closed* to get the `idle` event fired.
 
 If width, height, depth options are given, an xvfb instance listening
@@ -242,6 +242,11 @@ These are lifecycle events:
   listener()
 
 These events happen *once* and *in that order*.
+
+A new *busy* event can happen after *idle* event: it tracks further activity
+after idling state.
+It can be used to track updates done by XHR, or long timeouts executed after
+page load.
 
 Registering a listener for an event that just happened immediately calls the
 new listener.
