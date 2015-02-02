@@ -862,17 +862,24 @@ function stateTracker(staleXhrTimeout, emit) {
 		return w.clearTimeout.call(window, id);
 	};
 
-	var intervals = {len: 0};
+	var intervals = {len: 0, stall: 0};
 	window.setInterval = function(fn, interval) {
 		var args = Array.prototype.slice.call(arguments, 0);
-	  if (interval < 200) args[1] = 0; // collapse intervals
+		var stall = false;
+	  if (interval < 200) {
+	  	args[1] = 1; // collapse intervals
+	  } else {
+			stall = true;
+			intervals.stall++;
+		}
 		intervals.len++;
 		var id = w.setInterval.apply(window, args);
-		intervals[id] = true;
+		intervals[id] = {stall: stall};
 		return id;
 	};
 	window.clearInterval = function(id) {
 		if (id && intervals[id]) {
+			if (intervals[id].stall) intervals.stall--;
 			delete intervals[id];
 			intervals.len--;
 			if (intervals.len == 0) {
@@ -963,7 +970,7 @@ function stateTracker(staleXhrTimeout, emit) {
 
 	function check() {
 		w.setTimeout.call(window, function() {
-			if (timeouts.len <= timeouts.stall && intervals.len == 0 && frames.len == 0) {
+			if (lastEvent, timeouts.len <= timeouts.stall && intervals.len == intervals.stall && frames.len == 0) {
 				if (lastEvent == "load" && requests.len <= requests.stall) {
 					lastEvent = "idle";
 					emitNextFrame("idle");
