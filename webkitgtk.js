@@ -833,8 +833,9 @@ function stateTracker(staleXhrTimeout, emit) {
 	window.setTimeout = function setTimeout(fn, timeout) {
 		var args = Array.prototype.slice.call(arguments, 0);
 		var stall = false;
-		if (timeout < 200) args[1] = 0; // collapse timeouts
-		else {
+		if (timeout < 200) {
+			args[1] = 1; // collapse timeouts
+		} else {
 			stall = true;
 			timeouts.stall++;
 		}
