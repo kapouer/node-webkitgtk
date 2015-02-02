@@ -67,3 +67,9 @@ Facilitate arguments passing with run(
 
 .html() now returns the document html prepended with its doctype declaration.
 
+1.12.0
+------
+
+idle event is more accurate. Happens once after load event.
+Further activity is tracked by repeated on('busy') events.
+Remove special inspector code, which paused debugger on load.
