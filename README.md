@@ -244,7 +244,14 @@ These are lifecycle events:
 These events happen *once* and *in that order*.
 
 A new *busy* event can happen after *idle* event: it tracks further activity
-after idling state.
+after idling state, caused by any of:
+
+- setTimeout is finished or cleared
+- setInterval is finished or cleared
+- xhr is finished or aborted
+- animationFrame is finished or cancelled
+- a websocket emits a message
+
 It can be used to track updates done by XHR, or long timeouts executed after
 page load.
 
