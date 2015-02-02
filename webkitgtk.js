@@ -31,21 +31,21 @@ function WebKit(opts, cb) {
 				} else {
 					EventEmitter.prototype.once.call(this, ev, cb);
 				}
-			}, function(ev, cb) {
-				if (!RegEvents.test(ev)) return cb(new Error("call .wait(ev) with ev like " + RegEvents));
-				if (!this.chainState) return cb(new Error("call .wait(ev) after .load(...)"));
+			}, function(ev) {
+				if (!RegEvents.test(ev)) throw new Error("call .wait(ev) with ev like " + RegEvents);
+				if (!this.chainState) throw new Error("call .wait(ev) after .load(...)");
 				this.chainState[ev] = true;
 			});
 			chainit.add(ChainableWebKit, "load", function(uri, cb) {
 				WebKit.prototype.load.apply(this, Array.prototype.slice.call(arguments));
 				this.priv.nextEvents = this.chainState;
-			}, function(uri, cb) {
+			}, function(uri) {
 				this.chainState = {};
 			});
 			chainit.add(ChainableWebKit, "preload", function(uri, cb) {
 				WebKit.prototype.preload.apply(this, Array.prototype.slice.call(arguments));
 				this.priv.nextEvents = this.chainState;
-			}, function(uri, cb) {
+			}, function(uri) {
 				this.chainState = {};
 			});
 		}
