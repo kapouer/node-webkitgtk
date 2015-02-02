@@ -39,11 +39,11 @@ static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest*
 	GVariantDict dictOut;
 	g_variant_dict_init(&dictOut, g_variant_get_child_value(results, 0));
 
-	bool ret = FALSE;
 	const gchar* newuri = NULL;
 	const gchar* cancel = NULL;
 	if (g_variant_dict_lookup(&dictOut, "cancel", "s", &cancel) && cancel != NULL && !g_strcmp0(cancel, "1")) {
-		ret = TRUE;
+		// returning TRUE blocks requests - it's better to set an empty uri - it sets status to 0
+		webkit_uri_request_set_uri(request, "");
 	} else if (g_variant_dict_lookup(&dictOut, "uri", "s", &newuri) && newuri != NULL) {
 		webkit_uri_request_set_uri(request, newuri);
 	}
@@ -53,7 +53,7 @@ static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest*
 	update_soup_headers_with_dict(headers, results);
 	g_variant_unref(results);
 
-	return ret;
+	return FALSE;
 }
 
 
