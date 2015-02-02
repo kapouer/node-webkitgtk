@@ -125,7 +125,10 @@ function initialPriv() {
 		loopImmediate: null,
 		wasBusy: false,
 		wasIdle: false,
-		previousEvents: {}
+		idling: false,
+		previousEvents: {},
+		lastEvent: null,
+		nextEvents: {}
 	};
 }
 
