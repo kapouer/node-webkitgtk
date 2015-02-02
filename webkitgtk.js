@@ -431,7 +431,7 @@ function load(uri, opts, cb) {
 	if (Buffer.isBuffer(opts.script)) opts.script = opts.script.toString();
 	var scripts = [errorEmitter];
 	if (opts.console) scripts.push(consoleEmitter);
-	scripts.push({fn: stateTracker, args: [priv.stall]});
+	scripts.push({fn: stateTracker, args: [priv.eventName, priv.stall, 200, 200]});
 	if (!opts.script) opts.script = "";
 	opts.script += '\n' + scripts.map(function(fn) {
 		return prepareRun(fn.fn || fn, null, fn.args || null, priv).script;
@@ -789,7 +789,7 @@ function consoleEmitter(emit) {
 	});
 }
 
-function stateTracker(staleXhrTimeout, emit) {
+function stateTracker(eventName, staleXhrTimeout, collapseTimeout, collapseInterval, emit) {
 	var lastEvent = "";
 
 	window.addEventListener('load', loadListener, false);
@@ -833,7 +833,7 @@ function stateTracker(staleXhrTimeout, emit) {
 	window.setTimeout = function setTimeout(fn, timeout) {
 		var args = Array.prototype.slice.call(arguments, 0);
 		var stall = false;
-		if (timeout < 200) {
+		if (timeout < collapseTimeout) {
 			args[1] = 1; // collapse timeouts
 		} else {
 			stall = true;
@@ -867,7 +867,7 @@ function stateTracker(staleXhrTimeout, emit) {
 	window.setInterval = function(fn, interval) {
 		var args = Array.prototype.slice.call(arguments, 0);
 		var stall = false;
-	  if (interval < 200) {
+	  if (interval < collapseInterval) {
 	  	args[1] = 1; // collapse intervals
 	  } else {
 			stall = true;
@@ -930,7 +930,9 @@ function stateTracker(staleXhrTimeout, emit) {
 		this.addEventListener("abort", xhrClean);
 		this.addEventListener("timeout", xhrClean);
 		this.url = url;
-		return wopen.apply(this, Array.prototype.slice.call(arguments, 0));
+		var ret = wopen.apply(this, Array.prototype.slice.call(arguments, 0));
+		this.setRequestHeader('X-' + eventName, 'xhr');
+		return ret;
 	};
 	var wsend = window.XMLHttpRequest.prototype.send;
 	window.XMLHttpRequest.prototype.send = function() {

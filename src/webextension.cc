@@ -14,6 +14,7 @@ static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest*
 	if (redirected_response != NULL) {
 		return FALSE;
 	}
+	gchar* myHeader = g_strconcat("X-", (gchar*)data, NULL);
 	const char* uri = webkit_uri_request_get_uri(request);
 	SoupMessageHeaders* headers = webkit_uri_request_get_http_headers(request);
 
@@ -41,9 +42,20 @@ static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest*
 
 	const gchar* newuri = NULL;
 	const gchar* cancel = NULL;
+	const gchar* xhr = NULL;
+
+	gboolean ret = FALSE;
 	if (g_variant_dict_lookup(&dictOut, "cancel", "s", &cancel) && cancel != NULL && !g_strcmp0(cancel, "1")) {
-		// returning TRUE blocks requests - it's better to set an empty uri - it sets status to 0
-		webkit_uri_request_set_uri(request, "");
+		// returning TRUE blocks requests - it's better to set an empty uri - it sets status to 0;
+		if (headers != NULL) {
+			xhr = soup_message_headers_get_one(headers, myHeader);
+		}
+		if (xhr != NULL) {
+			soup_message_headers_remove(headers, myHeader);
+			webkit_uri_request_set_uri(request, "");
+		} else {
+			ret = TRUE;
+		}
 	} else if (g_variant_dict_lookup(&dictOut, "uri", "s", &newuri) && newuri != NULL) {
 		webkit_uri_request_set_uri(request, newuri);
 	}
@@ -53,7 +65,7 @@ static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest*
 	update_soup_headers_with_dict(headers, results);
 	g_variant_unref(results);
 
-	return FALSE;
+	return ret;
 }
 
 
@@ -89,7 +101,7 @@ extern "C" {
 
 		g_signal_connect(webkit_script_world_get_default(), "window-object-cleared", G_CALLBACK(window_object_cleared_callback), eventName);
 
-		g_signal_connect(extension, "page-created", G_CALLBACK(web_page_created_callback), NULL);
+		g_signal_connect(extension, "page-created", G_CALLBACK(web_page_created_callback), eventName);
 
 		GError* error = NULL;
 		connection = g_dbus_connection_new_for_address_sync(address, G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT, NULL, NULL, &error);
