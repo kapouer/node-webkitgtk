@@ -17,6 +17,8 @@ public:
 	static const int DOCUMENT_AVAILABLE = 0;
 	static const int DOCUMENT_LOADING = 1;
 
+	static const int HAVE_TRANSPARENT_BACKGROUND = WEBKIT_CHECK_VERSION(2, 7, 4);
+
 	static void Init(Handle<Object>, Handle<Object>);
 	static void Exit(void*);
 

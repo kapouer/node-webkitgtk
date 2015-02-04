@@ -703,6 +703,13 @@ function prepareRun(script, ticket, args, priv) {
 }
 
 WebKit.prototype.png = function(obj, cb) {
+  var opts = {};
+  if (typeof cb != "function") {
+    opts = cb;
+    cb = arguments[2];
+  }
+  cb = cb || noop;
+
 	var wstream;
 	if (typeof obj == "string") {
 		wstream = fs.createWriteStream(obj);
@@ -711,13 +718,12 @@ WebKit.prototype.png = function(obj, cb) {
 	} else {
 		return cb(new Error("png() first arg must be either a writableStream or a file path"));
 	}
-	cb = cb || noop;
-	png.call(this, wstream, cb);
+	png.call(this, wstream, opts, cb);
 };
 
-function png(wstream, cb) {
+function png(wstream, opts, cb) {
 	loop.call(this, true);
-	this.webview.png(function(err, buf) {
+	this.webview.png(opts, function(err, buf) {
 		if (err) {
 			loop.call(this, false);
 			wstream.emit('error', err);
