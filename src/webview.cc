@@ -88,6 +88,8 @@ WebView::WebView(Handle<Object> opts) {
 	}
 	gtk_widget_set_app_paintable(window, TRUE);
 
+	gtk_window_set_decorated(GTK_WINDOW(window), opts->Get(H("decorated"))->BooleanValue());
+
 	gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 	gtk_widget_show_all(window);
 
