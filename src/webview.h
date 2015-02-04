@@ -20,6 +20,12 @@ public:
 	static void Init(Handle<Object>, Handle<Object>);
 	static void Exit(void*);
 
+#if WEBKIT_CHECK_VERSION(2,7,4)
+	static const WebKitSnapshotOptions snapshot_options = WEBKIT_SNAPSHOT_OPTIONS_TRANSPARENT_BACKGROUND;
+#else
+	static const WebKitSnapshotOptions snapshot_options = WEBKIT_SNAPSHOT_OPTIONS_NONE;
+#endif
+
 	static void InspectorClosed(WebKitWebInspector*, gpointer);
 	static void WindowClosed(GtkWidget*, gpointer);
 	static gboolean Authenticate(WebKitWebView*, WebKitAuthenticationRequest*, gpointer);
@@ -60,6 +66,7 @@ private:
 	int authRetryCount;
 	bool allowDialogs;
 	bool offscreen;
+	bool transparencySupport;
 
 	char* content = NULL;
 	char* script = NULL;

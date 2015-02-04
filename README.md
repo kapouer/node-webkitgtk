@@ -135,6 +135,10 @@ load() options
   string, default null  
   insert user stylesheet, see  
   http://www.w3.org/TR/CSS21/cascade.html#cascading-order
+  
+- transparent
+  boolean, default false  
+  let the background be transparent (or any color set by css on the document)
 
 - ua  
   user-agent string, default to "Mozilla/5.0"

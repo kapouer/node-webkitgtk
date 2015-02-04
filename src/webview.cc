@@ -77,6 +77,17 @@ WebView::WebView(Handle<Object> opts) {
 	} else {
 		window = gtk_offscreen_window_new();
 	}
+
+	GdkScreen* screen = gtk_window_get_screen(GTK_WINDOW(window));
+	GdkVisual* rgba_visual = gdk_screen_get_rgba_visual(screen);
+	if (rgba_visual) {
+		gtk_widget_set_visual(window, rgba_visual);
+#if WEBKIT_CHECK_VERSION(2,7,4)
+		transparencySupport = TRUE;
+#endif
+	}
+	gtk_widget_set_app_paintable(window, TRUE);
+
 	gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 	gtk_widget_show_all(window);
 
@@ -436,6 +447,23 @@ NAN_METHOD(WebView::Load) {
 	self->script = getStr(opts, "script");
 	self->style = getStr(opts, "style");
 
+	if (NanBooleanOptionValue(opts, H("transparent"), false) == TRUE) {
+		if (self->transparencySupport == FALSE) {
+			g_print("Background cannot be transparent: rgba visual not found and/or webkitgtk >= 2.7.4 required");
+		} else {
+	#if WEBKIT_CHECK_VERSION(2,7,4)
+			static const GdkRGBA transparent = {.0, .0, .0, .0};
+			webkit_web_view_set_background_color(self->view, &transparent);
+	#endif
+		}
+	} else {
+	#if WEBKIT_CHECK_VERSION(2,7,4)
+		static const GdkRGBA opaque = {1.0, 1.0, 1.0, 1.0};
+		webkit_web_view_set_background_color(self->view, &opaque);
+	#endif
+		// nothing to do
+	}
+
 	gtk_window_set_default_size(GTK_WINDOW(self->window),
 		NanUInt32OptionValue(opts, H("width"), 1024),
 		NanUInt32OptionValue(opts, H("height"), 768)
@@ -599,7 +627,7 @@ NAN_METHOD(WebView::Png) {
 	webkit_web_view_get_snapshot(
 		self->view,
 		WEBKIT_SNAPSHOT_REGION_FULL_DOCUMENT,
-		WEBKIT_SNAPSHOT_OPTIONS_NONE,
+		snapshot_options,
 		NULL, //	GCancellable
 		WebView::PngFinished,
 		self
