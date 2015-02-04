@@ -108,7 +108,7 @@ NAN_GETTER(WebResponse::get_prop) {
 		NanReturnValue(obj);
 	} else if (propstr == "length") {
 		if (self->response != NULL) {
-			NanReturnValue(NanNew<Integer>(webkit_uri_response_get_content_length(self->response)));
+			NanReturnValue(NanNew<Integer>((int)webkit_uri_response_get_content_length(self->response)));
 		} else {
 			NanReturnValue(NanNew<Integer>(0));
 		}

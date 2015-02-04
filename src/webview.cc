@@ -290,7 +290,7 @@ void WebView::ResourceReceiveData(WebKitWebResource* resource, guint64 length, g
 	WebView* self = (WebView*)data;
 	const gchar* uri = webkit_web_resource_get_uri(resource);
 	int argc = 2;
-	Handle<Value> argv[] = { NanNew<String>(uri), NanNew<Integer>(length) };
+	Handle<Value> argv[] = { NanNew<String>(uri), NanNew<Integer>((int)length) };
 	self->receiveDataCallback->Call(argc, argv);
 }
 
