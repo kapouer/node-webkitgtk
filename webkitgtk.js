@@ -432,7 +432,7 @@ function load(uri, opts, cb) {
 	if (Buffer.isBuffer(opts.script)) opts.script = opts.script.toString();
 	var scripts = [errorEmitter];
 	if (opts.console) scripts.push(consoleEmitter);
-	scripts.push({fn: stateTracker, args: [priv.eventName, priv.stall, 200, 200]});
+	scripts.push({fn: stateTracker, args: [opts.preload, priv.eventName, priv.stall, 200, 200]});
 	if (!opts.script) opts.script = "";
 	opts.script += '\n' + scripts.map(function(fn) {
 		return prepareRun(fn.fn || fn, null, fn.args || null, priv).script;
@@ -469,7 +469,7 @@ function preload(uri, opts, cb) {
 	var nopts = {};
 	for (var key in opts) nopts[key] = opts[key];
 	nopts.allow = "none";
-	nopts.script = disableAllScripts;
+	nopts.preload = true;
 	load.call(this, uri, nopts, cb);
 }
 
@@ -644,8 +644,11 @@ function run(script, ticket, args, cb) {
 function prepareRun(script, ticket, args, priv) {
 	args = args || [];
 	args = args.map(function(val) {
+		if (val === undefined) return 'undefined';
 		var str = JSON.stringify(val);
-		if (str === undefined) throw new Error("impossible to pass argument to script " + val);
+		if (str === undefined) {
+			throw new Error("impossible to pass argument to script " + val);
+		}
 		return str;
 	});
 	if (typeof script == "function" || Buffer.isBuffer(script)) script = script.toString();
@@ -790,24 +793,76 @@ function consoleEmitter(emit) {
 	});
 }
 
-function stateTracker(eventName, staleXhrTimeout, stallTimeout, stallInterval, emit) {
-	var lastEvent = "";
+function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallInterval, emit) {
+	var lastEvent = "", missedEvent;
+	if (preload) disableExternalResources();
 
 	window.addEventListener('load', loadListener, false);
 	document.addEventListener('DOMContentLoaded', readyListener, false);
+
+	var preloadList = [], observer;
+
+	function disableExternalResources() {
+		var count = 0;
+		function jumpAuto(node) {
+			var att = {
+				body: "onload",
+				link: "rel",
+				script: "type"
+			}[node.nodeName.toLowerCase()];
+			if (!att) return;
+			var val = node.hasAttribute(att) ? node[att] : null;
+			node[att] = 'null';
+			if (!lastEvent) preloadList.push({node: node, val: val, att: att});
+			else w.setTimeout.call(window, function() {
+				console.log('delayed attribute restore')
+				node[att] = val;
+			}, 0);
+		}
+		observer = new MutationObserver(function(mutations) {
+			var node, val, list, att;
+			for (var m=0; m < mutations.length; m++) {
+				list = mutations[m].addedNodes;
+				if (!list) continue;
+				for (var i=0; i < list.length; i++) {
+					node = list[i];
+					if (node.nodeType != 1) continue;
+					jumpAuto(node);
+				}
+			}
+		});
+		observer.observe(document, {
+			childList: true,
+			subtree: true
+		});
+	}
 
 	function loadListener() {
 		if (lastEvent == "ready") {
 			lastEvent = "load";
 			window.removeEventListener('load', loadListener, false);
+			console.log("ICI")
 			emitNextFrame("load");
 			check(); // this one makes it crash
+		} else {
+			missedEvent = "load";
 		}
 	}
 	function readyListener() {
-		if (lastEvent == "") {
+		if (lastEvent) return;
+		document.removeEventListener('DOMContentLoaded', readyListener, false);
+		if (preloadList.length) {
+			w.setTimeout.call(window, function() {
+				preloadList.forEach(function(obj) {
+					obj.node[obj.att] = obj.val;
+				});
+				preloadList = [];
+				lastEvent = "ready";
+				emitNextFrame("ready");
+				if (missedEvent == "load") loadListener();
+			}, 0);
+		} else {
 			lastEvent = "ready";
-			document.removeEventListener('DOMContentLoaded', readyListener, false);
 			emitNextFrame("ready");
 		}
 	}
@@ -998,60 +1053,5 @@ function stateTracker(eventName, staleXhrTimeout, stallTimeout, stallInterval, e
 		});
 	}
 }
-
-var disableAllScripts = '(' + function() {
-	var disableds = [];
-	window.preloading = true;
-	var observer = new MutationObserver(function(mutations) {
-		var node, val, list, att;
-		for (var m=0; m < mutations.length; m++) {
-			list = mutations[m].addedNodes;
-			if (!list) continue;
-			for (var i=0; i < list.length; i++) {
-				node = list[i];
-				if (node.nodeType != 1) continue;
-				switch (node.nodeName) {
-					case "SCRIPT":
-						att = node.attributes.getNamedItem('type');
-						if (att) val = att.nodeValue;
-						else val = null;
-						node.type = "disabled";
-						disableds.push({node: node, val: val});
-					break;
-					case "BODY":
-						val = node.onload;
-						if (val) {
-							node.onload = "";
-							disableds.push({node: node, val: val});
-						}
-					break;
-				}
-			}
-		}
-	});
-	function prereadyListener(e) {
-		document.removeEventListener('DOMContentLoaded', prereadyListener, false);
-		observer.disconnect();
-		for (var i=0, item, len=disableds.length; i < len; i++) {
-			item = disableds[i];
-			switch (item.node.nodeName) {
-				case "SCRIPT":
-					item.node.type = item.val;
-				break;
-				case "BODY":
-					setTimeout(function(item) {
-						item.node.onload = item.val;
-					}.bind(window, item), 0);
-				break;
-			}
-		}
-		delete window.preloading;
-	}
-	document.addEventListener('DOMContentLoaded', prereadyListener, false);
-	observer.observe(document, {
-		childList: true,
-		subtree: true
-	});
-}.toString() + ')();';
 
 module.exports = WebKit;
