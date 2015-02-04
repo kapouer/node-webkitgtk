@@ -88,8 +88,6 @@ WebView::WebView(Handle<Object> opts) {
 	}
 	gtk_widget_set_app_paintable(window, TRUE);
 
-	gtk_window_set_decorated(GTK_WINDOW(window), opts->Get(H("decorated"))->BooleanValue());
-
 	gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 	gtk_widget_show_all(window);
 
@@ -466,11 +464,13 @@ NAN_METHOD(WebView::Load) {
 		// nothing to do
 	}
 
-	gtk_window_set_default_size(GTK_WINDOW(self->window),
-		NanUInt32OptionValue(opts, H("width"), 1024),
-		NanUInt32OptionValue(opts, H("height"), 768)
-	);
-	//gtk_window_resize(GTK_WINDOW(self->window), width, height); // useless
+	gtk_window_set_decorated(GTK_WINDOW(self->window), NanBooleanOptionValue(opts, H("decorated"), true));
+
+	int w = NanUInt32OptionValue(opts, H("width"), 1024);
+	int h = NanUInt32OptionValue(opts, H("height"), 768);
+	gtk_window_set_default_size(GTK_WINDOW(self->window), w, h);
+	gtk_window_resize(GTK_WINDOW(self->window), w, h);
+
 	const gchar* ua = getStr(opts, "ua");
 	if (ua == NULL) {
 		ua = "Mozilla/5.0";

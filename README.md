@@ -91,6 +91,9 @@ Patches are welcome for UI uses, though.
 * long-running web page as a service with websockets or webrtc
   communications
 
+* gui widgets (since webkitgtk >= 2.7.4, transparent windows are possible),
+  see [the github wiki of node-webkitgtk](https://github.com/kapouer/node-webkitgtk/wiki).
+
 
 load() options
 --------------
@@ -140,6 +143,10 @@ load() options
   boolean, default false  
   webkitgtk >= 2.7.4  
   let the background be transparent (or any color set by css on the document)
+
+- decorated  
+  boolean, default true  
+  show window decorations (title bar, scroll bars)
 
 - ua  
   user-agent string, default to "Mozilla/5.0"
