@@ -794,7 +794,7 @@ function consoleEmitter(emit) {
 }
 
 function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallInterval, emit) {
-	var lastEvent = "", missedEvent;
+	var lastEvent, missedEvent;
 	if (preload) disableExternalResources();
 
 	window.addEventListener('load', loadListener, false);
@@ -813,11 +813,12 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 			if (!att) return;
 			var val = node.hasAttribute(att) ? node[att] : null;
 			node[att] = 'null';
-			if (!lastEvent) preloadList.push({node: node, val: val, att: att});
-			else w.setTimeout.call(window, function() {
-				console.log('delayed attribute restore')
+			if (!lastEvent) {
+				node[att] = 'null';
+				preloadList.push({node: node, val: val, att: att});
+			} else {
 				node[att] = val;
-			}, 0);
+			}
 		}
 		observer = new MutationObserver(function(mutations) {
 			var node, val, list, att;
@@ -841,7 +842,6 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 		if (lastEvent == "ready") {
 			lastEvent = "load";
 			window.removeEventListener('load', loadListener, false);
-			console.log("ICI")
 			emitNextFrame("load");
 			check(); // this one makes it crash
 		} else {
