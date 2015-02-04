@@ -136,8 +136,9 @@ load() options
   insert user stylesheet, see  
   http://www.w3.org/TR/CSS21/cascade.html#cascading-order
   
-- transparent
+- transparent  
   boolean, default false  
+  webkitgtk >= 2.7.4  
   let the background be transparent (or any color set by css on the document)
 
 - ua  
