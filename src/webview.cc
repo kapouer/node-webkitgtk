@@ -619,11 +619,18 @@ NAN_METHOD(WebView::Png) {
 	NanScope();
 	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
 
-	if (!args[0]->IsFunction()) {
-		NanThrowError("png(cb) missing cb argument");
+	if (!args[1]->IsFunction()) {
+		NanThrowError("png(opts, cb) missing cb argument");
 		NanReturnUndefined();
 	}
-	self->pngCallback = new NanCallback(args[0].As<Function>());
+	self->pngCallback = new NanCallback(args[1].As<Function>());
+
+	Local<Object> opts = args[0]->ToObject();
+	bool is_transparent_background = NanBooleanOptionValue(opts, H("transparent_background"), false);
+
+	WebKitSnapshotOptions snapshot_options =
+		(HAVE_TRANSPARENT_BACKGROUND && is_transparent_background ? WEBKIT_SNAPSHOT_OPTIONS_TRANSPARENT_BACKGROUND : WEBKIT_SNAPSHOT_OPTIONS_NONE);
+
 	webkit_web_view_get_snapshot(
 		self->view,
 		WEBKIT_SNAPSHOT_REGION_FULL_DOCUMENT,
