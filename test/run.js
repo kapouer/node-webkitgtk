@@ -55,4 +55,15 @@ describe("run method", function suite() {
 			done();
 		});
 	});
+	it("should just work with script and script callback", function(done) {
+		WebKit().load("http://localhost", {content:'<html></html>'}).run(function(done) {
+			done(null, "stuff");
+		}, function(err, stuff) {
+			expect(err).to.not.be.ok();
+			expect(stuff).to.be("stuff");
+		}).html(function(err, str) {
+			// make sure we are called back
+			done();
+		});
+	});
 });
