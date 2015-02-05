@@ -73,3 +73,24 @@ Facilitate arguments passing with run(
 idle event is more accurate. Happens once after load event.
 Further activity is tracked by repeated on('busy') events.
 Remove special inspector code, which paused debugger on load.
+
+1.13.0
+------
+
+rewritten all code concerning preloading of a page - might have minor
+side effects.
+Added transparency support.
+
+1.14.0
+------
+
+changed the effect of width, height - it actually sets the window size, now
+the "gui" release !
+
+1.15.0
+------
+
+changed signature of `done` in .run(..., done) and gave precisions about
+that. Otherwise it was impossible to chain an async script after completion
+of a run call.
+
