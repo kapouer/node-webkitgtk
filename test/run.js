@@ -33,11 +33,11 @@ describe("run method", function suite() {
 			done();
 		}).on('unload', function() {});
 	});
-	it("should pass fail when nonstringifyable custom arguments mismatch script signature", function(done) {
+	it("should pass fail when missing custom arguments mismatch script signature", function(done) {
 		WebKit().load("http://localhost", {content:'<html></html>'}).run(function(nonstringifyable, cb) {
 			// here the first argument is in fact cb, en cb is empty because nonstringifyable is missing
 			cb(null, nonstringifyable); // won't actually be called
-		}, Array, function(err, results) {
+		}, function(err, results, cb) {
 			expect(err).to.be.ok();
 			done();
 		});
@@ -45,11 +45,12 @@ describe("run method", function suite() {
 	it("should throw error when passing non-stringifyable custom argument", function(done) {
 		WebKit().load("http://localhost", {content:'<html></html>'}).run(function(obj, arr, str, done) {
 			done(null, obj.a, arr[1], str);
-		}, {a:1}, ["a", 4], "testé\n", function(err, a1, b4, ctest) {
+		}, {a:1}, ["a", 4], "testé\n", function(err, a1, b4, ctest, cb) {
 			expect(err).to.not.be.ok();
 			expect(a1).to.be(1);
 			expect(b4).to.be(4);
 			expect(ctest).to.be("testé\n");
+			cb();
 		}).html(function(err, str) {
 			// make sure we are called back
 			done();
@@ -58,9 +59,20 @@ describe("run method", function suite() {
 	it("should just work with script and script callback", function(done) {
 		WebKit().load("http://localhost", {content:'<html></html>'}).run(function(done) {
 			done(null, "stuff");
-		}, function(err, stuff) {
+		}, function(err, stuff, cb) {
 			expect(err).to.not.be.ok();
 			expect(stuff).to.be("stuff");
+			cb();
+		}).html(function(err, str) {
+			// make sure we are called back
+			done();
+		});
+	});
+	it("should run sync", function(done) {
+		WebKit().load("http://localhost", {content:'<html></html>'}).run("document.body.outerHTML", function(err, html, cb) {
+			expect(err).to.not.be.ok();
+			expect(html).to.be("<body></body>");
+			cb()
 		}).html(function(err, str) {
 			// make sure we are called back
 			done();

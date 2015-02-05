@@ -616,8 +616,9 @@ WebKit.prototype.run = function(script, done, cb) {
 	}
 	if (!cb) cb = noop;
 	runcb.call(this, script, args, function(err) {
-		done.apply(this, Array.prototype.slice.call(arguments));
-		cb();
+		var args = Array.prototype.slice.call(arguments);
+		args.push(cb);
+		done.apply(this, args);
 	});
 };
 
