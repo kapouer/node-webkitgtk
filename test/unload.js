@@ -19,8 +19,9 @@ describe("unload method", function suite() {
 		});
 		v.unload(function(err) {
 			expect(err).to.not.be.ok();
-		}).run('document.documentElement.outerHTML', function(err, html) {
+		}).run('document.documentElement.outerHTML', function(err, html, cb) {
 			expect(html).to.be("<html><head></head><body></body></html>");
+			cb();
 		});
 		v.load('http://www.selmer.fr', function(err) {
 			expect(err).to.not.be.ok();
