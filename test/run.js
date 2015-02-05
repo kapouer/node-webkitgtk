@@ -33,13 +33,14 @@ describe("run method", function suite() {
 			done();
 		}).on('unload', function() {});
 	});
-	it("should pass optional stringifyable custom arguments", function(done) {
-		WebKit().load("http://localhost", {content:'<html></html>'}).run(function(nonstringifyable, done) {
-			done(null, nonstringifyable); // won't actually be called
+	it("should pass fail when nonstringifyable custom arguments mismatch script signature", function(done) {
+		WebKit().load("http://localhost", {content:'<html></html>'}).run(function(nonstringifyable, cb) {
+			// here the first argument is in fact cb, en cb is empty because nonstringifyable is missing
+			cb(null, nonstringifyable); // won't actually be called
 		}, Array, function(err, results) {
 			expect(err).to.be.ok();
 			done();
-		}).on('unload', function() {});
+		});
 	});
 	it("should throw error when passing non-stringifyable custom argument", function(done) {
 		WebKit().load("http://localhost", {content:'<html></html>'}).run(function(obj, arr, str, done) {
@@ -49,7 +50,9 @@ describe("run method", function suite() {
 			expect(a1).to.be(1);
 			expect(b4).to.be(4);
 			expect(ctest).to.be("testé\n");
+		}).html(function(err, str) {
+			// make sure we are called back
 			done();
-		}).on('unload', function() {});
+		});
 	});
 });

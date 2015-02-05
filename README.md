@@ -340,7 +340,8 @@ methods
   async-script must be a function that calls back its last argument, which
   accepts any number of arguments itself (with the convention that the first
   argument represents an error) as long as they are stringifyable.  
-  `function(arg0, arg1, ..., done) { done(err, rarg0, rarg1, ...); }`.
+  `function(arg0, arg1, ..., done) { done(err, rarg0, rarg1, ...); }`.  
+  cb will also receive arguments passed to done.
 
 * runev(async-script, arg0, arg1, ..., cb)  
   async-script must be a function that calls its last argument,  

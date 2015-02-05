@@ -602,10 +602,23 @@ function loop(start) {
 	}
 }
 
-WebKit.prototype.run = function(script, cb) {
+WebKit.prototype.run = function(script, done, cb) {
 	var args = Array.prototype.slice.call(arguments, 1);
-	if (args.length > 0 && typeof args[args.length-1] == "function") cb = args.pop();
-	runcb.call(this, script, args, cb);
+	if (args.length >= 2 && typeof args.slice(-1).pop() == "function") {
+		// is it cb or done ?
+		cb = args.pop();
+		if (typeof args.slice(-1).pop() == "function") {
+			done = args.pop();
+		} else {
+			done = cb;
+			cb = null;
+		}
+	}
+	if (!cb) cb = noop;
+	runcb.call(this, script, args, function(err) {
+		done.apply(this, Array.prototype.slice.call(arguments));
+		cb();
+	});
 };
 
 WebKit.prototype.runev = function(script, cb) {
@@ -651,6 +664,11 @@ function prepareRun(script, ticket, args, priv) {
 		}
 		return str;
 	});
+	var arity = null;
+	if (typeof script == "function") {
+		if (script.length > args.length + 1) throw new Error(".run(script, ...) where script will miss arguments");
+	}
+
 	if (typeof script == "function" || Buffer.isBuffer(script)) script = script.toString();
 	var async = /^\s*function(\s+\w+)?\s*\((\s*\w+\s*,)*(\s*\w+\s*)\)/.test(script);
 	if (!async && !ticket) {
