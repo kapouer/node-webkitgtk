@@ -604,10 +604,10 @@ function loop(start) {
 
 WebKit.prototype.run = function(script, done, cb) {
 	var args = Array.prototype.slice.call(arguments, 1);
-	if (args.length >= 2 && typeof args.slice(-1).pop() == "function") {
+	if (typeof args.slice(-1).pop() == "function") {
 		// is it cb or done ?
 		cb = args.pop();
-		if (typeof args.slice(-1).pop() == "function") {
+		if (args.length >= 1 && typeof args.slice(-1).pop() == "function") {
 			done = args.pop();
 		} else {
 			done = cb;
