@@ -451,12 +451,23 @@ libsoup2.4
 
 Also usual development tools are needed (pkg-config, gcc, and so on).
 
-On debian, these packages will pull necessary dependencies:
+On debian/jessie, these packages will pull necessary dependencies:
 
 ```
+nodejs
+npm
 libwebkit2gtk-3.0-dev (2.4.x), for node-webkitgtk 1.2.x
 libwebkit2gtk-4.0-dev (2.6.x), for node-webkitgtk >= 1.3.0
 libdbus-glib-1-dev
+```
+
+On fedora/21:
+
+```
+nodejs
+npm
+webkitgtk4-devel
+dbus-glib-devel
 ```
 
 License
