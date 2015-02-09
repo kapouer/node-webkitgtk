@@ -1017,51 +1017,59 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 	function ignoreListener(e) {
 		var uri = e && e.keyIdentifier;
 		if (!uri) return;
-		if (requests[uri]) {
-			w.clearTimeout.call(window, requests[uri]);
-			delete requests[uri];
-			requests.stall++;
-			check();
-		}	else {
-			requests[uri] = "stall";
-		}
+		if (!requests[uri]) requests[uri] = {count: 0};
+		requests[uri].stall = true;
 	}
 	var wopen = window.XMLHttpRequest.prototype.open;
 	window.XMLHttpRequest.prototype.open = function(method, url, async) {
-		if (this.url) xhrClean.call(this);
+		if (this._private) xhrClean.call(this);
 		this.addEventListener("progress", xhrProgress);
 		this.addEventListener("load", xhrChange);
 		this.addEventListener("error", xhrClean);
 		this.addEventListener("abort", xhrClean);
 		this.addEventListener("timeout", xhrClean);
-		this.url = absolute(url);
+		this._private = {url: absolute(url)};
 		var ret = wopen.apply(this, Array.prototype.slice.call(arguments, 0));
 		this.setRequestHeader('X-' + eventName, 'xhr');
 		return ret;
 	};
 	var wsend = window.XMLHttpRequest.prototype.send;
 	window.XMLHttpRequest.prototype.send = function() {
+		var priv = this._private;
+		if (!priv) return;
+		requests.len++;
 		try {
 			wsend.apply(this, Array.prototype.slice.call(arguments, 0));
 		} catch (e) {
 			xhrClean.call(this);
 			return;
 		}
-		if (requests[this.url] == "stall") {
-			requests.stall++;
+		var req = requests[priv.url];
+		if (req) {
+			if (req.stall) requests.stall++;
 		} else {
-			requests[this.url] = w.setTimeout.call(window, function(url) {
-				requests.stall++;
-				delete requests[url];
-				check();
-			}.bind(null, this.url), staleXhrTimeout);
+			req = requests[priv.url] = {};
 		}
-		requests.len++;
+		req.count = (req.count || 0) + 1;
+		priv.timeout = xhrTimeout(priv.url);
 	};
+	function xhrTimeout(url) {
+		return w.setTimeout.call(window, function(url) {
+			var req = requests[url];
+			if (req) {
+				if (!req.stall) requests.stall++;
+				req.count--;
+				check();
+			}
+		}, staleXhrTimeout);
+	}
 	function xhrProgress(e) {
-		if (e.totalSize > 0 && requests[this.url]) {
-			w.clearTimeout.call(window, requests[this.url]);
-			delete requests[this.url];
+		var priv = this._private;
+		if (!priv) return;
+		if (e.totalSize > 0 && priv.timeout) {
+			// set a new timeout
+			w.clearTimeout.call(window, priv.timeout);
+			priv.timeout = xhrTimeout(priv.url);
 		}
 	}
 	function xhrChange(e) {
@@ -1069,15 +1077,22 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 		xhrClean.call(this);
 	}
 	function xhrClean() {
-		if (!this.url) return;
+		var priv = this._private;
+		if (!priv) return;
 		this.removeEventListener("progress", xhrProgress);
 		this.removeEventListener("load", xhrChange);
 		this.removeEventListener("abort", xhrClean);
 		this.removeEventListener("error", xhrClean);
 		this.removeEventListener("timeout", xhrClean);
-		delete this.url;
+		if (priv.timeout) w.clearTimeout.call(window, priv.timeout);
+		var req = requests[priv.url];
+		if (req) {
+			req.count--;
+			if (req.stall) requests.stall--;
+		}
+		delete this._private;
 		requests.len--;
-		if (requests.len == 0) check();
+		if (requests.len <= requests.stall) check();
 	}
 
 	function check() {
