@@ -1097,11 +1097,11 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 
 	function check() {
 		w.setTimeout.call(window, function() {
-			if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall && frames.len == 0) {
-				if (lastEvent == "load" && requests.len <= requests.stall) {
+			if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall && frames.len == 0 && requests.len <= requests.stall) {
+				if (lastEvent == "load") {
 					lastEvent = "idle";
 					emitNextFrame("idle");
-				} else if (lastEvent == "idle" && requests.len == 0) {
+				} else if (lastEvent == "idle") {
 					emitNextFrame("busy");
 				}
 			}
