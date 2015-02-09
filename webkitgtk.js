@@ -1054,7 +1054,7 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 		priv.timeout = xhrTimeout(priv.url);
 	};
 	function xhrTimeout(url) {
-		return w.setTimeout.call(window, function(url) {
+		return w.setTimeout.call(window, function() {
 			var req = requests[url];
 			if (req) {
 				if (!req.stall) requests.stall++;
