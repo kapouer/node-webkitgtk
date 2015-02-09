@@ -280,8 +280,9 @@ These events can happen at any moment:
   listener(message, url, line, column)
 
 * request  
-  listener(req) where req.uri, req.cancel, req.headers are read/write.  
-  req.cancel stops the request.  
+  listener(req) where req.uri, req.cancel, req.ignore, req.headers are read/write.  
+  req.cancel, boolean, stops the request.  
+  req.ignore, boolean, does not count the request when waiting idle event.  
   The request is not yet sent, so all values can be modified.
 
 * response  

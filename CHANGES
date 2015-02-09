@@ -94,3 +94,8 @@ changed signature of `done` in .run(..., done) and gave precisions about
 that. Otherwise it was impossible to chain an async script after completion
 of a run call.
 
+1.16.0
+------
+
+req.ignore does not wait for requests to finish when deciding for idle event.
+
