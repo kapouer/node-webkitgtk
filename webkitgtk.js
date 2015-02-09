@@ -305,6 +305,9 @@ function requestDispatcher(binding) {
 		uri = req.uri;
 		binding.uri = uri;
 	}
+	if (req.ignore) {
+		binding.ignore = "1";
+	}
 	if (req.cancel) {
 		binding.cancel = "1";
 		return;
@@ -817,6 +820,7 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 	if (preload) disableExternalResources();
 
 	window.addEventListener('load', loadListener, false);
+	window.addEventListener('r' + eventName, ignoreListener, false);
 	document.addEventListener('DOMContentLoaded', readyListener, false);
 
 	var preloadList = [], observer;
@@ -1003,6 +1007,25 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 	};
 
 	var requests = {len: 0, stall: 0};
+
+	var absoluteA = document.createElement('a');
+	function absolute(url) {
+		absoluteA.href = url;
+		return absoluteA.href;
+	}
+
+	function ignoreListener(e) {
+		var uri = e && e.keyIdentifier;
+		if (!uri) return;
+		if (requests[uri]) {
+			w.clearTimeout.call(window, requests[uri]);
+			delete requests[uri];
+			requests.stall++;
+			check();
+		}	else {
+			requests[uri] = "stall";
+		}
+	}
 	var wopen = window.XMLHttpRequest.prototype.open;
 	window.XMLHttpRequest.prototype.open = function(method, url, async) {
 		if (this.url) xhrClean.call(this);
@@ -1011,7 +1034,7 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 		this.addEventListener("error", xhrClean);
 		this.addEventListener("abort", xhrClean);
 		this.addEventListener("timeout", xhrClean);
-		this.url = url;
+		this.url = absolute(url);
 		var ret = wopen.apply(this, Array.prototype.slice.call(arguments, 0));
 		this.setRequestHeader('X-' + eventName, 'xhr');
 		return ret;
@@ -1024,11 +1047,15 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 			xhrClean.call(this);
 			return;
 		}
-		requests[this.url] = w.setTimeout.call(window, function(url) {
+		if (requests[this.url] == "stall") {
 			requests.stall++;
-			delete requests[url];
-			check();
-		}.bind(null, this.url), staleXhrTimeout);
+		} else {
+			requests[this.url] = w.setTimeout.call(window, function(url) {
+				requests.stall++;
+				delete requests[url];
+				check();
+			}.bind(null, this.url), staleXhrTimeout);
+		}
 		requests.len++;
 	};
 	function xhrProgress(e) {

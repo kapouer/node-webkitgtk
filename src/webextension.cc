@@ -8,13 +8,36 @@
 
 static GDBusConnection* connection;
 
-static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest* request, WebKitURIResponse* redirected_response, gpointer data) {
+static void dispatch_ignore_event(WebKitWebPage* page, gchar* eventName, const gchar* uri) {
+	gchar* ignoreName = g_strconcat("r", eventName, NULL);
+	WebKitDOMDocument* document = webkit_web_page_get_dom_document(page);
+	WebKitDOMDOMWindow* window = webkit_dom_document_get_default_view(document);
+	GError* error = NULL;
+	WebKitDOMEvent* event = webkit_dom_document_create_event(document, "KeyboardEvent", &error);
+	if (error != NULL) {
+		g_printerr("Cannot create event in dispatch_ignore_event: %s\n", error->message);
+		g_error_free(error);
+		return;
+	}
+	webkit_dom_keyboard_event_init_keyboard_event(
+		(WebKitDOMKeyboardEvent*)event,	ignoreName,	FALSE, TRUE,
+		window, uri, 0, FALSE, FALSE, FALSE, FALSE, FALSE
+	);
+	webkit_dom_event_target_dispatch_event(WEBKIT_DOM_EVENT_TARGET(window), event, &error);
+	if (error != NULL) {
+		g_printerr("Cannot dispatch event in dispatch_ignore_event: %s\n", error->message);
+		g_error_free(error);
+	}
+}
+
+static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* request, WebKitURIResponse* redirected_response, gpointer data) {
 	GError* error = NULL;
 	// ignore redirected requests - it's transparent to the user
 	if (redirected_response != NULL) {
 		return FALSE;
 	}
-	gchar* myHeader = g_strconcat("X-", (gchar*)data, NULL);
+	gchar* eventName = (gchar*)data;
+	gchar* myHeader = g_strconcat("X-", eventName, NULL);
 	const char* uri = webkit_uri_request_get_uri(request);
 	SoupMessageHeaders* headers = webkit_uri_request_get_http_headers(request);
 
@@ -43,9 +66,11 @@ static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest*
 	const gchar* newuri = NULL;
 	const gchar* cancel = NULL;
 	const gchar* xhr = NULL;
+	const gchar* ignore = NULL;
 
 	gboolean ret = FALSE;
-	if (g_variant_dict_lookup(&dictOut, "cancel", "s", &cancel) && cancel != NULL && !g_strcmp0(cancel, "1")) {
+	if (g_variant_dict_lookup(&dictOut, "cancel", "s", &cancel)
+	&& cancel != NULL && !g_strcmp0(cancel, "1")) {
 		// returning TRUE blocks requests - it's better to set an empty uri - it sets status to 0;
 		if (headers != NULL) {
 			xhr = soup_message_headers_get_one(headers, myHeader);
@@ -56,9 +81,16 @@ static gboolean web_page_send_request(WebKitWebPage* web_page, WebKitURIRequest*
 		} else {
 			ret = TRUE;
 		}
-	} else if (g_variant_dict_lookup(&dictOut, "uri", "s", &newuri) && newuri != NULL) {
-		webkit_uri_request_set_uri(request, newuri);
+	} else {
+		if (g_variant_dict_lookup(&dictOut, "uri", "s", &newuri) && newuri != NULL) {
+			webkit_uri_request_set_uri(request, newuri);
+		}
+		if (g_variant_dict_lookup(&dictOut, "ignore", "s", &ignore)
+		&& ignore != NULL && !g_strcmp0(ignore, "1")) {
+			dispatch_ignore_event(page, eventName, uri);
+		}
 	}
+
 	g_variant_dict_remove(&dictOut, "uri");
 
 	results = g_variant_dict_end(&dictOut);
