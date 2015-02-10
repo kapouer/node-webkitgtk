@@ -608,10 +608,12 @@ function loop(start) {
 WebKit.prototype.run = function(script, params, done, cb) {
 	if (!cb && typeof done == "function") {
 		cb = done;
-		if (typeof params == "function") {
-			done = params;
-			params = null;
-		}
+		done = null;
+	}
+	if (typeof params == "function") {
+		if (!cb) cb = params;
+		else done = params;
+		params = null;
 	}
 	if (params != null && !Array.isArray(params)) params = [params];
 	runcb.call(this, script, params, function(err) {
