@@ -605,23 +605,23 @@ function loop(start) {
 	}
 }
 
-WebKit.prototype.run = function(script, done, cb) {
-	var args = Array.prototype.slice.call(arguments, 1);
-	if (typeof args.slice(-1).pop() == "function") {
-		// is it cb or done ?
-		cb = args.pop();
-		if (args.length >= 1 && typeof args.slice(-1).pop() == "function") {
-			done = args.pop();
-		} else {
-			done = cb;
-			cb = null;
+WebKit.prototype.run = function(script, params, done, cb) {
+	if (!cb && typeof done == "function") {
+		cb = done;
+		if (typeof params == "function") {
+			done = params;
+			params = null;
 		}
 	}
-	if (!cb) cb = noop;
-	runcb.call(this, script, args, function(err) {
-		var args = Array.prototype.slice.call(arguments);
-		args.push(cb);
-		done.apply(this, args);
+	if (params != null && !Array.isArray(params)) params = [params];
+	runcb.call(this, script, params, function(err) {
+		if (done) {
+			var args = Array.prototype.slice.call(arguments);
+			args.push(cb);
+			done.apply(this, args);
+		} else {
+			cb(err);
+		}
 	});
 };
 
