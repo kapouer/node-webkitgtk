@@ -70,13 +70,11 @@ describe("preload method", function suite() {
 				script.src = 'test2.js';
 				document.head.appendChild(script);
 				done();
-			}, script, function(err) {
-				this.html(function(err, str) {
-					expect(err).to.not.be.ok();
-					var strc = str;
-					expect(str.replace(script, '')).to.be(doc);
-					expect(strc.indexOf(script) > 0).to.be(true);
-				});
+			}, script).html(function(err, str) {
+				expect(err).to.not.be.ok();
+				var strc = str;
+				expect(str.replace(script, '')).to.be(doc);
+				expect(strc.indexOf(script) > 0).to.be(true);
 			});
 			this.load("http://localhost:8021", {content: doc}).wait('idle').html(function(err, str) {
 				if (err) console.error(err);
