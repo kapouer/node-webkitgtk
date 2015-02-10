@@ -78,4 +78,42 @@ describe("run method", function suite() {
 			done();
 		});
 	});
+	it("should run long job between load and idle", function(done) {
+		var doc = '<html><head><script type="text/javascript" src="test.js"></script></body></html>';
+		this.timeout(3000);
+		var server = require('http').createServer(function(req, res) {
+			if (req.url == "/") {
+				res.statusCode = 200;
+				res.end(doc);
+			} else if (req.url == "/test.js" || req.url == "/test2.js") {
+				res.statusCode = 200;
+				setTimeout(function() {
+					res.setHeader('Content-Type', "application/javascript");
+					res.write('document.documentElement.setAttribute("test", "toto");');
+					res.end();
+				}, 1000);
+			} else {
+				res.statusCode = 404;
+				res.end();
+			}
+		}).listen(8026);
+		var state = 0;
+		WebKit().preload("http://localhost:8026", {console: true}).run(function(bool, done) {
+			document.documentElement.className = "toto";
+			document.querySelector('script').src = 'test2.js';
+			done(null, "param");
+		}, false, function(err, parm, cb) {
+			setTimeout(function() {
+				state = 1;
+				cb();
+			}, 1000);
+		}).wait('idle', function(err) {
+			expect(state).to.be(1);
+			state = 2;
+		}).html(function(err, str) {
+			expect(str).to.be('<html class="toto"><head><script type="text/javascript" src="test2.js"></script></head><body></body></html>')
+//			expect(state).to.be(1);
+			done();
+		});
+	});
 });

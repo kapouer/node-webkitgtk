@@ -334,16 +334,19 @@ methods
   analogous to once(event, cb) except that it is usable in the chainable API.  
   It is useful before calling html, png, pdf methods: `.wait('load').png(...)`.
 
-* run(sync-script, done)  
+* run(sync-script, (next), cb)  
   any synchronous script text or global function.  
-  `done` has a (err, result, cb) signature and in turn *must* call cb.
+  Optional `next` has a (err, result, cb) signature and in turn *must* call cb.
 
-* run(async-script, arg0, arg1, ..., done)  
+* run(async-script, param(s), (next), cb)  
   async-script must be a function that calls back its last argument, which
   accepts any number of arguments itself (with the convention that the first
   argument represents an error) as long as they are stringifyable.  
   `function(arg0, arg1, ..., done) { done(err, rarg0, rarg1, ...); }`.  
-  `done` has a (err, rarg0, rarg1, ..., cb) signature and in turn *must* call cb.
+  Optional `next` receives the arguments given by the `done` callback,
+  and in turn *must* call its last argument, cb (see test/run.js).  
+  This allows one to do an async task that makes use of the values returned by
+  the async-script.
 
 * runev(async-script, arg0, arg1, ..., cb)  
   async-script must be a function that calls its last argument,  

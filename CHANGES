@@ -99,3 +99,15 @@ of a run call.
 
 req.ignore does not wait for requests to finish when deciding for idle event.
 
+1.17.0
+------
+
+changed signature of .run() again.
+The optional parameter(s) is either alone or an array, to ensure .run() has
+definite max arguments length.
+Code doing 
+`.run(script, arg1, arg2, ...)`
+must replace it by
+`.run(script, [arg1, arg2], ...)`
+If only one argument was passed, that operation is done automatically.
+
