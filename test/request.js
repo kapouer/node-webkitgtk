@@ -62,33 +62,33 @@ describe("request listener", function suite() {
 			xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");\
 			xhr.send();</script></head>\
 		<body>move along</body></html>'
-			var server = require('http').createServer(function(req, res) {
-				if (req.url == "/") {
-					res.statusCode = 200;
-					res.end(doc);
-				} else if (req.url == "/test") {
-					res.statusCode = 200;
-					setTimeout(function() {
-						res.end('{"hello": "tata"}');
-					}, 3000);
-				} else {
-					expect("no 404").to.be("should happen");
-					res.statusCode = 404;
-					res.end();
-				}
-			}).listen(8024);
-			WebKit().load("http://localhost:8024", {console:true, stall: 2000})
-			.on('request', function(req) {
-				if (req.uri.indexOf('test') > 0) {
-					req.ignore = true;
-				}
-			})
-			.wait('idle').html(function(err, str) {
-				expect(str).to.be(doc);
+		var server = require('http').createServer(function(req, res) {
+			if (req.url == "/") {
+				res.statusCode = 200;
+				res.end(doc);
+			} else if (req.url == "/test") {
+				res.statusCode = 200;
 				setTimeout(function() {
-					server.close();
-					done();
-				}, 100);
-			});
+					res.end('{"hello": "tata"}');
+				}, 3000);
+			} else {
+				expect("no 404").to.be("should happen");
+				res.statusCode = 404;
+				res.end();
+			}
+		}).listen(8024);
+		WebKit().load("http://localhost:8024", {console:true, stall: 2000})
+		.on('request', function(req) {
+			if (req.uri.indexOf('test') > 0) {
+				req.ignore = true;
+			}
+		})
+		.wait('idle').html(function(err, str) {
+			expect(str).to.be(doc);
+			setTimeout(function() {
+				server.close();
+				done();
+			}, 100);
 		});
+	});
 });
