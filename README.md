@@ -390,6 +390,17 @@ properties
   is opening.
 
 
+how to debug
+------------
+
+This will keep the page running, output console to terminal, and open
+a gtk window with inspector open:
+
+```
+WebKit({debug: true}).load(url, {console: true}).wait('unload');
+```
+
+
 gtk loop and events
 -------------------
 
