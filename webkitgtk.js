@@ -1033,7 +1033,6 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 		this.addEventListener("timeout", xhrClean);
 		this._private = {url: absolute(url)};
 		var ret = wopen.apply(this, Array.prototype.slice.call(arguments, 0));
-		this.setRequestHeader('X-' + eventName, 'xhr');
 		return ret;
 	};
 	var wsend = window.XMLHttpRequest.prototype.send;
