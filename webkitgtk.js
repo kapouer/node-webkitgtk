@@ -531,7 +531,8 @@ function destroy() {
 }
 
 WebKit.prototype.destroy = function(cb) {
-	destroy.call(this, cb);
+	destroy.call(this);
+	if (cb) cb();
 };
 
 function stalled() {
