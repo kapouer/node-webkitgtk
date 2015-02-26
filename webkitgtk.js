@@ -373,10 +373,16 @@ function errorLoad(state) {
 	else if (state > INITIALIZED) return "cannot call method during loading";
 }
 
-WebKit.prototype.load = function(uri, cb) {
-	var opts = {};
-	if (typeof cb != "function") {
-		opts = cb;
+WebKit.prototype.load = function(cb) {
+	var opts = {}, uri;
+	if (typeof cb == "function") {
+		uri = "";
+	} else if (typeof arguments[1] == "function") {
+		uri = cb;
+		cb = arguments[1];
+	} else {
+		uri = cb;
+		opts = arguments[1];
 		cb = arguments[2];
 	}
 	if (!cb) cb = noop;
@@ -458,10 +464,16 @@ function load(uri, opts, cb) {
 	}.bind(this));
 }
 
-WebKit.prototype.preload = function(uri, cb) {
-	var opts = {};
-	if (typeof cb != "function") {
-		opts = cb;
+WebKit.prototype.preload = function(cb) {
+	var opts = {}, uri;
+	if (typeof cb == "function") {
+		uri = "";
+	} else if (typeof arguments[1] == "function") {
+		uri = cb;
+		cb = arguments[1];
+	} else {
+		uri = cb;
+		opts = arguments[1];
 		cb = arguments[2];
 	}
 	if (!cb) cb = noop;
