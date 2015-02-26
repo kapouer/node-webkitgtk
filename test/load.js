@@ -3,6 +3,16 @@ var expect = require('expect.js');
 var fs = require('fs');
 
 describe("load method", function suite() {
+	it("should accept no arguments", function(done) {
+		WebKit().load().html(function(err, str) {
+			done();
+		});
+	});
+	it("should accept only a callback", function(done) {
+		WebKit().load(function(err) {
+			done();
+		});
+	});
 	it("should initialize display if it was not on instantiation", function(done) {
 		this.timeout(10000);
 		var called = false;
