@@ -568,6 +568,7 @@ void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) 
 	} else {
 		webkit_javascript_result_unref(js_result);
 	}
+	if (sm->message != NULL) delete sm->message;
 	delete sm;
 }
 
@@ -855,7 +856,7 @@ gpointer data) {
 void WebView::Exit(void*) {
 	NanScope();
 	for (ObjMap::iterator it = instances.begin(); it != instances.end(); it++) {
-		it->second->destroy();
+		if (it->second != NULL) it->second->destroy();
 	}
 	instances.clear();
 }
