@@ -111,3 +111,9 @@ must replace it by
 `.run(script, [arg1, arg2], ...)`
 If only one argument was passed, that operation is done automatically.
 
+1.18.0
+------
+
+registering an event listener using wait(ev) for an event that already happened
+has now the same behavior as when the event just happened.
+

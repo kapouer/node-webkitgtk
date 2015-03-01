@@ -267,10 +267,8 @@ after idling state, caused by any of:
 It can be used to track updates done by XHR, or long timeouts executed after
 page load.
 
-Registering a listener for an event that just happened immediately calls the
+Registering a listener for an event that already happened immediately calls the
 new listener.
-
-Registering a listener for a previous event throws an error.
 
 
 These events can happen at any moment:
