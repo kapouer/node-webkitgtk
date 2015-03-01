@@ -279,17 +279,18 @@ function Request(uri, binding) {
 function requestDispatcher(binding) {
 	var priv = this.priv;
 	var uri = binding.uri;
-	if (uri != this.uri) {
+	var mainUri = this.uri || "";
+	if (uri != mainUri) {
 		if (priv.uris) priv.uris[uri] = Date.now();
 	}
 
 	var cancel = false;
 	if (priv.allow == "none") {
-		if (uri != this.uri) cancel = true;
+		if (uri != mainUri) cancel = true;
 	} else if (priv.allow == "same-origin") {
-		if (url.parse(uri).host != url.parse(this.uri).host) cancel = true;
+		if (url.parse(uri).host != url.parse(mainUri).host) cancel = true;
 	} else if (priv.allow instanceof RegExp) {
-		if (uri != this.uri && !priv.allow.test(uri)) cancel = true;
+		if (uri != mainUri && !priv.allow.test(uri)) cancel = true;
 	}
 	if (cancel) {
 		binding.cancel = "1";
