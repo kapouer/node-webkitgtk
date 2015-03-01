@@ -23,12 +23,10 @@ function WebKit(opts, cb) {
 			ChainableWebKit = chainit(WebKit);
 			chainit.add(ChainableWebKit, "wait", function(ev, cb) {
 				var priv = this.priv;
-				if (priv.lastEvent == ev) {
+				if (priv.lastEvent == ev || priv.previousEvents[ev]) {
 					return (cb || noop)();
 				} else if (this.readyState == "stop") {
 					throw new Error("Loading was stopped");
-				} else if (priv.previousEvents[ev]) {
-					throw new Error("do not wait() an event that already happened:" + ev);
 				} else {
 					EventEmitter.prototype.once.call(this, ev, cb);
 				}
