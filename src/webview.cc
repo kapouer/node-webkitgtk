@@ -31,7 +31,7 @@ WebView::WebView(Handle<Object> opts) {
 	this->offscreen = opts->Get(H("offscreen"))->BooleanValue();
 	bool hasInspector = opts->Get(H("inspector"))->BooleanValue();
 
-	NanAdjustExternalMemory(100000000);
+	NanAdjustExternalMemory(1000000);
 	gtk_init(0, NULL);
 	state = 0;
 
