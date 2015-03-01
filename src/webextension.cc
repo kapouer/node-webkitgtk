@@ -14,6 +14,7 @@ static void dispatch_ignore_event(WebKitWebPage* page, gchar* eventName, const g
 	WebKitDOMDOMWindow* window = webkit_dom_document_get_default_view(document);
 	GError* error = NULL;
 	WebKitDOMEvent* event = webkit_dom_document_create_event(document, "KeyboardEvent", &error);
+	g_object_unref(document);
 	if (error != NULL) {
 		g_printerr("Cannot create event in dispatch_ignore_event: %s\n", error->message);
 		g_error_free(error);
@@ -24,6 +25,8 @@ static void dispatch_ignore_event(WebKitWebPage* page, gchar* eventName, const g
 		window, uri, 0, FALSE, FALSE, FALSE, FALSE, FALSE
 	);
 	webkit_dom_event_target_dispatch_event(WEBKIT_DOM_EVENT_TARGET(window), event, &error);
+	g_object_unref(window);
+	g_object_unref(event);
 	if (error != NULL) {
 		g_printerr("Cannot dispatch event in dispatch_ignore_event: %s\n", error->message);
 		g_error_free(error);

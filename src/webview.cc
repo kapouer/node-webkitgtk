@@ -767,6 +767,8 @@ NAN_METHOD(WebView::Print) {
 	g_signal_connect(op, "failed", G_CALLBACK(WebView::PrintFailed), self);
 	g_signal_connect(op, "finished", G_CALLBACK(WebView::PrintFinished), self);
 	webkit_print_operation_print(op);
+	g_object_unref(op);
+	g_object_unref(settings);
 	NanReturnUndefined();
 }
 
