@@ -550,7 +550,7 @@ void WebView::requestUri(WebView* self, const char* uri) {
 		}
 		webkit_web_view_load_html(self->view, content, self->uri);
 	} else {
-		webkit_web_view_load_request(self->view, webkit_uri_request_new(self->uri));
+		webkit_web_view_load_uri(self->view, self->uri);
 	}
 }
 
