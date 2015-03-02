@@ -13,7 +13,7 @@
   ],
   "main": "webkitgtk.js",
   "dependencies": {
-    "chainit3": "^3.1.0",
+    "chainit3": "^3.1.1",
     "nan": "^1.6.1"
   },
   "optionalDependencies": {
