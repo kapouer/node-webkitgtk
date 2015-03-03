@@ -98,37 +98,24 @@ static void web_page_created_callback(WebKitWebExtension* extension, WebKitWebPa
 	g_signal_connect(web_page, "send-request", G_CALLBACK(web_page_send_request), data);
 }
 
-static gboolean custom_listener(WebKitDOMDOMWindow* window, WebKitDOMEvent* event, gpointer data) {
+static gboolean event_listener(WebKitDOMDOMWindow* view, WebKitDOMEvent* event, gpointer data) {
 	char* message = webkit_dom_keyboard_event_get_key_identifier((WebKitDOMKeyboardEvent*)event);
-	g_object_unref(event);
 	GError* error = NULL;
-	GVariant* vmessage = g_variant_new("(s)", message);
 	g_dbus_connection_call_sync(connection, NULL, DBUS_OBJECT_WKGTK, DBUS_INTERFACE_WKGTK,
-		"NotifyEvent", vmessage, G_VARIANT_TYPE("()"), G_DBUS_CALL_FLAGS_NONE, -1, NULL,
+		"NotifyEvent", g_variant_new("(s)", message), G_VARIANT_TYPE("()"), G_DBUS_CALL_FLAGS_NONE, -1, NULL,
 		&error);
-	g_variant_unref(vmessage);
-	g_free(message);
 	if (error != NULL) {
 		g_printerr("Failed to finish dbus call: %s\n", error->message);
 		g_error_free(error);
 	}
+	g_free(message);
 	return TRUE;
 }
 
-WebKitDOMDOMWindow* prevWin = NULL;
-WebKitDOMDocument* prevDoc = NULL;
-
 static void window_object_cleared_callback(WebKitScriptWorld* world, WebKitWebPage* page, WebKitFrame* frame, gchar* eventName) {
-	if (prevWin != NULL) {
-		webkit_dom_event_target_remove_event_listener(WEBKIT_DOM_EVENT_TARGET(prevWin), eventName, G_CALLBACK(custom_listener), FALSE);
-		g_object_unref(prevWin);
-		g_object_unref(prevDoc);
-		prevWin = NULL;
-		prevDoc = NULL;
-	}
-	prevDoc = webkit_web_page_get_dom_document(page);
-	prevWin = webkit_dom_document_get_default_view(prevDoc);
-	webkit_dom_event_target_add_event_listener(WEBKIT_DOM_EVENT_TARGET(prevWin), eventName, G_CALLBACK(custom_listener), FALSE, NULL);
+	WebKitDOMDocument* document = webkit_web_page_get_dom_document(page);
+	WebKitDOMDOMWindow* window = webkit_dom_document_get_default_view(document);
+	webkit_dom_event_target_add_event_listener(WEBKIT_DOM_EVENT_TARGET(window), eventName, G_CALLBACK(event_listener), false, NULL);
 }
 
 extern "C" {
