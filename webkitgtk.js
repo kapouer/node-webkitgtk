@@ -390,11 +390,11 @@ WebKit.prototype.load = function(cb) {
 		if (!Array.isArray(cookies)) cookies = [cookies];
 		var script = cookies.map(function(cookie) {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
-		}).join(';') + ';';
-		preload.call(this, uri, {content:"<html></html>"}, function(err) {
+		});
+		script.push('');
+		preload.call(this, uri, {script: script.join(';\n'), content:"<html></html>"}, function(err) {
 			if (err) return cb(err, this);
-			runcb.call(this, script, null, function(err) {
-				if (err) return cb(err, this);
+			setImmediate(function() {
 				load.call(this, uri, opts, cb);
 			}.bind(this));
 		}.bind(this));
