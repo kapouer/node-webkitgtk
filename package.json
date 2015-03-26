@@ -1,6 +1,6 @@
 {
   "name": "webkitgtk",
-  "version": "1.18.2",
+  "version": "1.18.3",
   "description": "Drive webkitgtk from Node.js",
   "keywords": [
     "webkit",
