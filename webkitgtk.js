@@ -191,7 +191,6 @@ function policyDispatcher(type, uri) {
 
 function eventsDispatcher(err, json) {
 	var priv = this.priv;
-	debug("event from dom", json);
 	if (err) {
 		console.error("Error in event dispatcher", err, json);
 		if (priv.debug) {
@@ -204,6 +203,7 @@ function eventsDispatcher(err, json) {
 		console.error("received invalid event", json);
 		return;
 	}
+	debug("event from dom", obj.event || obj.ticket);
 	var args = obj.args || [];
 	if (obj.event) {
 		args.unshift(obj.event);
