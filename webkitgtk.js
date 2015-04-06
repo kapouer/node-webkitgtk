@@ -4,6 +4,7 @@ var stream = require('stream');
 var fs = require('fs');
 var path = require('path');
 var url = require('url');
+var debug = require('debug')('webkitgtk');
 
 // internal state, does not match readyState
 var CREATED = 0;
@@ -85,8 +86,10 @@ WebKit.prototype.init = function(opts, cb) {
 		opts.offscreen = false;
 		opts.inspector = true;
 	}
+	debug('find display')
 	display.call(this, opts, function(err, child, newDisplay) {
 		if (err) return cb(err);
+		debug('display found', newDisplay);
 		if (child) priv.xvfb = child;
 		process.env.DISPLAY = ":" + newDisplay;
 		var Bindings = require(__dirname + '/lib/webkitgtk.node');
@@ -104,6 +107,7 @@ WebKit.prototype.init = function(opts, cb) {
 			offscreen: opts.offscreen,
 			inspector: opts.inspector
 		});
+		debug('new instance created');
 		priv.state = INITIALIZED;
 		cb();
 	}.bind(this));
@@ -147,6 +151,7 @@ function emitLifeEvent(event) {
 			priv.loopForLife = false;
 		}
 	}.bind(this));
+	debug('emit event', event)
 	this.emit(event);
 }
 
@@ -186,6 +191,7 @@ function policyDispatcher(type, uri) {
 
 function eventsDispatcher(err, json) {
 	var priv = this.priv;
+	debug("event from dom", json);
 	if (err) {
 		console.error("Error in event dispatcher", err, json);
 		if (priv.debug) {
@@ -277,6 +283,7 @@ function Request(uri, binding) {
 function requestDispatcher(binding) {
 	var priv = this.priv;
 	var uri = binding.uri;
+	debug("request", uri);
 	var mainUri = this.uri || "";
 	if (uri != mainUri) {
 		if (priv.uris) priv.uris[uri] = Date.now();
@@ -291,6 +298,7 @@ function requestDispatcher(binding) {
 		if (uri != mainUri && !priv.allow.test(uri)) cancel = true;
 	}
 	if (cancel) {
+		debug("cancelled before dispatch");
 		binding.cancel = "1";
 		return;
 	}
@@ -308,10 +316,12 @@ function requestDispatcher(binding) {
 		binding.ignore = "1";
 	}
 	if (req.cancel) {
+		debug("cancelled after dispatch");
 		binding.cancel = "1";
 		return;
 	}
 	if (uri && isNetworkProtocol(uri)) {
+		debug("counted as pending");
 		priv.pendingRequests++;
 	}
 }
@@ -319,11 +329,14 @@ function requestDispatcher(binding) {
 function responseDispatcher(binding) {
 	var res = new Response(this, binding);
 	var uri = res.uri;
+	debug('response', uri);
 	if (uri && this.priv.uris) delete this.priv.uris[uri];
 	if (res.status == 0) {
+		debug('status 0, ignored');
 		return;
 	}
 	if (uri && isNetworkProtocol(uri)) {
+		debug('counted as ending pending');
 		this.priv.pendingRequests--;
 	}
 	this.emit('response', res);
@@ -387,12 +400,14 @@ WebKit.prototype.load = function(cb) {
 	if (!cb) cb = noop;
 	var cookies = opts.cookies;
 	if (cookies) {
+		debug('load cookies');
 		if (!Array.isArray(cookies)) cookies = [cookies];
 		var script = cookies.map(function(cookie) {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 		});
 		script.push('');
 		preload.call(this, uri, {script: script.join(';\n'), content:"<html></html>"}, function(err) {
+			debug('load cookies done', err);
 			if (err) return cb(err, this);
 			setImmediate(function() {
 				load.call(this, uri, opts, cb);
@@ -446,8 +461,10 @@ function load(uri, opts, cb) {
 		return prepareRun(fn.fn || fn, null, fn.args || null, priv).script;
 	}).join('\n');
 	loop.call(this, true);
+	debug('load', uri);
 	this.webview.load(uri, opts, function(err, status) {
 		loop.call(this, false);
+		debug('load %s done', uri);
 		priv.state = INITIALIZED;
 		if (priv.timeout) {
 			clearTimeout(priv.timeout);
@@ -519,8 +536,10 @@ WebKit.prototype.unload = function(cb) {
 	priv.state = LOADING;
 	this.readyState = null;
 	this.status = null;
+	debug('unload');
 	loop.call(this, true);
 	this.webview.load('', {}, function(err) {
+		debug('unload done');
 		loop.call(this, false);
 		priv.state = INITIALIZED;
 		priv.tickets = {};
@@ -777,6 +796,7 @@ function png(wstream, cb) {
 }
 
 WebKit.prototype.html = function(cb) {
+	debug('output html');
 	runcb.call(this, function() {
 		var dtd = document.doctype;
 		var html = "";
@@ -789,7 +809,10 @@ WebKit.prototype.html = function(cb) {
 		}
 		html += document.documentElement.outerHTML;
 		return html;
-	}, null, cb);
+	}, null, function(err, str) {
+		debug('output html done');
+		cb(err, str);
+	});
 };
 
 WebKit.prototype.pdf = function(filepath, cb) {
