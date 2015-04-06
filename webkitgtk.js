@@ -565,18 +565,6 @@ WebKit.prototype.destroy = function(cb) {
 	if (cb) cb();
 };
 
-function stalled() {
-	var priv = this.priv;
-	var now = Date.now();
-	var count = 0;
-	for (var uri in priv.uris) {
-		if (now > priv.uris[uri] + priv.stall) {
-			count++;
-		}
-	}
-	return count;
-}
-
 function loop(start) {
 	var priv = this.priv;
 	if (start) {
