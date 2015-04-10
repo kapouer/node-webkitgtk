@@ -365,11 +365,9 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 		break;
 		case WEBKIT_LOAD_FINISHED: // 3
 			/* Load finished, we can now stop the spinner */
-			if (self->state == DOCUMENT_LOADING) {
-				self->state = DOCUMENT_AVAILABLE;
-				if (self->nextUri != NULL) {
-					requestUri(self, self->nextUri);
-				}
+			self->state = DOCUMENT_AVAILABLE;
+			if (self->nextUri != NULL) {
+				requestUri(self, self->nextUri);
 			}
 		break;
 	}
