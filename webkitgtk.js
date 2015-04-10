@@ -539,7 +539,7 @@ WebKit.prototype.unload = function(cb) {
 	this.status = null;
 	debug('unload');
 	loop.call(this, true);
-	this.webview.load('', {}, function(err) {
+	this.webview.load('http://localhost', {content: '<html></html>'}, function(err) {
 		debug('unload done');
 		loop.call(this, false);
 		priv.state = INITIALIZED;
