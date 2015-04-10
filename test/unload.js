@@ -7,7 +7,7 @@ describe("unload method", function suite() {
 		WebKit().unload().run("document.documentElement.outerHTML;", function(err, html) {
 			expect(err).to.not.be.ok();
 			expect(html).to.be('<html><head></head><body></body></html>');
-			expect(this.uri).to.be("");
+			expect(this.uri).to.be("http://localhost/");
 			done();
 		});
 	});
