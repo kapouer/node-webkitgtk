@@ -1135,9 +1135,10 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 	}
 
 	function emitNextFrame(ev) {
-		w.requestAnimationFrame.call(window, function(ts) {
+		setTimeout(function() {
 			emit(ev);
-		});
+		}, 0);
+
 	}
 }
 
