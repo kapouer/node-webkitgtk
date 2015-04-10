@@ -337,11 +337,11 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 			// provisional_uri = webkit_web_view_get_uri (web_view);
 			/* Here we could start a spinner or update the
 			* location bar with the provisional URI */
-			self->updateUri(uri);
+			if (self->state == DOCUMENT_LOADING) self->updateUri(uri);
 		break;
 		case WEBKIT_LOAD_REDIRECTED: // 1
 			// redirected_uri = webkit_web_view_get_uri (web_view);
-			self->updateUri(uri);
+			if (self->state == DOCUMENT_LOADING) self->updateUri(uri);
 		break;
 		case WEBKIT_LOAD_COMMITTED: // 2
 			/* The load is being performed. Current URI is
@@ -365,9 +365,11 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 		break;
 		case WEBKIT_LOAD_FINISHED: // 3
 			/* Load finished, we can now stop the spinner */
-			self->state = DOCUMENT_AVAILABLE;
-			if (self->nextUri != NULL) {
-				requestUri(self, self->nextUri);
+			if (self->state == DOCUMENT_LOADING) {
+				self->state = DOCUMENT_AVAILABLE;
+				if (self->nextUri != NULL) {
+					requestUri(self, self->nextUri);
+				}
 			}
 		break;
 	}
