@@ -173,7 +173,7 @@ function closedListener(what) {
 }
 
 function receiveDataDispatcher(uri, length) {
-	if (uri != this.uri) this.priv.uris[uri] = Date.now();
+	if (this.priv.uris && uri != this.uri) this.priv.uris[uri] = Date.now();
 }
 
 function authDispatcher(request) {
