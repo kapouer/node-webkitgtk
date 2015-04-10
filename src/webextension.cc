@@ -95,6 +95,7 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 
 
 static void web_page_created_callback(WebKitWebExtension* extension, WebKitWebPage* web_page, gpointer data) {
+	g_signal_handlers_disconnect_by_data(web_page, data);
 	g_signal_connect(web_page, "send-request", G_CALLBACK(web_page_send_request), data);
 }
 
