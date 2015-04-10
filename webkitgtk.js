@@ -313,6 +313,7 @@ function requestDispatcher(binding) {
 		binding.uri = uri;
 	}
 	if (req.ignore) {
+		debug("ignore request");
 		binding.ignore = "1";
 	}
 	if (req.cancel) {
