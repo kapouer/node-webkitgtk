@@ -204,9 +204,12 @@ function eventsDispatcher(err, json) {
 		console.error("received invalid event", json);
 		return;
 	}
-	debug("event from dom", obj.event || obj.ticket);
 	var args = obj.args || [];
 	if (obj.event) {
+		var from = args[0];
+		var debugArgs = ['event from dom', obj.event];
+		if (from) debugArgs.push('from', from);
+		debug.apply(this, debugArgs);
 		args.unshift(obj.event);
 		if (obj.event == "ready") {
 			this.readyState = "interactive";
@@ -893,8 +896,8 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 		if (lastEvent == "ready") {
 			lastEvent = "load";
 			window.removeEventListener('load', loadListener, false);
-			emitNextFrame("load");
-			check(); // this one makes it crash
+			emitNext("load");
+			check('load');
 		} else {
 			missedEvent = "load";
 		}
@@ -909,12 +912,12 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 				});
 				preloadList = [];
 				lastEvent = "ready";
-				emitNextFrame("ready");
+				emitNext("ready");
 				if (missedEvent == "load") loadListener();
 			}, 0);
 		} else {
 			lastEvent = "ready";
-			emitNextFrame("ready");
+			emitNext("ready");
 		}
 	}
 
@@ -933,7 +936,7 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 			delete timeouts[id];
 			timeouts.len--;
 			if (timeouts.len <= timeouts.stall) {
-				check();
+				check('timeout');
 			}
 		}
 	}
@@ -987,7 +990,7 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 			delete intervals[id];
 			intervals.len--;
 			if (intervals.len <= intervals.stall) {
-				check();
+				check('interval');
 			}
 		}
 		return w.clearInterval.call(window, id);
@@ -999,7 +1002,7 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 			delete frames[id];
 			frames.len--;
 			if (frames.len == 0) {
-				check();
+				check('frame');
 			}
 		}
 	}
@@ -1025,12 +1028,15 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 
 	window.WebSocket = function() {
 		var ws = new w.WebSocket(Array.prototype.slice.call(arguments, 0));
-		ws.addEventListener('message', check);
-		function uncheck() {
-			this.removeEventListener('message', check);
-			this.removeEventListener('close', uncheck);
+		function checkws() {
+			check('websocket');
 		}
-		ws.addEventListener('close', uncheck);
+		function uncheckws() {
+			this.removeEventListener('message', checkws);
+			this.removeEventListener('close', uncheckws);
+		}
+		ws.addEventListener('message', checkws);
+		ws.addEventListener('close', uncheckws);
 		return ws;
 	};
 
@@ -1086,7 +1092,7 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 			if (req) {
 				if (!req.stall) requests.stall++;
 				req.count--;
-				check();
+				check('xhr timeout');
 			}
 		}, staleXhrTimeout);
 	}
@@ -1119,25 +1125,25 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 		}
 		delete this._private;
 		requests.len--;
-		if (requests.len <= requests.stall) check();
+		if (requests.len <= requests.stall) check('xhr clean');
 	}
 
-	function check() {
+	function check(from) {
 		w.setTimeout.call(window, function() {
 			if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall && frames.len == 0 && requests.len <= requests.stall) {
 				if (lastEvent == "load") {
 					lastEvent = "idle";
-					emitNextFrame("idle");
+					emitNext("idle", from);
 				} else if (lastEvent == "idle") {
-					emitNextFrame("busy");
+					emitNext("busy", from);
 				}
 			}
 		}, 0);
 	}
 
-	function emitNextFrame(ev) {
+	function emitNext(ev, from) {
 		setTimeout(function() {
-			emit(ev);
+			emit(ev, from);
 		}, 0);
 
 	}
