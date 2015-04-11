@@ -86,7 +86,7 @@ WebKit.prototype.init = function(opts, cb) {
 		opts.offscreen = false;
 		opts.inspector = true;
 	}
-	debug('find display')
+	debug('find display');
 	display.call(this, opts, function(err, child, newDisplay) {
 		if (err) return cb(err);
 		debug('display found', newDisplay);
@@ -151,7 +151,7 @@ function emitLifeEvent(event) {
 			priv.loopForLife = false;
 		}
 	}.bind(this));
-	debug('emit event', event)
+	debug('emit event', event);
 	this.emit(event);
 }
 
