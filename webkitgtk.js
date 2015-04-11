@@ -331,6 +331,7 @@ function requestDispatcher(binding) {
 function responseDispatcher(binding) {
 	var res = new Response(this, binding);
 	var uri = res.uri;
+	if (!uri) return;
 	debug('response', uri);
 	if (uri && this.priv.uris) delete this.priv.uris[uri];
 	if (res.status == 0) {
