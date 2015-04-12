@@ -904,7 +904,9 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 			lastEvent = "load";
 			window.removeEventListener('load', loadListener, false);
 			emitNext("load");
-			check('load');
+			w.setTimeout.call(window, function() {
+				check('load');
+			}, 0);
 		} else {
 			missedEvent = "load";
 		}
