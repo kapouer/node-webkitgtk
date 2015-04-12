@@ -15,6 +15,7 @@ var LOADING = 3;
 var RegEvents = /^(ready|load|idle|unload)$/;
 
 var ChainableWebKit;
+var availableDisplays = {};
 
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
@@ -364,8 +365,14 @@ function noop(err) {
 
 function display(opts, cb) {
 	var display = opts.display;
+	if (availableDisplays[display]) {
+		return setImmediate(cb.bind(this, null, null, display));
+	}
 	fs.exists('/tmp/.X' + display + '-lock', function(exists) {
-		if (exists) return cb(null, null, display);
+		if (exists) {
+			availableDisplays[display] = true;
+			return cb(null, null, display);
+		}
 		if (display == 0) return cb("Error - do not spawn xvfb on DISPLAY 0");
 		require('headless')({
 			display: {
