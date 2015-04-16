@@ -353,9 +353,8 @@ function isNetworkProtocol(uri) {
 	var p = uri.split(':', 1).pop();
 	if (p == 'http' || p == 'https') {
 		return true;
-	} else if (p != "data" && p != "about") {
-		console.info("Unknown protocol in", uri);
-		console.info("Please report issue to https://github.com/kapouer/node-webkitgtk/issues");
+	} else {
+		debug("is not network protocol", uri);
 	}
 }
 
