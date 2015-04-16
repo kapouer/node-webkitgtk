@@ -337,7 +337,8 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 			// provisional_uri = webkit_web_view_get_uri (web_view);
 			/* Here we could start a spinner or update the
 			* location bar with the provisional URI */
-			if (self->state == DOCUMENT_LOADING) self->updateUri(uri);
+			self->state = DOCUMENT_LOADING;
+			self->updateUri(uri);
 		break;
 		case WEBKIT_LOAD_REDIRECTED: // 1
 			// redirected_uri = webkit_web_view_get_uri (web_view);
