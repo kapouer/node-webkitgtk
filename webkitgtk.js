@@ -551,7 +551,7 @@ WebKit.prototype.unload = function(cb) {
 	debug('unload');
 	loop.call(this, true);
 	this.webview.load('', {content:'<html></html>'}, function(err) {
-		debug('unload done');
+		debug('unload done', err);
 		loop.call(this, false);
 		priv.state = INITIALIZED;
 		priv.tickets = {};

@@ -111,7 +111,7 @@ NAN_METHOD(WebView::Stop) {
 	NanScope();
 	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
 	bool wasLoading = FALSE;
-	if (self->state == DOCUMENT_LOADING) {
+	if (self->state >= DOCUMENT_LOADING) {
 		wasLoading = TRUE;
 	}
 	self->stopCallback = new NanCallback(args[0].As<Function>());
@@ -134,7 +134,6 @@ void WebView::destroy() {
 	if (content != NULL) delete[] content;
 
 	if (uri != NULL) g_free(uri);
-	if (nextUri != NULL) delete nextUri;
 
 	if (pngCallback != NULL) delete pngCallback;
 	if (pngFilename != NULL) delete pngFilename;
@@ -350,6 +349,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 			* load is requested or a navigation within the
 			* same page is performed */
 			if (self->state == DOCUMENT_LOADING) {
+				self->state = DOCUMENT_LOADED;
 				self->updateUri(uri);
 				if (self->loadCallback != NULL) {
 					guint status = getStatusFromView(web_view);
@@ -365,11 +365,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 			}
 		break;
 		case WEBKIT_LOAD_FINISHED: // 3
-			/* Load finished, we can now stop the spinner */
 			self->state = DOCUMENT_AVAILABLE;
-			if (self->nextUri != NULL) {
-				requestUri(self, self->nextUri);
-			}
 		break;
 	}
 }
@@ -377,7 +373,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gchar* failing_uri, GError* error, gpointer data) {
 	WebView* self = (WebView*)data;
 //  g_print("fail %d %d %s %s\n", load_event, self->state, self->uri, failing_uri);
-	if (self->nextUri == NULL && self->state == DOCUMENT_LOADING && g_strcmp0(failing_uri, self->uri) == 0) {
+	if (self->state >= DOCUMENT_LOADING && g_strcmp0(failing_uri, self->uri) == 0) {
 		if (self->loadCallback != NULL) {
 			self->state = DOCUMENT_ERROR;
 			Handle<Value> argv[] = {
@@ -417,7 +413,7 @@ NAN_METHOD(WebView::Load) {
 	}
 	NanCallback* loadCb = new NanCallback(args[2].As<Function>());
 
-	if (self->nextUri != NULL) {
+	if (self->state == DOCUMENT_LOADING) {
 		Handle<Value> argv[] = {
 			NanError("A document is already being loaded")
 		};
@@ -442,9 +438,6 @@ NAN_METHOD(WebView::Load) {
 	NanUtf8String* uri = new NanUtf8String(args[0]);
 
 	Local<Object> opts = args[1]->ToObject();
-
-	if (self->content != NULL) delete self->content;
-	self->content = getStr(opts, "content");
 
 	self->script = getStr(opts, "script");
 	self->style = getStr(opts, "style");
@@ -499,12 +492,14 @@ NAN_METHOD(WebView::Load) {
 
 	if (self->loadCallback != NULL) delete self->loadCallback;
 	self->loadCallback = loadCb;
-	if (self->state == DOCUMENT_AVAILABLE) {
-		webkit_web_view_stop_loading(self->view);
-		requestUri(self, **uri);
-	} else {
-		self->nextUri = **uri;
-	}
+
+	if (self->content != NULL) delete self->content;
+	self->content = getStr(opts, "content");
+
+	if (self->state == DOCUMENT_LOADED) webkit_web_view_stop_loading(self->view);
+
+	requestUri(self, **uri);
+
 	NanReturnUndefined();
 }
 
@@ -539,17 +534,14 @@ void WebView::requestUri(WebView* self, const char* uri) {
 		delete self->style;
 		self->style = NULL;
 	}
-	if (self->nextUri != NULL) delete self->nextUri;
-	self->nextUri = NULL;
 
 	if (isEmpty || self->content != NULL) {
-		const char* content = self->content;
-		if (content == NULL) content = "";
+		if (self->content == NULL) self->content = g_strconcat("", NULL);
 		if (isEmpty) {
 			g_free(self->uri);
 			self->uri = NULL;
 		}
-		webkit_web_view_load_html(self->view, content, self->uri);
+		webkit_web_view_load_html(self->view, self->content, self->uri);
 	} else {
 		webkit_web_view_load_uri(self->view, self->uri);
 	}

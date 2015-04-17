@@ -16,6 +16,7 @@ public:
 	static const int DOCUMENT_ERROR = -1;
 	static const int DOCUMENT_AVAILABLE = 0;
 	static const int DOCUMENT_LOADING = 1;
+	static const int DOCUMENT_LOADED = 2;
 
 	static void Init(Handle<Object>, Handle<Object>);
 	static void Exit(void*);
@@ -93,8 +94,6 @@ private:
 	NanCallback* policyCallback = NULL;
 	NanCallback* authCallback = NULL;
 	NanCallback* closeCallback = NULL;
-
-	gchar* nextUri = NULL;
 
 	static NAN_METHOD(New);
 	static NAN_METHOD(Load);
