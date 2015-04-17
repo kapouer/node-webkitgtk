@@ -499,8 +499,8 @@ NAN_METHOD(WebView::Load) {
 
 	if (self->loadCallback != NULL) delete self->loadCallback;
 	self->loadCallback = loadCb;
-	webkit_web_view_stop_loading(self->view);
 	if (self->state == DOCUMENT_AVAILABLE) {
+		webkit_web_view_stop_loading(self->view);
 		requestUri(self, **uri);
 	} else {
 		self->nextUri = **uri;
