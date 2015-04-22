@@ -225,7 +225,7 @@ gboolean WebView::Authenticate(WebKitWebView* view, WebKitAuthenticationRequest*
 		// return TRUE;
 	// }
 
-	Handle<Object> obj = WebAuthRequest::constructor->GetFunction()->NewInstance();
+	Handle<Object> obj = NanNew<FunctionTemplate>(WebAuthRequest::constructor)->GetFunction()->NewInstance();
 	WebAuthRequest* selfAuthRequest = node::ObjectWrap::Unwrap<WebAuthRequest>(obj);
 	selfAuthRequest->init(request);
 
@@ -294,7 +294,7 @@ void WebView::ResourceReceiveData(WebKitWebResource* resource, guint64 length, g
 void WebView::ResourceResponse(WebKitWebResource* resource, gpointer data) {
 	WebView* self = (WebView*)data;
 	WebKitURIResponse* response = webkit_web_resource_get_response(resource);
-	Handle<Object> obj = WebResponse::constructor->GetFunction()->NewInstance();
+	Handle<Object> obj = NanNew<FunctionTemplate>(WebResponse::constructor)->GetFunction()->NewInstance();
 	WebResponse* selfResponse = node::ObjectWrap::Unwrap<WebResponse>(obj);
 	selfResponse->init(resource, response);
 	int argc = 1;
@@ -824,7 +824,7 @@ gpointer data) {
 		GVariant* variant = g_variant_get_child_value(parameters, 0);
 		GVariantDict dict;
 		g_variant_dict_init(&dict, variant);
-		Handle<Object> obj = GVariantProxy::constructor->GetFunction()->NewInstance();
+		Handle<Object> obj = NanNew<FunctionTemplate>(GVariantProxy::constructor)->GetFunction()->NewInstance();
 		GVariantProxy* prox = node::ObjectWrap::Unwrap<GVariantProxy>(obj);
 		prox->init(variant);
 		Handle<Value> argv[] = {
