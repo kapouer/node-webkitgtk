@@ -194,7 +194,8 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 
 	ATTR(tpl, "uri", get_prop, NULL);
 
-	constructor = Persistent<Function>::New(tpl->GetFunction());
+	NanAssignPersistent(constructor, tpl->GetFunction());
+
 	module->Set(NanNew("exports"), constructor);
 	GVariantProxy::Init(exports);
 	WebResponse::Init(exports);
