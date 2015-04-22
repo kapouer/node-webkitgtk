@@ -8,7 +8,7 @@ gchar* getStr(Handle<Object> opts, const gchar* name) {
 			str = new NanUtf8String(opt);
 		}
 	}
-	if (str != NULL && str->Size() > 1) {
+	if (str != NULL && str->length() > 1) {
 		return **str;
 	} else {
 		return NULL;
