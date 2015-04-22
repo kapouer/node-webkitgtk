@@ -95,7 +95,7 @@ static NAN_PROPERTY_ENUMERATOR(EnumerateNamedProperties) {
 	int i = 0;
 	while (g_variant_iter_next(&iter, "{sv}", &key, &val)) {
 		if (!g_strcmp0(key, "uri")) continue;
-		array->Set(Number::New(i++), NanNew<String>(key));
+		array->Set(NanNew<Number>(i++), NanNew<String>(key));
 		g_free(key);
 	}
 	NanReturnValue(array);
