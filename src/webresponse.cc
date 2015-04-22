@@ -102,7 +102,7 @@ NAN_GETTER(WebResponse::get_prop) {
 		NanReturnValue(NanNew<Integer>(status));
 	} else if (propstr == "headers") {
 		if (self->response == NULL) NanReturnNull();
-		Handle<Object> obj = GVariantProxy::constructor->GetFunction()->NewInstance();
+		Handle<Object> obj = NanNew<FunctionTemplate>(GVariantProxy::constructor)->GetFunction()->NewInstance();
 		GVariantProxy* prox = node::ObjectWrap::Unwrap<GVariantProxy>(obj);
 		prox->init(soup_headers_to_gvariant_dict(webkit_uri_response_get_http_headers(self->response)));
 		NanReturnValue(obj);
