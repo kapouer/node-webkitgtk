@@ -196,7 +196,7 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 
 	NanAssignPersistent(constructor, tpl->GetFunction());
 
-	module->Set(NanNew("exports"), constructor);
+	module->Set(NanNew("exports"), tpl->GetFunction());
 	GVariantProxy::Init(exports);
 	WebResponse::Init(exports);
 	WebAuthRequest::Init(exports);
