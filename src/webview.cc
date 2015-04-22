@@ -179,7 +179,7 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 	introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
 	g_assert(introspection_data != NULL);
 
-	Local<FunctionTemplate> tpl = FunctionTemplate::New(WebView::New);
+	Local<FunctionTemplate> tpl = NanNew<FunctionTemplate>(WebView::New);
 	tpl->SetClassName(NanNew("WebView"));
 	tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
