@@ -483,6 +483,9 @@ webkitgtk4-devel
 dbus-glib-devel
 ```
 
+On ubuntu/14:
+try [the WebKit team ppa](https://launchpad.net/~webkit-team)
+
 License
 -------
 
