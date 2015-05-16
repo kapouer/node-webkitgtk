@@ -3,7 +3,7 @@ var expect = require('expect.js');
 var fs = require('fs');
 var path = require('path');
 
-describe.only("Experiment", function suite() {
+describe("concurrent png calls should not crash", function suite() {
 	this.timeout(10000);
 	var w;
 	before(function(cb) {
@@ -14,7 +14,7 @@ describe.only("Experiment", function suite() {
 			cb();
 		});
 	});
-	it("reports an error on Bad URL", function(done) {
+	it("first call wrongly assumes idle event is not called", function(done) {
 		var href = "https://www.mezilla.org/en-US/";
 		var filePath = path.resolve(__dirname, './shots/out1.png');
 		w.once('idle', function() {
@@ -27,7 +27,7 @@ describe.only("Experiment", function suite() {
 			done();
 		});
 	});
-	it("should render Good URL after a bad one", function(done) {
+	it("second call calls png actually just after first call and must not crash", function(done) {
 		var href = "https://www.google.com";
 		var filePath = path.resolve(__dirname, './shots/out2.png');
 		w.once('idle', function() {
