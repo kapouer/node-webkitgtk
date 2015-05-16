@@ -621,6 +621,10 @@ NAN_METHOD(WebView::Png) {
 		NanThrowError("png(cb) missing cb argument");
 		NanReturnUndefined();
 	}
+	if (self->pngCallback != NULL) {
+		NanThrowError("cannot call png(cb) while another call is not yet finished");
+		NanReturnUndefined();
+	}
 	self->pngCallback = new NanCallback(args[0].As<Function>());
 	webkit_web_view_get_snapshot(
 		self->view,
