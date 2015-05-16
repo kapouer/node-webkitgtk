@@ -15,7 +15,7 @@ describe("pdf method", function suite() {
 		}).wait('load').pdf(pdfpath, function(err) {
 			expect(err).to.not.be.ok();
 			fs.stat(pdfpath, function(err, stat) {
-				expect(stat.size).to.be.above(100000);
+				expect(stat.size).to.be.above(70000);
 				done();
 			});
 		});
