@@ -35,5 +35,28 @@ describe("png method", function suite() {
 			});
 		});
 	});
+	it("should not crash when calling png twice in a row", function(done) {
+		var w = new WebKit();
+		w.init({}, function() {
+			w.load('https://www.debian.org', function() {
+				var count = 0;
+				w.png(__dirname + '/shots/testr1.png', function(err) {
+					expect(err).to.not.be.ok();
+					expect(count).to.be(1);
+					done();
+				});
+				var ex;
+				try {
+					w.png(__dirname + '/shots/testr2.png', function(err) {
+						expect(true).to.be(false);
+					});
+				} catch(e) {
+					ex = e;
+				}
+				expect(ex).to.be.ok();
+				count++;
+			});
+		});
+	});
 });
 
