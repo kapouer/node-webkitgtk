@@ -205,4 +205,50 @@ describe("load method", function suite() {
 			done();
 		});
 	});
+
+	it("should be able to load twice in a row", function(done) {
+		this.timeout(10000);
+		WebKit().load('http://google.com').load('http://google.com', function(err) {
+			expect(err).to.not.be.ok();
+			done();
+		});
+	});
+
+	it("should be able to load twice in a row using normal api", function(done) {
+		this.timeout(10000);
+		var inst = new WebKit();
+		inst.init({}, function(err) {
+			inst.load('http://google.com', function(err) {
+				inst.load('http://google.com', function(err) {
+					expect(err).to.not.be.ok();
+					done();
+				});
+			});
+		});
+	});
+
+	it("should be able to fail then load", function(done) {
+		this.timeout(10000);
+		WebKit().load('http://google.com/azertyuiop404', function(err) {
+			expect(err).to.be.ok();
+			this.load('http://google.com', function(err) {
+				expect(err).to.not.be.ok();
+				done();
+			});
+		});
+	});
+
+	it("should be able to fail then load using normal api", function(done) {
+		this.timeout(10000);
+		var inst = new WebKit();
+		inst.init({}, function(err) {
+			inst.load('http://google.com/wxcvvbn404', function(err) {
+				expect(err).to.be.ok();
+				inst.load('http://google.com', function(err) {
+					expect(err).to.not.be.ok();
+					done();
+				});
+			});
+		});
+	});
 });
