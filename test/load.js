@@ -251,4 +251,12 @@ describe("load method", function suite() {
 			});
 		});
 	});
+
+	it("should be able to load a url with a default protocol", function(done) {
+		this.timeout(4000);
+		WebKit().load('www.debian.org', function(err) {
+			expect(err).to.not.be.ok();
+			done();
+		});
+	});
 });
