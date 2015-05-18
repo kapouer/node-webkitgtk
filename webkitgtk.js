@@ -431,6 +431,8 @@ WebKit.prototype.load = function(cb) {
 };
 
 function load(uri, opts, cb) {
+	if (uri && !url.parse(uri).protocol) uri = 'http://' + uri;
+
 	var priv = this.priv;
 	if (priv.state != INITIALIZED) return cb(new Error(errorLoad(priv.state)), this);
 
