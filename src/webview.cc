@@ -329,6 +329,7 @@ void WebView::updateUri(const gchar* uri) {
 
 void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpointer data) {
 	WebView* self = (WebView*)data;
+	NanCallback* cb;
 	const gchar* uri = webkit_web_view_get_uri(web_view);
 //	g_print("change %d %d %s %s\n", load_event, self->state, self->uri, uri);
 	switch (load_event) {
@@ -359,9 +360,10 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 						NanNull(),
 						NanNew<Integer>(status)
 					};
-					self->loadCallback->Call(2, argv);
-					delete self->loadCallback;
+					cb = self->loadCallback;
 					self->loadCallback = NULL;
+					cb->Call(2, argv);
+					delete cb;
 				}
 			}
 		break;
@@ -373,6 +375,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 
 gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gchar* failing_uri, GError* error, gpointer data) {
 	WebView* self = (WebView*)data;
+	NanCallback* cb;
 //  g_print("fail %d %d %s %s\n", load_event, self->state, self->uri, failing_uri);
 	if (self->state >= DOCUMENT_LOADING && g_strcmp0(failing_uri, self->uri) == 0) {
 		if (self->loadCallback != NULL) {
@@ -381,15 +384,17 @@ gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gcha
 				NanError(error->message),
 				NanNew<Integer>(getStatusFromView(web_view))
 			};
-			self->loadCallback->Call(2, argv);
-			delete self->loadCallback;
+			cb = self->loadCallback;
 			self->loadCallback = NULL;
+			cb->Call(2, argv);
+			delete cb;
 		}
 		if (self->stopCallback != NULL) {
 			Handle<Value> argvstop[] = {};
-			self->stopCallback->Call(0, argvstop);
-			delete self->stopCallback;
+			cb = self->stopCallback;
 			self->stopCallback = NULL;
+			cb->Call(0, argvstop);
+			delete cb;
 		}
 		return TRUE;
 	} else {
