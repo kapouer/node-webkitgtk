@@ -496,7 +496,10 @@ NAN_METHOD(WebView::Load) {
 
 	self->allowDialogs = NanBooleanOptionValue(opts, H("dialogs"), false);
 
-	if (self->loadCallback != NULL) delete self->loadCallback;
+	if (self->loadCallback != NULL) {
+		g_printerr("load callback is still set, this should not happen\n");
+		delete self->loadCallback;
+	}
 	self->loadCallback = loadCb;
 
 	if (self->content != NULL) delete self->content;
