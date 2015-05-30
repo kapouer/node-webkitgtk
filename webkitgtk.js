@@ -5,6 +5,7 @@ var fs = require('fs');
 var path = require('path');
 var url = require('url');
 var debug = require('debug')('webkitgtk');
+var destall = require('debug')('webkitgtk:stall');
 
 // internal state, does not match readyState
 var CREATED = 0;
@@ -208,8 +209,13 @@ function eventsDispatcher(err, json) {
 	var args = obj.args || [];
 	if (obj.event) {
 		var from = args[0];
+		var url = args[1];
 		var debugArgs = ['event from dom', obj.event];
 		if (from) debugArgs.push('from', from);
+		if (url) debugArgs.push(url);
+		if (from == "xhr timeout" && url) {
+			destall("xhr timeout\n%s\ncurrent stall = %s", url, priv.stall);
+		}
 		debug.apply(this, debugArgs);
 		args.unshift(obj.event);
 		if (obj.event == "ready") {
@@ -1102,7 +1108,7 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 			if (req) {
 				if (!req.stall) requests.stall++;
 				req.count--;
-				check('xhr timeout');
+				check('xhr timeout', url);
 			}
 		}, staleXhrTimeout);
 	}
@@ -1138,22 +1144,22 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 		if (requests.len <= requests.stall) check('xhr clean');
 	}
 
-	function check(from) {
+	function check(from, url) {
 		w.setTimeout.call(window, function() {
 			if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall && frames.len == 0 && requests.len <= requests.stall) {
 				if (lastEvent == "load") {
 					lastEvent = "idle";
-					emitNext("idle", from);
+					emitNext("idle", from, url);
 				} else if (lastEvent == "idle") {
-					emitNext("busy", from);
+					emitNext("busy", from, url);
 				}
 			}
 		}, 0);
 	}
 
-	function emitNext(ev, from) {
+	function emitNext(ev, from, url) {
 		w.setTimeout.call(window, function() {
-			emit(ev, from);
+			emit(ev, from, url);
 		}, 0);
 
 	}
