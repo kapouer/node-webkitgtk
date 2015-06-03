@@ -852,7 +852,13 @@ function errorEmitter(emit) {
 function consoleEmitter(emit) {
 	['log', 'error', 'info', 'warn'].forEach(function(meth) {
 		console[meth] = function() {
-			var args = Array.prototype.slice.call(arguments, 0);
+			var args = Array.prototype.slice.call(arguments, 0).map(function(arg) {
+				if (arg instanceof Error && arg.stack) {
+					return arg + '\n ' + arg.stack.toString().replace(/\n/g, '\n ');
+				} else {
+					return arg;
+				}
+			});
 			args.unshift(meth);
 			args.unshift('console');
 			emit.apply(null, args);
