@@ -457,9 +457,10 @@ function load(uri, opts, cb) {
 	if (priv.debug) priv.inspecting = true;
 
 	if (this.listeners('error').length == 0) {
-		this.on('error', function(msg, uri, line, column) {
+		this.on('error', function(msg, uri, line, column, err) {
 			if (this.listeners('error').length <= 1) {
 				console.error(msg, "\n", uri, "line", line, "column", column);
+				if (err) console.error("with error object", err);
 			}
 		});
 	}
