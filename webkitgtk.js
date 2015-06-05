@@ -1065,10 +1065,8 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 
 	var requests = {len: 0, stall: 0};
 
-	var absoluteA = document.createElement('a');
 	function absolute(url) {
-		absoluteA.href = url;
-		return absoluteA.href;
+		return (new URL(url, document.location)).href;
 	}
 
 	function ignoreListener(e) {
