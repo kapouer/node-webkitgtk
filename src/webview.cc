@@ -479,6 +479,7 @@ NAN_METHOD(WebView::Load) {
 
 	WebKitSettings* settings = webkit_web_view_get_settings(self->view);
 	g_object_set(settings,
+		"enable-private-browsing", NanBooleanOptionValue(opts, H("private"), false),
 		"enable-plugins", FALSE,
 		"print-backgrounds", TRUE,
 		"enable-javascript", TRUE,

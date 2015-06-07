@@ -114,6 +114,10 @@ load() options
   bypassing 'request' event.  
   This does not allow requests that are rejected by cross-origin policy.
 
+- private  
+  boolean, default false  
+  run in private (a.k.a. incognito) mode.
+
 - images  
   boolean, default true  
   Load images automatically.
