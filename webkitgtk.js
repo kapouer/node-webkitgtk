@@ -424,16 +424,11 @@ WebKit.prototype.load = function(cb) {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 		});
 		script.push('');
-		loop.call(this, true);
-		this.webview.load(uri, {content: "<html></html>"}, function(err, status) {
+		preload.call(this, uri, {script: script.join(';\n'), content:"<html></html>"}, function(err) {
 			debug('load cookies done', err);
-			loop.call(this, false);
 			if (err) return cb(err, this);
-			runcb.call(this, script.join(';\n'), [], function(err) {
-				if (err) return cb(err, this);
-				setImmediate(function() {
-					load.call(this, uri, opts, cb);
-				}.bind(this));
+			setImmediate(function() {
+				load.call(this, uri, opts, cb);
 			}.bind(this));
 		}.bind(this));
 	} else {
