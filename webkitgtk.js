@@ -210,6 +210,7 @@ function eventsDispatcher(err, json) {
 	if (obj.event) {
 		var from = args[0];
 		var url = args[1];
+		var info = args[2];
 		var debugArgs = ['event from dom', obj.event];
 		if (from) debugArgs.push('from', from);
 		if (url) debugArgs.push(url);
@@ -226,6 +227,7 @@ function eventsDispatcher(err, json) {
 			emitLifeEvent.call(this, obj.event);
 		} else if (obj.event == "idle") {
 			priv.idling = true;
+			debug("reached idle", this.uri, info);
 		} else if (obj.event == "busy") {
 			// not a life event
 			this.emit(obj.event);
@@ -1152,9 +1154,15 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 	function check(from, url) {
 		w.setTimeout.call(window, function() {
 			if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall && frames.len == 0 && requests.len <= requests.stall) {
+				var info = {
+					timeouts: timeouts,
+					intervals: intervals,
+					frames: frames,
+					requests: requests
+				};
 				if (lastEvent == "load") {
 					lastEvent = "idle";
-					emitNext("idle", from, url);
+					emitNext("idle", from, url, info);
 				} else if (lastEvent == "idle") {
 					emitNext("busy", from, url);
 				}
@@ -1162,9 +1170,9 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 		}, 0);
 	}
 
-	function emitNext(ev, from, url) {
+	function emitNext(ev, from, url, info) {
 		w.setTimeout.call(window, function() {
-			emit(ev, from, url);
+			emit(ev, from, url, info);
 		}, 0);
 
 	}
