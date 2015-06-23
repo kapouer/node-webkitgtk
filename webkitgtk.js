@@ -5,7 +5,8 @@ var fs = require('fs');
 var path = require('path');
 var url = require('url');
 var debug = require('debug')('webkitgtk');
-var destall = require('debug')('webkitgtk:stall');
+var debugStall = require('debug')('webkitgtk:stall');
+var debugError = require('debug')('webkitgtk:error');
 
 // internal state, does not match readyState
 var CREATED = 0;
@@ -215,7 +216,7 @@ function eventsDispatcher(err, json) {
 		if (from) debugArgs.push('from', from);
 		if (url) debugArgs.push(url);
 		if (from == "xhr timeout" && url) {
-			destall("xhr timeout\n%s\ncurrent stall = %s", url, priv.stall);
+			debugStall("xhr timeout\n%s\ncurrent stall = %s", url, priv.stall);
 		}
 		debug.apply(this, debugArgs);
 		args.unshift(obj.event);
@@ -246,6 +247,17 @@ function eventsDispatcher(err, json) {
 			console.warn("event without pending ticket", json);
 		}
 	}
+}
+
+function logError(msg, file, line, col, err) {
+	if (err && err.name) msg = err.name + ': ' + msg;
+	if (file) {
+		msg += " in " + file;
+		if (line) msg += ':' + line;
+		if (col) msg += ',' + col;
+	}
+	if (err && err.stack) msg += '\n ' + err.stack.replace(/\n/g, '\n ');
+	debugError(msg);
 }
 
 Object.defineProperty(WebKit.prototype, "uri", {
@@ -459,13 +471,9 @@ function load(uri, opts, cb) {
 	if (priv.debug) priv.inspecting = true;
 
 	if (this.listeners('error').length == 0) {
-		this.on('error', function(msg, uri, line, column, err) {
-			if (this.listeners('error').length <= 1) {
-				console.error(msg, "\n", uri, "line", line, "column", column);
-				if (err) console.error("with error object", err);
-			}
-		});
+		this.on('error', logError);
 	}
+
 	if (opts.console && this.listeners('console').length == 0) {
 		this.on('console', function(level) {
 			if (this.listeners('console').length <= 1) {
@@ -845,9 +853,70 @@ function pdf(filepath, opts, cb) {
 }
 
 function errorEmitter(emit) {
-	window.onerror = function() {
-		var ret = Array.prototype.slice.call(arguments, 0);
-		ret.unshift("error");
+	var lastError;
+	var OriginalError = window.Error;
+	window.Error = function Error(message) {
+		var err = new OriginalError(message);
+		var isParent = Object.getPrototypeOf(this) == Error.prototype;
+		// remove parts that comes from these error functions
+		this.stack = err.stack.split('\n').slice(isParent ? 1 : 2).join('\n');
+		this.message = err.message;
+		this.name = err.name;
+		lastError = this;
+		return this;
+	};
+	Error.prototype = Object.create(OriginalError.prototype);
+	Error.prototype.constructor = Error;
+
+	window.URIError = function URIError(message) {
+		Error.call(this, message);
+		return this;
+	};
+	URIError.prototype = Object.create(Error.prototype);
+	URIError.prototype.constructor = URIError;
+
+	window.TypeError = function TypeError(message) {
+		Error.call(this, message);
+		return this;
+	};
+	TypeError.prototype = Object.create(Error.prototype);
+	TypeError.prototype.constructor = TypeError;
+
+	window.SyntaxError = function SyntaxError(message) {
+		Error.call(this, message);
+		return this;
+	};
+	SyntaxError.prototype = Object.create(Error.prototype);
+	SyntaxError.prototype.constructor = SyntaxError;
+
+	window.ReferenceError = function ReferenceError(message) {
+		Error.call(this, message);
+		return this;
+	};
+	ReferenceError.prototype = Object.create(Error.prototype);
+	ReferenceError.prototype.constructor = ReferenceError;
+
+	window.RangeError = function RangeError(message) {
+		Error.call(this, message);
+		return this;
+	};
+	RangeError.prototype = Object.create(Error.prototype);
+	RangeError.prototype.constructor = RangeError;
+
+	window.EvalError = function EvalError(message) {
+		Error.call(this, message);
+		return this;
+	};
+	EvalError.prototype = Object.create(Error.prototype);
+	EvalError.prototype.constructor = EvalError;
+
+	window.onerror = function(message, file, line, col, err) {
+		var ret = ["error", message, file, line, col];
+		if (!err && lastError) {
+			err = lastError;
+			lastError = null;
+		}
+		ret.push(err);
 		emit.apply(null, ret);
 	};
 }
@@ -855,15 +924,7 @@ function errorEmitter(emit) {
 function consoleEmitter(emit) {
 	['log', 'error', 'info', 'warn'].forEach(function(meth) {
 		console[meth] = function() {
-			var args = Array.prototype.slice.call(arguments, 0).map(function(arg) {
-				if (arg instanceof Error && arg.stack) {
-					return arg + '\n ' + arg.stack.toString().replace(/\n/g, '\n ');
-				} else {
-					return arg;
-				}
-			});
-			args.unshift(meth);
-			args.unshift('console');
+			var args = ['console', meth].concat(Array.prototype.slice.call(arguments));
 			emit.apply(null, args);
 		};
 	});
