@@ -392,7 +392,6 @@ function display(opts, cb) {
 			availableDisplays[display] = true;
 			return cb(null, null, display);
 		}
-		if (display == 0) return cb("Error - do not spawn xvfb on DISPLAY 0");
 		require('headless')({
 			display: {
 				width: opts.width || 1024,
