@@ -254,7 +254,7 @@ function logError(msg, file, line, col, err) {
 	if (file) {
 		msg += " in " + file;
 		if (line) msg += ':' + line;
-		if (col) msg += ',' + col;
+		if (col) msg += ':' + col;
 	}
 	if (err && err.stack) msg += '\n ' + err.stack.replace(/\n/g, '\n ');
 	debugError(msg);
