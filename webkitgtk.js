@@ -399,7 +399,7 @@ function display(opts, cb) {
 				height: opts.height || 768,
 				depth: opts.depth || 32
 			}
-		}, display, function(err, child, display) {
+		}, display - 1, function(err, child, display) {
 			if (err) cb(err);
 			else {
 				console.log("Spawned xvfb on DISPLAY=:" + display);
