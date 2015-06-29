@@ -5,8 +5,8 @@ var fs = require('fs');
 var path = require('path');
 var url = require('url');
 var debug = require('debug')('webkitgtk');
-var debugStall = require('debug')('webkitgtk:stall');
-var debugError = require('debug')('webkitgtk:error');
+var debugStall = console.warn;
+var debugError = console.error;
 
 // internal state, does not match readyState
 var CREATED = 0;
@@ -216,7 +216,7 @@ function eventsDispatcher(err, json) {
 		if (from) debugArgs.push('from', from);
 		if (url) debugArgs.push(url);
 		if (from == "xhr timeout" && url) {
-			debugStall("xhr timeout\n%s\ncurrent stall = %s", url, priv.stall);
+			debugStall("webkitgtk xhr timeout\n%s\ncurrent stall = %s", url, priv.stall);
 		}
 		debug.apply(this, debugArgs);
 		args.unshift(obj.event);
@@ -257,7 +257,7 @@ function logError(msg, file, line, col, err) {
 		if (col) msg += ':' + col;
 	}
 	if (err && err.stack) msg += '\n ' + err.stack.replace(/\n/g, '\n ');
-	debugError(msg);
+	debugError("webkitgtk ", msg);
 }
 
 Object.defineProperty(WebKit.prototype, "uri", {

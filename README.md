@@ -398,8 +398,8 @@ how to debug
 `DEBUG=webkitgtk node myscript.js`
 to print all logs.
 
-`DEBUG=webkitgtk:stall node myscript.js`
-to print only info about stalled xhr requests, see stall option.
+Stalled xhr requests (see stall option) are printed using console.warn.
+Errors on page are printed using console.error.
 
 This will keep the page running, output console to terminal, and open
 a gtk window with inspector open:
