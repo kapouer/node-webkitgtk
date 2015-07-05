@@ -998,7 +998,12 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 				preloadList = [];
 				lastEvent = "ready";
 				emitNext("ready");
-				if (missedEvent == "load") loadListener();
+				if (missedEvent == "load") {
+					if (!preload) {
+						console.error("load event should not happen before ready event", document.location.toString());
+					}
+					loadListener();
+				}
 			}, 0);
 		} else {
 			lastEvent = "ready";
