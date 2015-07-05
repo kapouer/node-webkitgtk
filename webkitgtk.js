@@ -1239,7 +1239,6 @@ function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallIn
 		w.setTimeout.call(window, function() {
 			emit(ev, from, url, info);
 		}, 0);
-
 	}
 }
 
