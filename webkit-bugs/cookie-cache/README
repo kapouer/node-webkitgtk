@@ -1,0 +1,20 @@
+1) You need nodejs 0.10 to run the http server.
+Actually any server dumping request headers will do - only one request is going to happen anyway.
+
+./server.js
+
+2) Build test.cc (need pkg-config, gtk and webkit2gtk-4.0 dev libs installed)
+
+make
+
+3) run test
+
+./test
+
+4) stop both processes and check the output of server.js.
+It should have received the first cookie:
+- the xhr request is made from a webview in private mode
+- the only cookie that has been set on that webview (using document.cookie = ...) is sid=firstcookie.
+
+But it receives the second cookie that was set on the second webview.
+
