@@ -502,7 +502,7 @@ function load(uri, opts, cb) {
 	if (Buffer.isBuffer(opts.script)) opts.script = opts.script.toString();
 	var scripts = [errorEmitter];
 	if (opts.console) scripts.push(consoleEmitter);
-	scripts.push({fn: stateTracker, args: [opts.preload, priv.eventName, priv.stall, 200, 200]});
+	scripts.push({fn: stateTracker, args: [opts.preload, opts.charset || "utf-8", priv.eventName, priv.stall, 200, 200]});
 	if (!opts.script) opts.script = "";
 	opts.script += '\n' + scripts.map(function(fn) {
 		return prepareRun(fn.fn || fn, null, fn.args || null, priv).script;
@@ -951,9 +951,10 @@ function consoleEmitter(emit) {
 	});
 }
 
-function stateTracker(preload, eventName, staleXhrTimeout, stallTimeout, stallInterval, emit) {
+function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout, stallInterval, emit) {
 	var lastEvent, missedEvent;
 	if (preload) disableExternalResources();
+	document.charset = charset;
 
 	window.addEventListener('load', loadListener, false);
 	window.addEventListener('r' + eventName, ignoreListener, false);
