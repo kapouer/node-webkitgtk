@@ -477,8 +477,14 @@ NAN_METHOD(WebView::Load) {
 		ua = "Mozilla/5.0";
 	}
 
+	const gchar* charset = getStr(opts, "charset");
+		if (charset == NULL) {
+			charset = "utf-8";
+		}
+
 	WebKitSettings* settings = webkit_web_view_get_settings(self->view);
 	g_object_set(settings,
+		"default-charset", charset,
 		"enable-private-browsing", NanBooleanOptionValue(opts, H("private"), false),
 		"enable-plugins", FALSE,
 		"print-backgrounds", TRUE,

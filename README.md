@@ -170,6 +170,12 @@ load() options
   Default listener outputs everything and is disabled by registering a custom
   listener.
 
+- charset  
+  string, default "utf-8", previously default was "iso-8859-1"  
+  The default text charset used when interpreting content with an unspecified
+  charset.  
+  Useful to fix Script errors when serving utf-8 encoded javascript files.
+
 
 init() options
 --------------
