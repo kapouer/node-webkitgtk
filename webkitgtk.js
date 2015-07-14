@@ -307,9 +307,6 @@ function requestDispatcher(binding) {
 	var uri = binding.uri;
 	debug("request", uri);
 	var mainUri = this.uri || "";
-	if (uri != mainUri) {
-		if (priv.uris) priv.uris[uri] = Date.now();
-	}
 
 	var cancel = false;
 	if (priv.allow == "none") {
@@ -342,6 +339,9 @@ function requestDispatcher(binding) {
 		debug("cancelled after dispatch");
 		binding.cancel = "1";
 		return;
+	}
+	if (uri != mainUri) {
+		if (priv.uris) priv.uris[uri] = Date.now();
 	}
 	if (uri && isNetworkProtocol(uri)) {
 		debug("counted as pending");
