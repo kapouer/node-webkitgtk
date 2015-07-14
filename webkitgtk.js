@@ -359,7 +359,7 @@ function responseDispatcher(binding) {
 		var lastMod = priv.uris[uri];
 		if (lastMod == Infinity) return;
 		if (lastMod) delete priv.uris[uri];
-		else if (uri != this.uri) return console.warn("Untracked response", res, this.uri);
+		else if (uri != this.uri) return console.warn("Untracked response", uri, res.status, res.headers);
 	}
 	if (res.status == 0 && !res.stall) {
 		debug('status 0, ignored');
