@@ -215,9 +215,6 @@ function eventsDispatcher(err, json) {
 		var debugArgs = ['event from dom', obj.event];
 		if (from) debugArgs.push('from', from);
 		if (url) debugArgs.push(url);
-		if (from == "xhr timeout" && url) {
-			debugStall("webkitgtk xhr timeout\n%s\ncurrent stall = %s", url, priv.stall);
-		}
 		debug.apply(this, debugArgs);
 		args.unshift(obj.event);
 		if (obj.event == "ready") {
@@ -357,14 +354,20 @@ function responseDispatcher(binding) {
 	var uri = res.uri;
 	if (!uri) return;
 	debug('response', uri);
-	if (uri && this.priv.uris) delete this.priv.uris[uri];
-	if (res.status == 0) {
+	var priv = this.priv;
+	if (priv.uris) {
+		var lastMod = priv.uris[uri];
+		if (lastMod == Infinity) return;
+		if (lastMod) delete priv.uris[uri];
+		else if (uri != this.uri) return console.warn("Untracked response", res, this.uri);
+	}
+	if (res.status == 0 && !res.stall) {
 		debug('status 0, ignored');
 		return;
 	}
 	if (uri && isNetworkProtocol(uri)) {
 		debug('counted as ending pending');
-		this.priv.pendingRequests--;
+		priv.pendingRequests--;
 	}
 	this.emit('response', res);
 }
@@ -461,6 +464,20 @@ function load(uri, opts, cb) {
 	priv.lastEvent = null;
 	priv.allow = opts.allow || "all";
 	priv.stall = opts.stall || 1000;
+	if (priv.stallInterval) {
+		clearInterval(priv.stallInterval);
+		delete priv.stallInterval;
+	}
+	priv.stallInterval = setInterval(function() {
+		var now = Date.now();
+		for (var uri in priv.uris) {
+			if (now - priv.uris[uri] > priv.stall) {
+				priv.uris[uri] = Infinity;
+				debugStall("Timeout %s after %s ms", uri, priv.stall);
+				responseDispatcher.call(this, {uri: uri, status: 0, stall: true});
+			}
+		}
+	}.bind(this), priv.stall); // let dom client cancel stalled xhr first
 	priv.navigation = opts.navigation || false;
 	priv.wasIdle = false;
 	priv.idling = false;
@@ -561,6 +578,11 @@ WebKit.prototype.stop = function(cb) {
 
 WebKit.prototype.unload = function(cb) {
 	var priv = this.priv;
+	if (priv.stallInterval) {
+		clearInterval(priv.stallInterval);
+		delete priv.stallInterval;
+	}
+	if (priv.uris) delete priv.uris;
 	cb = cb || noop;
 	if (priv.state != INITIALIZED) return cb(new Error(errorLoad(priv.state)), this);
 	priv.state = LOADING;
