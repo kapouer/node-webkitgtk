@@ -60,7 +60,7 @@ WebView::WebView(Handle<Object> opts) {
 	}
 	webkit_web_context_set_disk_cache_directory(context, cacheDir);
 	webkit_web_context_set_process_model(context, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
-	webkit_web_context_set_cache_model(context, WEBKIT_CACHE_MODEL_WEB_BROWSER);
+	webkit_web_context_set_cache_model(context, WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
 	webkit_web_context_set_tls_errors_policy(context, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 
 	const gchar* wePath = getStr(opts, "webextension");
