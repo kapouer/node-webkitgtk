@@ -1,6 +1,7 @@
 #!/usr/bin/env node
+
 var server = require('http').createServer(function(req, res) {
-	res.setHeader('Vary', 'Cookie');
+	res.setHeader('Cache-Control', 'no-cache, must-revalidate');
 	if (req.url == "/xhr") {
 		console.log("received xhr request with headers", req.headers);
 		if (req.headers.cookie == 'sid=secondcookie') {
