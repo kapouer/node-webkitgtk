@@ -390,7 +390,7 @@ function display(opts, cb) {
 	if (availableDisplays[display]) {
 		return setImmediate(cb.bind(this, null, null, display));
 	}
-	fs.exists('/tmp/.X' + display + '-lock', function(exists) {
+	fs.exists('/tmp/.X11-unix/X' + display, function(exists) {
 		if (exists) {
 			availableDisplays[display] = true;
 			return cb(null, null, display);
