@@ -172,6 +172,7 @@ function closedListener(what) {
 			priv.loopImmediate = null;
 		}
 		destroy.call(this);
+		delete this.webview;
 	}
 }
 
@@ -566,15 +567,20 @@ function stop(cb) {
 	// immediately returned
 	if (!wasLoading) setImmediate(fincb);
 	this.readyState = "stop";
-	if (!priv.lastEvent) emitLifeEvent.call(this, 'ready');
-	if (priv.lastEvent == "ready") emitLifeEvent.call(this, 'load');
-	if (priv.lastEvent == "load") emitLifeEvent.call(this, 'idle');
-	if (priv.lastEvent == "idle") emitLifeEvent.call(this, 'unload');
+	emitAllEvents.call(this);
 }
 
 WebKit.prototype.stop = function(cb) {
 	stop.call(this, cb);
 };
+
+function emitAllEvents() {
+	var priv = this.priv;
+	if (!priv.lastEvent) emitLifeEvent.call(this, 'ready');
+	if (priv.lastEvent == "ready") emitLifeEvent.call(this, 'load');
+	if (priv.lastEvent == "load") emitLifeEvent.call(this, 'idle');
+	if (priv.lastEvent == "idle") emitLifeEvent.call(this, 'unload');
+}
 
 WebKit.prototype.unload = function(cb) {
 	var priv = this.priv;
@@ -602,10 +608,10 @@ WebKit.prototype.unload = function(cb) {
 };
 
 function destroy() {
+	emitAllEvents.call(this);
 	this.priv = initialPriv();
 	if (this.webview) {
 		this.webview.destroy();
-		delete this.webview;
 	}
 	if (this.priv.xvfb) {
 		this.priv.xvfb.kill();
