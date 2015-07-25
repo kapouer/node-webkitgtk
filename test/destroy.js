@@ -7,8 +7,8 @@ describe("destroy method", function suite() {
 		var view = new WebKit();
 		view.init(0, function(err) {
 			expect(err).to.not.be.ok();
-			view.webview.destroy();
-			view.webview.destroy();
+			view.destroy();
+			view.destroy();
 			done();
 		});
 	});
