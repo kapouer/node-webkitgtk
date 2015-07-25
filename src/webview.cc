@@ -78,7 +78,7 @@ WebView::WebView(Handle<Object> opts) {
 	}
 
 	// WindowClosed will in turn call destroy (through webkitgtk.js closedListener)
-	g_signal_connect(window, "destroy-event", G_CALLBACK(WebView::WindowClosed), this);
+	g_signal_connect(window, "destroy", G_CALLBACK(WebView::WindowClosed), this);
 
 	GdkScreen* screen = gtk_window_get_screen(GTK_WINDOW(window));
 	GdkVisual* rgba_visual = gdk_screen_get_rgba_visual(screen);
@@ -134,6 +134,7 @@ void WebView::destroy() {
 	inspector = NULL;
 	if (window != NULL) {
 		gtk_widget_destroy(window);
+		window = NULL;
 	}
 	if (content != NULL) delete[] content;
 
@@ -213,6 +214,10 @@ void WebView::InspectorClosed(WebKitWebInspector* inspector, gpointer data) {
 }
 
 void WebView::WindowClosed(GtkWidget* window, gpointer data) {
+	// wait until window has finished closing
+	while (gtk_events_pending()) {
+		gtk_main_iteration_do(true);
+	}
 	WebView* self = (WebView*)data;
 	self->window = NULL;
 	Handle<Value> argv[] = { NanNew<String>("window") };

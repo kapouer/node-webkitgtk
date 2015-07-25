@@ -160,19 +160,24 @@ function emitLifeEvent(event) {
 
 function closedListener(what) {
 	var priv = this.priv;
-	if (what == "inspector") {
-		priv.inspecting = false;
-	}	else if (what == "window") {
-		if (priv.loopTimeout) {
-			clearTimeout(priv.loopTimeout);
-			priv.loopTimeout = null;
-		}
-		if (priv.loopImmediate) {
-			clearImmediate(priv.loopImmediate);
-			priv.loopImmediate = null;
-		}
-		destroy.call(this);
-		delete this.webview;
+	switch (what) {
+		case "inspector":
+			priv.inspecting = false;
+		return;
+		case "window":
+			if (priv.loopTimeout) {
+				clearTimeout(priv.loopTimeout);
+				priv.loopTimeout = null;
+			}
+			if (priv.loopImmediate) {
+				clearImmediate(priv.loopImmediate);
+				priv.loopImmediate = null;
+			}
+			destroy.call(this);
+			emitAllEvents.call(this);
+			delete this.webview;
+			this.priv = initialPriv();
+		break;
 	}
 }
 
@@ -608,8 +613,6 @@ WebKit.prototype.unload = function(cb) {
 };
 
 function destroy() {
-	emitAllEvents.call(this);
-	this.priv = initialPriv();
 	if (this.webview) {
 		this.webview.destroy();
 	}
@@ -619,8 +622,7 @@ function destroy() {
 }
 
 WebKit.prototype.destroy = function(cb) {
-	destroy.call(this);
-	if (cb) cb();
+	destroy.call(this, cb);
 };
 
 function loop(start) {
