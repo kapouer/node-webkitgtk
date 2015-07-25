@@ -73,10 +73,12 @@ WebView::WebView(Handle<Object> opts) {
 
 	if (!this->offscreen) {
 		window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-		g_signal_connect(window, "destroy", G_CALLBACK(WebView::WindowClosed), this);
 	} else {
 		window = gtk_offscreen_window_new();
 	}
+
+	// WindowClosed will in turn call destroy (through webkitgtk.js closedListener)
+	g_signal_connect(window, "destroy", G_CALLBACK(WebView::WindowClosed), this);
 
 	GdkScreen* screen = gtk_window_get_screen(GTK_WINDOW(window));
 	GdkVisual* rgba_visual = gdk_screen_get_rgba_visual(screen);
@@ -128,9 +130,13 @@ NAN_METHOD(WebView::Destroy) {
 
 void WebView::destroy() {
 	if (view == NULL) return;
+	g_signal_handlers_disconnect_by_data(view, this);
 	view = NULL;
 	inspector = NULL;
-	if (window != NULL) gtk_widget_destroy(window);
+	if (window != NULL) {
+		gtk_widget_destroy(window);
+		window = NULL;
+	}
 	if (content != NULL) delete[] content;
 
 	if (uri != NULL) g_free(uri);
@@ -209,6 +215,10 @@ void WebView::InspectorClosed(WebKitWebInspector* inspector, gpointer data) {
 }
 
 void WebView::WindowClosed(GtkWidget* window, gpointer data) {
+	// wait until window has finished closing
+	while (gtk_events_pending()) {
+		gtk_main_iteration_do(true);
+	}
 	WebView* self = (WebView*)data;
 	self->window = NULL;
 	Handle<Value> argv[] = { NanNew<String>("window") };

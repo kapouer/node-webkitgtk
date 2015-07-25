@@ -160,18 +160,24 @@ function emitLifeEvent(event) {
 
 function closedListener(what) {
 	var priv = this.priv;
-	if (what == "inspector") {
-		priv.inspecting = false;
-	}	else if (what == "window") {
-		if (priv.loopTimeout) {
-			clearTimeout(priv.loopTimeout);
-			priv.loopTimeout = null;
-		}
-		if (priv.loopImmediate) {
-			clearImmediate(priv.loopImmediate);
-			priv.loopImmediate = null;
-		}
-		destroy.call(this);
+	switch (what) {
+		case "inspector":
+			priv.inspecting = false;
+		return;
+		case "window":
+			if (priv.loopTimeout) {
+				clearTimeout(priv.loopTimeout);
+				priv.loopTimeout = null;
+			}
+			if (priv.loopImmediate) {
+				clearImmediate(priv.loopImmediate);
+				priv.loopImmediate = null;
+			}
+			destroy.call(this);
+			emitAllEvents.call(this);
+			delete this.webview;
+			this.priv = initialPriv();
+		break;
 	}
 }
 
@@ -566,15 +572,20 @@ function stop(cb) {
 	// immediately returned
 	if (!wasLoading) setImmediate(fincb);
 	this.readyState = "stop";
-	if (!priv.lastEvent) emitLifeEvent.call(this, 'ready');
-	if (priv.lastEvent == "ready") emitLifeEvent.call(this, 'load');
-	if (priv.lastEvent == "load") emitLifeEvent.call(this, 'idle');
-	if (priv.lastEvent == "idle") emitLifeEvent.call(this, 'unload');
+	emitAllEvents.call(this);
 }
 
 WebKit.prototype.stop = function(cb) {
 	stop.call(this, cb);
 };
+
+function emitAllEvents() {
+	var priv = this.priv;
+	if (!priv.lastEvent) emitLifeEvent.call(this, 'ready');
+	if (priv.lastEvent == "ready") emitLifeEvent.call(this, 'load');
+	if (priv.lastEvent == "load") emitLifeEvent.call(this, 'idle');
+	if (priv.lastEvent == "idle") emitLifeEvent.call(this, 'unload');
+}
 
 WebKit.prototype.unload = function(cb) {
 	var priv = this.priv;
@@ -602,10 +613,8 @@ WebKit.prototype.unload = function(cb) {
 };
 
 function destroy() {
-	this.priv = initialPriv();
 	if (this.webview) {
 		this.webview.destroy();
-		delete this.webview;
 	}
 	if (this.priv.xvfb) {
 		this.priv.xvfb.kill();
@@ -613,8 +622,7 @@ function destroy() {
 }
 
 WebKit.prototype.destroy = function(cb) {
-	destroy.call(this);
-	if (cb) cb();
+	destroy.call(this, cb);
 };
 
 function loop(start) {
