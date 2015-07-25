@@ -130,6 +130,7 @@ NAN_METHOD(WebView::Destroy) {
 
 void WebView::destroy() {
 	if (view == NULL) return;
+	g_signal_handlers_disconnect_by_data(view, this);
 	view = NULL;
 	inspector = NULL;
 	if (window != NULL) {
