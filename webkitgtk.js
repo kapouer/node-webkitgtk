@@ -173,9 +173,9 @@ function closedListener(what) {
 				clearImmediate(priv.loopImmediate);
 				priv.loopImmediate = null;
 			}
-			destroy.call(this);
-			emitAllEvents.call(this);
 			delete this.webview;
+			emitAllEvents.call(this);
+			destroy.call(this, priv.destroyCb);
 			this.priv = initialPriv();
 		break;
 	}
@@ -612,9 +612,12 @@ WebKit.prototype.unload = function(cb) {
 	}.bind(this));
 };
 
-function destroy() {
+function destroy(cb) {
 	if (this.webview) {
+		this.priv.destroyCb = cb;
 		this.webview.destroy();
+	} else {
+		setImmediate(cb);
 	}
 	if (this.priv.xvfb) {
 		this.priv.xvfb.kill();
