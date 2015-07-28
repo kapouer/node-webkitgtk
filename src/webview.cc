@@ -130,6 +130,7 @@ NAN_METHOD(WebView::Destroy) {
 
 void WebView::destroy() {
 	if (view == NULL) return;
+	unloaded();
 	g_signal_handlers_disconnect_by_data(view, this);
 	view = NULL;
 	inspector = NULL;
@@ -165,6 +166,16 @@ void WebView::destroy() {
 
 WebView::~WebView() {
 	destroy();
+}
+
+
+void WebView::unloaded() {
+	if (view == NULL) return;
+	WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(view);
+	if (contman != NULL) {
+		webkit_user_content_manager_remove_all_scripts(contman);
+		webkit_user_content_manager_remove_all_style_sheets(contman);
+	}
 }
 
 void WebView::Init(Handle<Object> exports, Handle<Object> module) {
@@ -455,9 +466,6 @@ NAN_METHOD(WebView::Load) {
 
 	Local<Object> opts = args[1]->ToObject();
 
-	self->script = getStr(opts, "script");
-	self->style = getStr(opts, "style");
-
 	if (NanBooleanOptionValue(opts, H("transparent"), false) == TRUE) {
 		if (self->transparencySupport == FALSE) {
 			g_print("Background cannot be transparent: rgba visual not found and/or webkitgtk >= 2.7.4 required");
@@ -524,43 +532,44 @@ NAN_METHOD(WebView::Load) {
 
 	if (self->state == DOCUMENT_LOADED) webkit_web_view_stop_loading(self->view);
 
-	requestUri(self, **uri);
-
-	NanReturnUndefined();
-}
-
-void WebView::requestUri(WebView* self, const char* uri) {
-	self->state = DOCUMENT_LOADING;
-	self->updateUri(uri);
-	gboolean isEmpty = g_strcmp0(uri, "") == 0;
 
 	WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
+	
+	self->unloaded();
 
-	webkit_user_content_manager_remove_all_scripts(contman);
-	if (self->script != NULL) {
-		WebKitUserScript* userScript = webkit_user_script_new(self->script,
+	self->state = DOCUMENT_LOADING;
+	self->updateUri(**uri);
+	gboolean isEmpty = g_strcmp0(**uri, "") == 0;
+
+	char* script = getStr(opts, "script");
+	if (script != NULL) {
+		self->userScript = webkit_user_script_new(
+			script,
 			WEBKIT_USER_CONTENT_INJECT_TOP_FRAME,
 			WEBKIT_USER_SCRIPT_INJECT_AT_DOCUMENT_START,
 			NULL, NULL
 		);
-		webkit_user_content_manager_add_script(contman, userScript);
-		delete self->script;
-		self->script = NULL;
+		webkit_user_content_manager_add_script(contman, self->userScript);
+		webkit_user_script_unref(self->userScript);
+		self->userScript = NULL;
+		delete script;
+		script = NULL;
 	}
 
-	webkit_user_content_manager_remove_all_style_sheets(contman);
-	if (self->style != NULL) {
-		WebKitUserStyleSheet* styleSheet = webkit_user_style_sheet_new(
-			self->style,
+	char* style = getStr(opts, "style");
+	if (style != NULL) {
+		self->userStyleSheet = webkit_user_style_sheet_new(
+			style,
 			WEBKIT_USER_CONTENT_INJECT_TOP_FRAME,
 			WEBKIT_USER_STYLE_LEVEL_USER,
 			NULL, NULL
 		);
-		webkit_user_content_manager_add_style_sheet(contman, styleSheet);
-		delete self->style;
-		self->style = NULL;
+		webkit_user_content_manager_add_style_sheet(contman, self->userStyleSheet);
+		webkit_user_style_sheet_unref(self->userStyleSheet);
+		self->userStyleSheet = NULL;
+		delete style;
+		script = NULL;
 	}
-
 	if (isEmpty || self->content != NULL) {
 		if (self->content == NULL) self->content = g_strconcat("", NULL);
 		if (isEmpty) {
@@ -571,6 +580,7 @@ void WebView::requestUri(WebView* self, const char* uri) {
 	} else {
 		webkit_web_view_load_uri(self->view, self->uri);
 	}
+	NanReturnUndefined();
 }
 
 void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) {
