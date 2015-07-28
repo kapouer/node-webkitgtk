@@ -8,6 +8,8 @@
 
 static GDBusConnection* connection;
 
+static WebKitWebExtension* extension_access;
+static gchar* eventName = NULL;
 static void dispatch_ignore_event(WebKitWebPage* page, gchar* eventName, const gchar* uri) {
 	gchar* ignoreName = g_strconcat("r", eventName, NULL);
 	WebKitDOMDocument* document = webkit_web_page_get_dom_document(page);
@@ -120,8 +122,9 @@ static void window_object_cleared_callback(WebKitScriptWorld* world, WebKitWebPa
 
 extern "C" {
 	G_MODULE_EXPORT void webkit_web_extension_initialize_with_user_data(WebKitWebExtension* extension, const GVariant* constData) {
+
+		extension_access = extension;
 		gchar* address = NULL;
-		gchar* eventName = NULL;
 		g_variant_get((GVariant*)constData, "(ss)", &address, &eventName);
 
 		g_signal_connect(webkit_script_world_get_default(), "window-object-cleared", G_CALLBACK(window_object_cleared_callback), eventName);
@@ -135,4 +138,22 @@ extern "C" {
 			g_error_free(error);
 		}
 	}
+}
+
+
+
+static void __attribute__((destructor))
+Webkit_Web_extension_shutdown (void)
+{
+	g_object_unref (extension_access);
+	g_object_unref (connection);
+
+	g_signal_handlers_disconnect_by_data(webkit_script_world_get_default(),eventName);
+	g_signal_handlers_disconnect_by_data(extension_access,eventName);
+
+
+	eventName = NULL;
+	extension_access = NULL;
+	connection = NULL;
+
 }
