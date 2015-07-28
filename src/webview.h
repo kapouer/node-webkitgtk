@@ -44,13 +44,15 @@ public:
 	static void PrintFinished(WebKitPrintOperation*, gpointer);
 	static void PrintFailed(WebKitPrintOperation*, gpointer, gpointer);
 
-	static void requestUri(WebView*, const char*);
 	static void handle_method_call(GDBusConnection*, const gchar*, const gchar*,
 		const gchar*, const gchar*, GVariant*, GDBusMethodInvocation*, gpointer);
 	static gboolean on_new_connection(GDBusServer*, GDBusConnection*, gpointer);
 
 	void destroy();
+	void unloaded();
 
+	WebKitUserScript* userScript;
+	WebKitUserStyleSheet* userStyleSheet;
 private:
 	static v8::Persistent<v8::Function> constructor;
 	WebView(Handle<Object>);
@@ -70,8 +72,7 @@ private:
 	bool transparencySupport;
 
 	char* content = NULL;
-	char* script = NULL;
-	char* style = NULL;
+
 
 	WebKitWebView* view = NULL;
 	GtkWidget* window = NULL;

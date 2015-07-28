@@ -1099,7 +1099,7 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	window.setInterval = function(fn, interval) {
 		var args = Array.prototype.slice.call(arguments, 0);
 		var stall = false;
-	  if (interval >= stallInterval) {
+		if (interval >= stallInterval) {
 			stall = true;
 			intervals.stall++;
 		}
