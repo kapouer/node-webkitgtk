@@ -3,6 +3,7 @@
 #include "utils.h"
 #include "webview.h"
 #include "gvariantproxy.h"
+#include "selfmessage.h"
 #include "webresponse.h"
 #include "webauthrequest.h"
 #include "dbus.h"
@@ -177,6 +178,8 @@ void WebView::unloaded() {
 		webkit_user_content_manager_remove_all_style_sheets(contman);
 	}
 }
+
+
 
 void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 	node::AtExit(Exit);
@@ -597,8 +600,8 @@ void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) 
 	} else {
 		webkit_javascript_result_unref(js_result);
 	}
-	if (sm->message != NULL) delete sm->message;
 	delete sm;
+	sm = NULL;
 }
 
 NAN_METHOD(WebView::Run) {
@@ -610,7 +613,8 @@ NAN_METHOD(WebView::Run) {
 	}
 
 	NanUtf8String* script = new NanUtf8String(args[0]);
-	SelfMessage* data = new SelfMessage(self, args[1]->IsString() ? **(new NanUtf8String(args[1])) : NULL);
+	SelfMessage* data = new SelfMessage(self, args[1]->IsString() ? new NanUtf8String(args[1]) : NULL);
+
 	if (self->window != NULL) {
 		webkit_web_view_run_javascript(
 			self->view,
@@ -621,7 +625,7 @@ NAN_METHOD(WebView::Run) {
 		);
 	}
 	delete script;
-
+	script = NULL;
 	NanReturnUndefined();
 }
 
@@ -896,3 +900,7 @@ void WebView::Exit(void*) {
 
 
 NODE_MODULE(webkitgtk, WebView::Init)
+
+
+
+

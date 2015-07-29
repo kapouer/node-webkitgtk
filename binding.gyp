@@ -9,6 +9,7 @@
             'src/gvariantproxy.cc',
             'src/webauthrequest.cc',
             'src/webresponse.cc',
+            'src/selfmessage.cc',
             'src/webview.cc'
           ],
           'include_dirs': ["<!(node -e \"require('nan')\")"],
