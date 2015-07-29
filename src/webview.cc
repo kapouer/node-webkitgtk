@@ -537,7 +537,7 @@ NAN_METHOD(WebView::Load) {
 
 
 	WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
-	
+
 	self->unloaded();
 
 	self->state = DOCUMENT_LOADING;
@@ -899,7 +899,4 @@ void WebView::Exit(void*) {
 
 
 NODE_MODULE(webkitgtk, WebView::Init)
-
-
-
 

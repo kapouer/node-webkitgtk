@@ -16,6 +16,3 @@ SelfMessage::~SelfMessage() {
 	if (view != NULL) view = NULL;
 }
 
-
-
-

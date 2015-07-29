@@ -8,4 +8,3 @@ class SelfMessage {
 	~SelfMessage();
 };
 
-
