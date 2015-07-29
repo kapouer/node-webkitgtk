@@ -109,14 +109,6 @@ private:
 	static NAN_GETTER(get_prop);
 };
 
-struct SelfMessage {
-	WebView* view;
-	char* message;
-	SelfMessage(WebView* w, char* m) {
-		view = w;
-		message = m;
-	};
-};
 typedef std::map<char*, WebView*> ObjMap;
 typedef std::pair<char*, WebView*> ObjMapPair;
 static ObjMap instances;
