@@ -625,7 +625,6 @@ NAN_METHOD(WebView::Run) {
 		);
 	}
 	delete script;
-	script = NULL;
 	NanReturnUndefined();
 }
 
