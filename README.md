@@ -394,7 +394,7 @@ properties
 
 * readyState  
   Read-only: empty, "opening", "loading", "interactive", "complete"  
-  Before the first call to .load(cb) it is empty, and before cb is called it
+  Before the first call to .load(uri, cb) it is empty, and before cb is called it
   is opening.
 
 
