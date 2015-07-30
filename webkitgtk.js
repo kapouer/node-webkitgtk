@@ -421,19 +421,12 @@ function errorLoad(state) {
 	else if (state > INITIALIZED) return "cannot call method during loading";
 }
 
-WebKit.prototype.load = function(cb) {
-	var opts = {}, uri;
-	if (typeof cb == "function") {
-		uri = "";
-	} else if (typeof arguments[1] == "function") {
-		uri = cb;
-		cb = arguments[1];
-	} else {
-		uri = cb;
-		opts = arguments[1];
+WebKit.prototype.load = function(uri, cb) {
+	var opts = {};
+	if (typeof cb != "function" && typeof arguments[2] == "function") {
+		opts = cb;
 		cb = arguments[2];
 	}
-	if (!cb) cb = noop;
 	var cookies = opts.cookies;
 	if (cookies) {
 		debug('load cookies');
