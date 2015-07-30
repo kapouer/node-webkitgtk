@@ -22,6 +22,8 @@ function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
 		var chainit = require('chainit3');
 		var ChainableWebKit = chainit(WebKit);
+		var _load = ChainableWebKit.prototype.load;
+		var _preload = ChainableWebKit.prototype.preload;
 		chainit.add(ChainableWebKit, "wait", function(ev, cb) {
 			var priv = this.priv;
 			if (priv.lastEvent == ev || priv.previousEvents[ev]) {
@@ -37,13 +39,13 @@ function WebKit(opts, cb) {
 			this.chainState[ev] = true;
 		});
 		chainit.add(ChainableWebKit, "load", function(uri, cb) {
-			WebKit.prototype.load.apply(this, Array.prototype.slice.call(arguments));
+			_load.apply(this, Array.prototype.slice.call(arguments));
 			this.priv.nextEvents = this.chainState;
 		}, function(uri) {
 			this.chainState = {};
 		});
 		chainit.add(ChainableWebKit, "preload", function(uri, cb) {
-			WebKit.prototype.preload.apply(this, Array.prototype.slice.call(arguments));
+			_preload.apply(this, Array.prototype.slice.call(arguments));
 			this.priv.nextEvents = this.chainState;
 		}, function(uri) {
 			this.chainState = {};
