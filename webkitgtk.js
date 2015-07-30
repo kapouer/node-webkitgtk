@@ -682,8 +682,12 @@ WebKit.prototype.run = function(script, params, done, cb) {
 		done = null;
 	}
 	if (typeof params == "function") {
-		if (!cb) cb = params;
-		else done = params;
+		if (!cb) {
+			cb = params;
+			done = null;
+		}	else {
+			done = params;
+		}
 		params = null;
 	}
 	if (params != null && !Array.isArray(params)) params = [params];
