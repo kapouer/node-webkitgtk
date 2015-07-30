@@ -16,50 +16,46 @@ var LOADING = 3;
 
 var RegEvents = /^(ready|load|idle|unload)$/;
 
-var ChainableWebKit;
 var availableDisplays = {};
 
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
 		var chainit = require('chainit3');
-
-		if (!ChainableWebKit) {
-			ChainableWebKit = chainit(WebKit);
-			chainit.add(ChainableWebKit, "wait", function(ev, cb) {
-				var priv = this.priv;
-				if (priv.lastEvent == ev || priv.previousEvents[ev]) {
-					return (cb || noop)();
-				} else if (this.readyState == "stop") {
-					throw new Error("Loading was stopped");
-				} else {
-					EventEmitter.prototype.once.call(this, ev, cb);
-				}
-			}, function(ev) {
-				if (!RegEvents.test(ev)) throw new Error("call .wait(ev) with ev like " + RegEvents);
-				if (!this.chainState) throw new Error("call .wait(ev) after .load(...)");
-				this.chainState[ev] = true;
-			});
-			chainit.add(ChainableWebKit, "load", function(uri, cb) {
-				WebKit.prototype.load.apply(this, Array.prototype.slice.call(arguments));
-				this.priv.nextEvents = this.chainState;
-			}, function(uri) {
-				this.chainState = {};
-			});
-			chainit.add(ChainableWebKit, "preload", function(uri, cb) {
-				WebKit.prototype.preload.apply(this, Array.prototype.slice.call(arguments));
-				this.priv.nextEvents = this.chainState;
-			}, function(uri) {
-				this.chainState = {};
-			});
-		}
+		var ChainableWebKit = chainit(WebKit);
+		chainit.add(ChainableWebKit, "wait", function(ev, cb) {
+			var priv = this.priv;
+			if (priv.lastEvent == ev || priv.previousEvents[ev]) {
+				return (cb || noop)();
+			} else if (this.readyState == "stop") {
+				throw new Error("Loading was stopped");
+			} else {
+				EventEmitter.prototype.once.call(this, ev, cb);
+			}
+		}, function(ev) {
+			if (!RegEvents.test(ev)) throw new Error("call .wait(ev) with ev like " + RegEvents);
+			if (!this.chainState) throw new Error("call .wait(ev) after .load(...)");
+			this.chainState[ev] = true;
+		});
+		chainit.add(ChainableWebKit, "load", function(uri, cb) {
+			WebKit.prototype.load.apply(this, Array.prototype.slice.call(arguments));
+			this.priv.nextEvents = this.chainState;
+		}, function(uri) {
+			this.chainState = {};
+		});
+		chainit.add(ChainableWebKit, "preload", function(uri, cb) {
+			WebKit.prototype.preload.apply(this, Array.prototype.slice.call(arguments));
+			this.priv.nextEvents = this.chainState;
+		}, function(uri) {
+			this.chainState = {};
+		});
 
 		var inst = new ChainableWebKit();
 
 		if (cb) return inst.init(opts, cb);
 		else return inst.init(opts);
 	}
+	this.priv = initialPriv();
 	if (opts) throw new Error("Use WebKit(opts, cb) as short-hand for Webkit().init(opts, cb)");
-	var priv = this.priv = initialPriv();
 }
 
 util.inherits(WebKit, EventEmitter);
