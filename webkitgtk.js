@@ -153,15 +153,28 @@ function emitLifeEvent(event) {
 		}
 	}.bind(this));
 	debug('emit event', event);
-	this.emit(event);
+	EventEmitter.prototype.emit.call(this, event);
+	// setImmediate(this.run...) give some time to place run calls before event is resumed on browser
+	// but it can also lead to a lock if wait('idle').run(hasRunEvent(idle)) happen in that order
+	// that's why runcb is called instead here - which could ultimately win the race over the previously
+	// placed .run calls
+	// the right way to solve this is to maintain separate queues for methods and events
 	setImmediate(function() {
-		this.run('window.hasRunEvent_' + priv.eventName + '("' + event + '");', function() {
+		// wait('load').run(hasRunEvent load)
+		var meth;
+		if (this.chainState && this.chainState[event]) meth = runcb.bind(this);
+		else meth = this.run.bind(this);
+		meth(function(name, event, done) {
+			var func = window['hasRunEvent_' + name];
+			if (func) func(event);
+			done();
+		}, [priv.eventName, event], function(err) {
 			// this catches the errors
-			var cb = Array.prototype.slice.call(arguments, -1).pop();
+			if (!arguments.length) return;
+			var cb = arguments[arguments.length - 1];
 			if (cb && typeof cb == "function") cb();
 		});
 	}.bind(this));
-//	if (!priv.preload) setTimeout(this.run.bind(this, 'window.run' + priv.eventName + '("' + event + '");'), 5000);
 }
 
 function closedListener(what) {
@@ -194,7 +207,7 @@ function receiveDataDispatcher(uri, length) {
 function authDispatcher(request) {
 	// ignore auth request synchronously
 	if (this.listeners('authenticate').length == 0) return true;
-	this.emit('authenticate', request);
+	EventEmitter.prototype.emit.call(this, 'authenticate', request);
 }
 
 function policyDispatcher(type, uri) {
@@ -240,9 +253,9 @@ function eventsDispatcher(err, json) {
 			debug("reached idle", this.uri, info);
 		} else if (obj.event == "busy") {
 			// not a life event
-			this.emit(obj.event);
+			EventEmitter.prototype.emit.call(this, obj.event);
 		} else {
-			this.emit.apply(this, args);
+			EventEmitter.prototype.emit.apply(this, args);
 		}
 	} else if (obj.ticket) {
 		var cb = priv.tickets[obj.ticket];
@@ -336,7 +349,7 @@ function requestDispatcher(binding) {
 	}
 	var req = new Request(uri, binding);
 
-	this.emit('request', req);
+	EventEmitter.prototype.emit.call(this, 'request', req);
 
 	if (req.uri == null) { // compat with older versions
 		req.cancel = true;
@@ -382,7 +395,7 @@ function responseDispatcher(binding) {
 		debug('counted as ending pending');
 		priv.pendingRequests--;
 	}
-	this.emit('response', res);
+	EventEmitter.prototype.emit.call(this, 'response', res);
 }
 
 function isNetworkProtocol(uri) {
