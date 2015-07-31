@@ -427,8 +427,11 @@ function display(opts, cb) {
 }
 
 function errorLoad(state) {
-	if (state < INITIALIZED) return "cannot call method before init";
-	else if (state > INITIALIZED) return "cannot call method during loading";
+	if (state < INITIALIZED) {
+		return "cannot call method before init";
+	} else if (state > INITIALIZED) {
+		return "cannot call method during loading";
+	}
 }
 
 WebKit.prototype.load = function(uri, cb) {
@@ -529,8 +532,7 @@ function load(uri, opts, cb) {
 		this.status = status;
 		if (!err && status < 200 || status >= 400) err = status;
 		cb(err, this);
-		if (err) return;
-		if (priv.inspecting) {
+		if (!err && priv.inspecting) {
 			this.webview.inspect();
 		}
 	}.bind(this));
