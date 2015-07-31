@@ -188,7 +188,7 @@ function closedListener(what) {
 }
 
 function receiveDataDispatcher(uri, length) {
-	if (this.priv.uris && uri != this.uri) this.priv.uris[uri] = Date.now();
+	if (uri && this.priv.uris && uri != this.uri) this.priv.uris[uri] = Date.now();
 }
 
 function authDispatcher(request) {
@@ -317,6 +317,7 @@ function Request(uri, binding) {
 function requestDispatcher(binding) {
 	var priv = this.priv;
 	var uri = binding.uri;
+	if (!uri) return; // ignore empty uri
 	debug("request", uri);
 	var mainUri = this.uri || "";
 
