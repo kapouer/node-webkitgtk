@@ -674,6 +674,7 @@ function loop(start) {
 		}
 		if (priv.loopForCallbacks == 0 && !priv.loopForLife) {
 			priv.loopCount = 0;
+			debug("loop stopped - no pending callbacks - no next life event to listen to");
 			if (!priv.debug || !priv.inspecting) return;
 		}
 		var busy = this.webview.loop(true);
