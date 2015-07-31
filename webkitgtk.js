@@ -154,6 +154,14 @@ function emitLifeEvent(event) {
 	}.bind(this));
 	debug('emit event', event);
 	this.emit(event);
+	setImmediate(function() {
+		this.run('window.hasRunEvent_' + priv.eventName + '("' + event + '");', function() {
+			// this catches the errors
+			var cb = Array.prototype.slice.call(arguments, -1).pop();
+			if (cb && typeof cb == "function") cb();
+		});
+	}.bind(this));
+//	if (!priv.preload) setTimeout(this.run.bind(this, 'window.run' + priv.eventName + '("' + event + '");'), 5000);
 }
 
 function closedListener(what) {
@@ -962,15 +970,40 @@ function consoleEmitter(emit) {
 }
 
 function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout, stallInterval, emit) {
-	var lastEvent, missedEvent;
+	var EV = {
+		init: 0,
+		ready: 1,
+		load: 2,
+		idle: 3,
+		busy: 4,
+		unload: 5
+	};
+	var lastEvent = EV.init;
+	var lastRunEvent = EV.init;
+	var missedEvent;
+	var preloadList = [], observer;
+
 	if (preload) disableExternalResources();
+	if (preload) window.preload = true;
+	else window.preload = false;
+
+	var w = {};
+	['setTimeout', 'clearTimeout',
+	'setInterval', 'clearInterval',
+	'XMLHttpRequest', 'WebSocket',
+	'requestAnimationFrame', 'cancelAnimationFrame'].forEach(function(meth) {
+		w[meth] = window[meth];
+	});
+	window['hasRunEvent_' + eventName] = function(event) {
+		lastRunEvent = EV[event];
+		check('lastrun');
+	};
+
 	document.charset = charset;
 
 	window.addEventListener('load', loadListener, false);
 	window.addEventListener('r' + eventName, ignoreListener, false);
 	document.addEventListener('DOMContentLoaded', readyListener, false);
-
-	var preloadList = [], observer;
 
 	function disableExternalResources() {
 		var count = 0;
@@ -983,7 +1016,7 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 			if (!att) return;
 			var val = node.hasAttribute(att) ? node[att] : null;
 			node[att] = 'null';
-			if (!lastEvent) {
+			if (lastEvent == EV.init) {
 				node[att] = 'null';
 				preloadList.push({node: node, val: val, att: att});
 			} else {
@@ -1009,19 +1042,15 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	}
 
 	function loadListener() {
-		if (lastEvent == "ready") {
-			lastEvent = "load";
+		if (lastEvent == EV.ready) {
 			window.removeEventListener('load', loadListener, false);
-			emitNext("load");
-			w.setTimeout.call(window, function() {
-				check('load');
-			}, 0);
+			check('load');
 		} else {
-			missedEvent = "load";
+			missedEvent = EV.load;
 		}
 	}
 	function readyListener() {
-		if (lastEvent) return;
+		if (lastEvent != EV.init) return;
 		document.removeEventListener('DOMContentLoaded', readyListener, false);
 		if (preloadList.length) {
 			w.setTimeout.call(window, function() {
@@ -1029,9 +1058,8 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 					obj.node[obj.att] = obj.val;
 				});
 				preloadList = [];
-				lastEvent = "ready";
-				emitNext("ready");
-				if (missedEvent == "load") {
+				check("ready");
+				if (missedEvent == EV.load) {
 					if (!preload) {
 						console.error("load event should not happen before ready event", document.location.toString());
 					}
@@ -1039,18 +1067,9 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 				}
 			}, 0);
 		} else {
-			lastEvent = "ready";
-			emitNext("ready");
+			check("ready");
 		}
 	}
-
-	var w = {};
-	['setTimeout', 'clearTimeout',
-	'setInterval', 'clearInterval',
-	'XMLHttpRequest', 'WebSocket',
-	'requestAnimationFrame', 'cancelAnimationFrame'].forEach(function(meth) {
-		w[meth] = window[meth];
-	});
 
 	var timeouts = {len: 0, stall: 0};
 	function doneTimeout(id) {
@@ -1246,23 +1265,35 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		}
 		delete this._private;
 		requests.len--;
-		if (requests.len <= requests.stall) check('xhr clean');
+		w.setTimeout.call(window, function() {
+			check('xhr clean');
+		});
 	}
 
 	function check(from, url) {
 		w.setTimeout.call(window, function() {
-			if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall && frames.len == 0 && requests.len <= requests.stall) {
+			if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall
+			&& frames.len == 0 && requests.len <= requests.stall
+			&& (preload || lastEvent <= lastRunEvent)) {
 				var info = {
 					timeouts: timeouts,
 					intervals: intervals,
 					frames: frames,
 					requests: requests
 				};
-				if (lastEvent == "load") {
-					lastEvent = "idle";
+				if (lastEvent == EV.load) {
+					lastEvent += 1;
 					emitNext("idle", from, url, info);
-				} else if (lastEvent == "idle") {
+				} else if (lastEvent == EV.idle) {
 					emitNext("busy", from, url);
+				} else if (lastEvent == EV.init) {
+					lastEvent += 1;
+					emitNext("ready", from, url);
+				} else if (lastEvent == EV.ready) {
+					lastEvent += 1;
+					emitNext("load", from, url);
+				} else {
+					return;
 				}
 			}
 		}, 0);
