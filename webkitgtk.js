@@ -425,9 +425,13 @@ function errorLoad(state) {
 
 WebKit.prototype.load = function(uri, cb) {
 	var opts = {};
-	if (typeof cb != "function" && typeof arguments[2] == "function") {
+	if (typeof cb != "function") {
 		opts = cb;
-		cb = arguments[2];
+		if (typeof arguments[2] == "function") {
+			cb = arguments[2];
+		} else {
+			cb = noop;
+		}
 	}
 	var cookies = opts.cookies;
 	if (cookies) {
