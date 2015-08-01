@@ -1013,8 +1013,6 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	var preloadList = [], observer;
 
 	if (preload) disableExternalResources();
-	if (preload) window.preload = true;
-	else window.preload = false;
 
 	var w = {};
 	['setTimeout', 'clearTimeout',
