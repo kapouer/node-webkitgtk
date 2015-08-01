@@ -1305,7 +1305,7 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		w.setTimeout.call(window, function() {
 			if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall
 			&& frames.len == 0 && requests.len <= requests.stall
-			&& (preload || lastEvent <= lastRunEvent)) {
+			&& lastEvent <= lastRunEvent) {
 				var info = {
 					timeouts: timeouts,
 					intervals: intervals,
