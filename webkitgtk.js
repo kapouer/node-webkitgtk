@@ -183,8 +183,12 @@ function emitLifeEvent(event) {
 }
 
 function hasRunEvent(name, event, done) {
-	var func = window['hasRunEvent_' + name];
-	if (func) func(event);
+	try {
+		var func = window['hasRunEvent_' + name];
+		if (func) func(event);
+	} catch (e) {
+		return done(e);
+	}
 	done();
 }
 
