@@ -143,17 +143,14 @@ extern "C" {
 
 
 static void __attribute__((destructor))
-Webkit_Web_extension_shutdown (void)
-{
-	g_object_unref (extension_access);
-	g_object_unref (connection);
+Webkit_Web_extension_shutdown (void) {
+	g_object_unref(extension_access);
+	g_object_unref(connection);
 
-	g_signal_handlers_disconnect_by_data(webkit_script_world_get_default(),eventName);
-	g_signal_handlers_disconnect_by_data(extension_access,eventName);
-
+	g_signal_handlers_disconnect_by_data(webkit_script_world_get_default(), eventName);
+	g_signal_handlers_disconnect_by_data(extension_access, eventName);
 
 	eventName = NULL;
 	extension_access = NULL;
 	connection = NULL;
-
 }

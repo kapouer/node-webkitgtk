@@ -485,7 +485,7 @@ WebKit.prototype.load = function(uri, cb) {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 		});
 		script.push('');
-		preload.call(this, uri, {script: script.join(';\n'), content:"<html></html>"}, function(err) {
+		preload.call(this, uri, {script: script.join(';\n'), content: "<html></html>"}, function(err) {
 			debug('load cookies done', err);
 			if (err) return cb(err, this);
 			setImmediate(function() {
