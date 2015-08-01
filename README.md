@@ -176,6 +176,15 @@ load() options
   charset.  
   Useful to fix Script errors when serving utf-8 encoded javascript files.
 
+- manual  
+  boolean, default false  
+  By default, browser triggers life events and webkitgtk module reemits them
+  on next nodejs loop.  
+  If more control is needed, life events can be put on hold until .done(event)
+  is called.  
+  Typically, `page.wait('idle').run(...).run(...).html().done('idle')`
+  where `.run` calls are placed from different external client programs.
+
 
 init() options
 --------------

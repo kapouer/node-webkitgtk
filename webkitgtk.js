@@ -87,6 +87,9 @@ WebKit.prototype.init = function(opts, cb) {
 		opts.offscreen = false;
 		opts.inspector = true;
 	}
+	if (opts.manual) {
+		priv.manual = true;
+	}
 	debug('find display');
 	display.call(this, opts, function(err, child, newDisplay) {
 		if (err) return cb(err);
@@ -132,9 +135,29 @@ function initialPriv() {
 		idling: false,
 		previousEvents: {},
 		lastEvent: null,
-		nextEvents: {}
+		nextEvents: {},
+		emittedEvents: {}
 	};
 }
+
+function done(ev) {
+	var emitted = this.priv.emittedEvents;
+	if (emitted[ev]) return;
+	if (ev == "idle" || ev == "load") if (!emitted.ready) return done.call(this, "ready");
+	if (ev == "idle" && !emitted.load) return done.call(this, "load");
+	emitted[ev] = true;
+	runcb.call(this, hasRunEvent, [this.priv.eventName, ev], function() {
+		// this catches the errors
+		if (!arguments.length) return;
+		var cb = arguments[arguments.length - 1];
+		if (typeof cb == "function") cb();
+	});
+}
+
+WebKit.prototype.done = function(ev, cb) {
+	done.call(this, ev);
+	if (cb) setImmediate(cb);
+};
 
 function emitLifeEvent(event) {
 	var priv = this.priv;
@@ -154,27 +177,15 @@ function emitLifeEvent(event) {
 	}.bind(this));
 	debug('emit event', event);
 	EventEmitter.prototype.emit.call(this, event);
-	// setImmediate(this.run...) give some time to place run calls before event is resumed on browser
-	// but it can also lead to a lock if wait('idle').run(hasRunEvent(idle)) happen in that order
-	// that's why runcb is called instead here - which could ultimately win the race over the previously
-	// placed .run calls
-	// the right way to solve this is to maintain separate queues for methods and events
-	setImmediate(function() {
-		// wait('load').run(hasRunEvent load)
-		var meth;
-		if (this.chainState && this.chainState[event]) meth = runcb.bind(this);
-		else meth = this.run.bind(this);
-		meth(function(name, event, done) {
-			var func = window['hasRunEvent_' + name];
-			if (func) func(event);
-			done();
-		}, [priv.eventName, event], function(err) {
-			// this catches the errors
-			if (!arguments.length) return;
-			var cb = arguments[arguments.length - 1];
-			if (cb && typeof cb == "function") cb();
-		});
-	}.bind(this));
+	if (!priv.manual) {
+		setImmediate(done.bind(this, event));
+	}
+}
+
+function hasRunEvent(name, event, done) {
+	var func = window['hasRunEvent_' + name];
+	if (func) func(event);
+	done();
 }
 
 function closedListener(what) {
@@ -487,6 +498,7 @@ function load(uri, opts, cb) {
 	this.readyState = "loading";
 	priv.state = LOADING;
 	priv.previousEvents = {};
+	priv.emittedEvents = {};
 	priv.lastEvent = null;
 	priv.allow = opts.allow || "all";
 	priv.stall = opts.stall || 1000;
