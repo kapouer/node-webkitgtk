@@ -247,6 +247,10 @@ function eventsDispatcher(err, json) {
 		console.error("received invalid event", json);
 		return;
 	}
+	if (obj.stamp && obj.stamp != priv.stamp) {
+		debug("Ignoring message sent to another page", obj, priv.stamp);
+		return;
+	}
 	var args = obj.args || [];
 	if (obj.event) {
 		var from = args[0];
@@ -526,6 +530,7 @@ function load(uri, opts, cb) {
 	priv.loopForLife = true;
 	priv.timeout = setTimeout(stop.bind(this), opts.timeout || 30000);
 	priv.uris = {};
+	priv.stamp = Date.now().toString();
 	if (priv.debug) priv.inspecting = true;
 
 	if (this.listeners('error').length == 0) {
@@ -632,6 +637,7 @@ WebKit.prototype.unload = function(cb) {
 	cb = cb || noop;
 	if (priv.state != INITIALIZED) return cb(new Error(errorLoad(priv.state)), this);
 	priv.state = LOADING;
+	delete priv.stamp;
 	this.readyState = null;
 	this.status = null;
 	debug('unload');
@@ -821,6 +827,7 @@ function prepareRun(script, ticket, args, priv) {
 		var wrap = function() {
 			var message = {};
 			if (TICKET) message.ticket = TICKET;
+			else if (STAMP) message.stamp = STAMP;
 			try {
 				message.args = [ SCRIPT ];
 			} catch(e) {
@@ -830,7 +837,8 @@ function prepareRun(script, ticket, args, priv) {
 		}.toString()
 		.replace(/TICKET/g, JSON.stringify(ticket))
 		.replace('SCRIPT', script)
-		.replace('DISPATCHER', dispatcher);
+		.replace('DISPATCHER', dispatcher)
+		.replace('STAMP', '"' + priv.stamp + '"');
 		obj.script = '(' + wrap + ')()';
 	} else {
 		var wrap = function(err, result) {
@@ -838,6 +846,7 @@ function prepareRun(script, ticket, args, priv) {
 			message.args = Array.prototype.slice.call(arguments, 1);
 			if (!TICKET) {
 				message.event = err;
+				message.stamp = STAMP;
 			} else {
 				message.ticket = TICKET;
 				if (err) message.error = err;
@@ -845,7 +854,8 @@ function prepareRun(script, ticket, args, priv) {
 			DISPATCHER
 		}.toString()
 		.replace(/TICKET/g, JSON.stringify(ticket))
-		.replace('DISPATCHER', dispatcher);
+		.replace('DISPATCHER', dispatcher)
+		.replace('STAMP', '"' + priv.stamp + '"');
 		args.push(wrap);
 		obj.script = '(' + script + ')(' + args.join(', ') + ');';
 	}
