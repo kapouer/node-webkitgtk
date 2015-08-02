@@ -26,6 +26,11 @@ function WebKit(opts, cb) {
 		var _preload = ChainableWebKit.prototype.preload;
 		chainit.add(ChainableWebKit, "wait", function(ev, cb) {
 			var priv = this.priv;
+			if (this.priv.manual) {
+				var emitted = this.priv.emittedEvents;
+				if (ev == "load" && !emitted.ready) this.wait('ready').done("ready");
+				if (ev == "idle" && !emitted.load) this.wait('ready').done("load");
+			}
 			if (priv.lastEvent == ev || priv.previousEvents[ev]) {
 				return (cb || noop)();
 			} else if (this.readyState == "stop") {
@@ -143,8 +148,8 @@ function initialPriv() {
 function done(ev) {
 	var emitted = this.priv.emittedEvents;
 	if (emitted[ev]) return;
-	if (ev == "idle" || ev == "load") if (!emitted.ready) return done.call(this, "ready");
-	if (ev == "idle" && !emitted.load) return done.call(this, "load");
+	if (ev == "idle" && !emitted.load) done.call(this, "load");
+	if (ev == "load" && !emitted.ready) done.call(this, "ready");
 	emitted[ev] = true;
 	runcb.call(this, hasRunEvent, [this.priv.eventName, ev], function() {
 		// this catches the errors
@@ -1036,8 +1041,10 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		w[meth] = window[meth];
 	});
 	window['hasRunEvent_' + eventName] = function(event) {
-		lastRunEvent = EV[event];
-		check('lastrun');
+		if (EV[event] > lastRunEvent) {
+			lastRunEvent = EV[event];
+			check('lastrun');
+		}
 	};
 
 	document.charset = charset;
