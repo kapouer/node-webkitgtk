@@ -7,12 +7,8 @@ describe("concurrent png calls should not crash", function suite() {
 	this.timeout(10000);
 	var w;
 	before(function(cb) {
-		var inst = new WebKit();
-		inst.init({}, function(err) {
-			if (err) return cb(err);
-			w = inst;
-			cb();
-		});
+		w = new WebKit();
+		w.init(cb);
 	});
 	it("first call wrongly assumes idle event is not called", function(done) {
 		var href = "https://www.mezilla.org/en-US/";
