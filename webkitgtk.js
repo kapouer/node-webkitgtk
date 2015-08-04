@@ -20,59 +20,28 @@ var availableDisplays = {};
 
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
-		var chainit = require('chainit3');
-		var ChainableWebKit = chainit(WebKit);
-		var _load = ChainableWebKit.prototype.load;
-		var _preload = ChainableWebKit.prototype.preload;
-		chainit.add(ChainableWebKit, "wait", function(ev, cb) {
-			var priv = this.priv;
-			if (this.priv.manual) {
-				var emitted = this.priv.emittedEvents;
-				if (ev == "load" && !emitted.ready) this.wait('ready').done("ready");
-				if (ev == "idle" && !emitted.load) this.wait('ready').done("load");
-			}
-			if (priv.lastEvent == ev || priv.previousEvents[ev]) {
-				return (cb || noop)();
-			} else if (this.readyState == "stop") {
-				throw new Error("Loading was stopped");
-			} else {
-				EventEmitter.prototype.once.call(this, ev, cb);
-			}
-		}, function(ev) {
-			if (!RegEvents.test(ev)) throw new Error("call .wait(ev) with ev like " + RegEvents);
-			if (!this.chainState) throw new Error("call .wait(ev) after .load(...)");
-			this.chainState[ev] = true;
-		});
-		chainit.add(ChainableWebKit, "load", function(uri, cb) {
-			_load.apply(this, Array.prototype.slice.call(arguments));
-			this.priv.nextEvents = this.chainState;
-		}, function(uri) {
-			this.chainState = {};
-		});
-		chainit.add(ChainableWebKit, "preload", function(uri, cb) {
-			_preload.apply(this, Array.prototype.slice.call(arguments));
-			this.priv.nextEvents = this.chainState;
-		}, function(uri) {
-			this.chainState = {};
-		});
-
-		var inst = new ChainableWebKit();
-
-		if (cb) return inst.init(opts, cb);
-		else return inst.init(opts);
+		var inst = new WebKit();
+		if (arguments.length) inst.init(opts, cb);
+		return inst;
 	}
 	this.priv = initialPriv();
-	if (opts) throw new Error("Use WebKit(opts, cb) as short-hand for Webkit().init(opts, cb)");
+	if (arguments.length) throw new Error("Use WebKit(opts, cb) as short-hand for (new Webkit()).init(opts, cb)");
 }
 
 util.inherits(WebKit, EventEmitter);
 
 WebKit.prototype.init = function(opts, cb) {
+	if (!cb && typeof opts == "function") {
+		cb = opts;
+		opts = null;
+	}
+	if (opts == null) opts = {};
+	else if (typeof opts != "object") opts = {display: opts};
+
 	var priv = this.priv;
 	if (priv.state >= INITIALIZING) return cb(new Error("init must not be called twice"), this);
 	priv.state = INITIALIZING;
-	if (opts == null) opts = {};
-	else if (typeof opts != "object") opts = {display: opts};
+
 	var ndis = opts.display != null ? opts.display : process.env.DISPLAY;
 	if (typeof ndis == "string") {
 		var match = /^(?:(\d+)x(\d+)x(\d+))?\:(\d+)$/.exec(ndis);
@@ -97,7 +66,7 @@ WebKit.prototype.init = function(opts, cb) {
 	}
 	debug('find display');
 	display.call(this, opts, function(err, child, newDisplay) {
-		if (err) return cb(err);
+		if (err) return cb(err, this);
 		debug('display found', newDisplay);
 		if (child) priv.xvfb = child;
 		process.env.DISPLAY = ":" + newDisplay;
@@ -118,8 +87,9 @@ WebKit.prototype.init = function(opts, cb) {
 		});
 		debug('new instance created');
 		priv.state = INITIALIZED;
-		cb();
+		cb(null, this);
 	}.bind(this));
+	return this;
 };
 
 function initialPriv() {
@@ -162,6 +132,7 @@ function done(ev) {
 WebKit.prototype.done = function(ev, cb) {
 	done.call(this, ev);
 	if (cb) setImmediate(cb);
+	return this;
 };
 
 function emitLifeEvent(event) {
@@ -181,7 +152,7 @@ function emitLifeEvent(event) {
 		}
 	}.bind(this));
 	debug('emit event', event);
-	EventEmitter.prototype.emit.call(this, event);
+	this.emit(event);
 	if (!priv.manual) {
 		setImmediate(done.bind(this, event));
 	}
@@ -227,7 +198,7 @@ function receiveDataDispatcher(uri, length) {
 function authDispatcher(request) {
 	// ignore auth request synchronously
 	if (this.listeners('authenticate').length == 0) return true;
-	EventEmitter.prototype.emit.call(this, 'authenticate', request);
+	this.emit('authenticate', request);
 }
 
 function policyDispatcher(type, uri) {
@@ -277,9 +248,9 @@ function eventsDispatcher(err, json) {
 			debug("reached idle", this.uri, info);
 		} else if (obj.event == "busy") {
 			// not a life event
-			EventEmitter.prototype.emit.call(this, obj.event);
+			this.emit(obj.event);
 		} else {
-			EventEmitter.prototype.emit.apply(this, args);
+			this.emit.apply(this, args);
 		}
 	} else if (obj.ticket) {
 		var cb = priv.tickets[obj.ticket];
@@ -343,6 +314,7 @@ Response.prototype.data = function(cb) {
 		loop.call(view, false);
 		cb(err, data);
 	});
+	return this;
 };
 
 function Request(uri, binding) {
@@ -373,7 +345,7 @@ function requestDispatcher(binding) {
 	}
 	var req = new Request(uri, binding);
 
-	EventEmitter.prototype.emit.call(this, 'request', req);
+	this.emit('request', req);
 
 	if (req.uri == null) { // compat with older versions
 		req.cancel = true;
@@ -419,7 +391,7 @@ function responseDispatcher(binding) {
 		debug('counted as ending pending');
 		priv.pendingRequests--;
 	}
-	EventEmitter.prototype.emit.call(this, 'response', res);
+	this.emit('response', res);
 }
 
 function isNetworkProtocol(uri) {
@@ -472,16 +444,21 @@ function errorLoad(state) {
 	}
 }
 
-WebKit.prototype.load = function(uri, cb) {
-	var opts = {};
-	if (typeof cb != "function") {
-		opts = cb;
-		if (typeof arguments[2] == "function") {
-			cb = arguments[2];
-		} else {
-			cb = noop;
-		}
+WebKit.prototype.rawload = function(uri, opts, cb) {
+	loop.call(this, true);
+	this.webview.load(uri, opts, function(err) {
+		loop.call(this, false);
+		cb(err, this);
+	}.bind(this));
+};
+
+WebKit.prototype.load = function(uri, opts, cb) {
+	if (!cb && typeof opts == "function") {
+		cb = opts;
+		opts = null;
 	}
+	if (!opts) opts = {};
+	if (!cb) cb = noop;
 	var cookies = opts.cookies;
 	if (cookies) {
 		debug('load cookies');
@@ -490,7 +467,13 @@ WebKit.prototype.load = function(uri, cb) {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 		});
 		script.push('');
-		preload.call(this, uri, {script: script.join(';\n'), content: "<html></html>"}, function(err) {
+		loop.call(this, true);
+		this.webview.load(uri, {
+			script: script.join(';\n'),
+			content: "<html></html>",
+			waitFinish: true
+		}, function(err) {
+			loop.call(this, false);
 			debug('load cookies done', err);
 			if (err) return cb(err, this);
 			setImmediate(function() {
@@ -500,6 +483,7 @@ WebKit.prototype.load = function(uri, cb) {
 	} else {
 		load.call(this, uri, opts, cb);
 	}
+	return this;
 };
 
 function load(uri, opts, cb) {
@@ -578,29 +562,14 @@ function load(uri, opts, cb) {
 	}.bind(this));
 }
 
-WebKit.prototype.preload = function(cb) {
-	var opts = {}, uri;
-	if (typeof cb == "function") {
-		uri = "";
-	} else if (typeof arguments[1] == "function") {
-		uri = cb;
-		cb = arguments[1];
-	} else {
-		uri = cb;
-		opts = arguments[1];
-		cb = arguments[2];
-	}
-	if (!cb) cb = noop;
-	preload.call(this, uri, opts, cb);
-};
-
-function preload(uri, opts, cb) {
+WebKit.prototype.preload = function(uri, opts, cb) {
 	var nopts = {};
 	for (var key in opts) nopts[key] = opts[key];
 	nopts.allow = "none";
 	nopts.preload = true;
 	load.call(this, uri, nopts, cb);
-}
+	return this;
+};
 
 function stop(cb) {
 	var priv = this.priv;
@@ -622,6 +591,7 @@ function stop(cb) {
 
 WebKit.prototype.stop = function(cb) {
 	stop.call(this, cb);
+	return this;
 };
 
 function emitAllEvents() {
@@ -640,7 +610,10 @@ WebKit.prototype.unload = function(cb) {
 	}
 	if (priv.uris) delete priv.uris;
 	cb = cb || noop;
-	if (priv.state != INITIALIZED) return cb(new Error(errorLoad(priv.state)), this);
+	if (priv.state != INITIALIZED) {
+		cb(new Error(errorLoad(priv.state)), this);
+		return this;
+	}
 	priv.state = LOADING;
 	delete priv.stamp;
 	this.readyState = null;
@@ -656,6 +629,7 @@ WebKit.prototype.unload = function(cb) {
 		emitLifeEvent.call(this, 'unload');
 		setImmediate(cb);
 	}.bind(this));
+	return this;
 };
 
 function destroy(cb) {
@@ -672,6 +646,7 @@ function destroy(cb) {
 
 WebKit.prototype.destroy = function(cb) {
 	destroy.call(this, cb);
+	return this;
 };
 
 function loop(start) {
@@ -758,12 +733,14 @@ WebKit.prototype.run = function(script, params, done, cb) {
 			cb(err);
 		}
 	});
+	return this;
 };
 
 WebKit.prototype.runev = function(script, cb) {
 	var args = Array.prototype.slice.call(arguments, 1);
 	if (args.length > 0 && typeof args[args.length-1] == "function") cb = args.pop();
 	run.call(this, script, null, args, cb);
+	return this;
 };
 
 function runcb(script, args, cb) {
@@ -874,10 +851,12 @@ WebKit.prototype.png = function(obj, cb) {
 	} else if (obj instanceof stream.Writable || obj instanceof stream.Duplex) {
 		wstream = obj;
 	} else {
-		return cb(new Error("png() first arg must be either a writableStream or a file path"));
+		cb(new Error("png() first arg must be either a writableStream or a file path"));
+		return this;
 	}
 	cb = cb || noop;
 	png.call(this, wstream, cb);
+	return this;
 };
 
 function png(wstream, cb) {
@@ -919,6 +898,7 @@ WebKit.prototype.html = function(cb) {
 		debug('output html done');
 		cb(err, str);
 	});
+	return this;
 };
 
 WebKit.prototype.pdf = function(filepath, cb) {
@@ -929,6 +909,7 @@ WebKit.prototype.pdf = function(filepath, cb) {
 	}
 	if (!cb) cb = noop;
 	pdf.call(this, filepath, opts, cb);
+	return this;
 };
 
 function pdf(filepath, opts, cb) {

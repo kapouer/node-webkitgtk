@@ -1,6 +1,6 @@
 {
   "name": "webkitgtk",
-  "version": "1.19.0",
+  "version": "2.0.0",
   "description": "Drive webkitgtk from Node.js",
   "keywords": [
     "webkit",
@@ -13,7 +13,6 @@
   ],
   "main": "webkitgtk.js",
   "dependencies": {
-    "chainit3": "^3.1.1",
     "debug": "^2.1.3",
     "nan": "^1.7.0"
   },

@@ -6,49 +6,41 @@ Pilot webkitgtk from Node.js with a simple API.
 *this module uses only system-installed, shared libraries*  
 it doesn't embed static libraries at all.
 
+
+Version 2 warning
+-----------------
+
+The chainable API has been dropped.
+
+Every chained calls must be replaced by callbacks.
+
+The `.wait()` method must be replaced by `.once()`.
+
+
+
 usage
 -----
 
-A chainable API:
-
-```js
-WebKit().load('http://github.com')
-  .wait('ready')
-  .html(function(err, str) { console.log(str); })
-  .wait('load')
-  .png('github.png')
-  .wait('idle')
-  .pdf('github.pdf')
-  .on('authenticate', function(auth) {
-    auth.use('mylogin', 'mypass');
-  }).on('request', function(req) {
-    req.cancel = /\.js($|\?)/.test(req.uri) || req.headers.Origin
-      || req.headers.Accept == "*/*";
-  }).on('response', function(res) {
-    console.log(res.status, res.uri);
-    res.data(function(err, data) {
-      console.log("got", data.length, "bytes");
-    });
-  });
-```
-
-
-which is derived from the basic API using `chainit3`:
-
 ```js
 var WebKit = require('webkitgtk');
-var view = new WebKit();
 var fs = require('fs');
-view.init({
+
+// optional, if nothing is set, defaults to :0
+var displayOpts = {
   width: 1024,
   height: 768,
   display: "99"
-}, function(err, view) {
+};
+
+
+// old-style creation
+var view = new WebKit();
+view.init(displayOpts, function(err, view) {
   view.load(uri, {
     style: fs.readFileSync('css/png.css') // useful stylesheet for snapshots
   }, function(err) {
     if (err) console.error(err);
-  }).on('load', function() {
+  }).once('load', function() {
     this.png().save('test.png', function(err) {
       if (err) console.error(err);
       else console.log("screenshot saved", uri);
@@ -61,16 +53,29 @@ A facility for choosing/spawning a display using xvfb
 
 ```js
 // this spawns xvfb instance
-WebKit("1024x768x16:99").load("http://github.com").png('test.png');
+// new-style creation
+WebKit("1024x768x16:99", function(err, w) {
+  w.load("http://github.com", function(err) {
+    w.png('test.png', function(err) {
+      // done
+    });
+  });
+});
 
 // this uses a pre-existing display
-WebKit(98).load("http://google.com")
+WebKit(98, function(err, w) {
+  w.load("http://google.com");
+});
 
 // use pre-existing display 0 by default
-Webkit().load("http://webkitgtk.org").html(function(err, html) {
-  // dump html
-  console.log(html);
+Webkit(function(err, w) {
+  w.load("http://webkitgtk.org", function(err) {
+    w.html(function(err, str) {
+      console.log(html);
+    });
+  });
 });
+
 ```
 
 See test/ for more examples.
@@ -95,8 +100,8 @@ Patches are welcome for UI uses, though.
   see [the github wiki of node-webkitgtk](https://github.com/kapouer/node-webkitgtk/wiki).
 
 
-load() options
---------------
+load(uri, opts, cb) options
+---------------------------
 
 - cookies  
   string | [string], default none  
@@ -186,8 +191,8 @@ load() options
   where `.run` calls are placed from different external client programs.
 
 
-init() options
---------------
+init(opts, cb) options
+----------------------
 
 `init(display)` can be called instead of passing an object.
 
@@ -329,27 +334,27 @@ methods
   creates an unitialized instance upon which init() must be called.  
   WebKit is also an EventEmitter.
 
-* WebKit([opts])  
-  create an instance with the chainable API using `chainit`.  
-  If arguments are given, equals `WebKit().init(opts)`.
+* WebKit([opts], cb)  
+  Same as above.  
+  If arguments are given, equals `new WebKit().init(opts, cb)`.
 
 * init([opts], cb)  
   see parameters described above  
-  *must be invoked first*.
+  *must be invoked before (pre)load*.  
+  Callback receives (err, instance).
 
 * preload(uri, [opts], [cb])  
   load uri into webview  
   scripts are not run, resources are not loaded.  
   These options are not effective: `cookies`, `script`, `allow`.  
-  Only `ready` event is meaningful.
+  Callback receives (err, instance).
 
 * load(uri, [opts], [cb])  
   load uri into webview  
-  see parameters described above.
+  see parameters described above.  
+  Callback receives (err, instance).
 
-* wait(event, cb)  
-  analogous to once(event, cb) except that it is usable in the chainable API.  
-  It is useful before calling html, png, pdf methods: `.wait('load').png(...)`.
+* once(event, listener)   /the EventEmitter interface/
 
 * run(sync-script, (next), cb)  
   any synchronous script text or global function.  
@@ -380,7 +385,8 @@ methods
   Tip: use custom css to cut portions of the document.
 
 * html(cb)  
-  get the whole document html, prepended with its doctype, right now.
+  get the whole document html, prepended with its doctype, right now.  
+  Callback receives (err, str).
 
 * pdf(filepath, [opts], [cb])  
   print page to file right now  
@@ -420,7 +426,10 @@ This will keep the page running, output console to terminal, and open
 a gtk window with inspector open:
 
 ```
-WebKit({debug: true}).load(url, {console: true}).wait('unload');
+WebKit({debug: true}, function(err, w) {
+  w.load(url, {console: true});
+  w.once('unload');
+});
 ```
 
 
