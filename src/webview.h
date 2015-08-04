@@ -72,6 +72,7 @@ private:
 	bool transparencySupport;
 
 	bool userContent;
+	bool waitFinish;
 
 
 	WebKitWebView* view = NULL;

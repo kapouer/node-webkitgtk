@@ -376,7 +376,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 			if (self->state == DOCUMENT_LOADING) {
 				self->state = DOCUMENT_LOADED;
 				self->updateUri(uri);
-				if (self->loadCallback != NULL) {
+				if (self->loadCallback != NULL && self->waitFinish == FALSE) {
 					guint status = getStatusFromView(web_view);
 					if (status == 0 && self->userContent == TRUE) status = 200;
 					Handle<Value> argv[] = {
@@ -392,6 +392,18 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 		break;
 		case WEBKIT_LOAD_FINISHED: // 3
 			self->state = DOCUMENT_AVAILABLE;
+			if (self->loadCallback != NULL && self->waitFinish == TRUE) {
+				guint status = getStatusFromView(web_view);
+				if (status == 0 && self->userContent == TRUE) status = 200;
+				Handle<Value> argv[] = {
+					NanNull(),
+					NanNew<Integer>(status)
+				};
+				cb = self->loadCallback;
+				self->loadCallback = NULL;
+				cb->Call(2, argv);
+				delete cb;
+			}
 		break;
 	}
 }
@@ -569,6 +581,7 @@ NAN_METHOD(WebView::Load) {
 		script = NULL;
 	}
 	char* content = getStr(opts, "content");
+	self->waitFinish = NanBooleanOptionValue(opts, H("waitFinish"), FALSE);
 	if (isEmpty || content != NULL) {
 		self->userContent = TRUE;
 		if (content == NULL) content = g_strconcat("", NULL);
