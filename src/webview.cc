@@ -139,7 +139,6 @@ void WebView::destroy() {
 		gtk_widget_destroy(window);
 		window = NULL;
 	}
-	if (content != NULL) delete[] content;
 
 	if (uri != NULL) g_free(uri);
 
@@ -379,7 +378,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 				self->updateUri(uri);
 				if (self->loadCallback != NULL) {
 					guint status = getStatusFromView(web_view);
-					if (status == 0 && self->content != NULL) status = 200;
+					if (status == 0 && self->userContent == TRUE) status = 200;
 					Handle<Value> argv[] = {
 						NanNull(),
 						NanNew<Integer>(status)
@@ -530,11 +529,7 @@ NAN_METHOD(WebView::Load) {
 	}
 	self->loadCallback = loadCb;
 
-	if (self->content != NULL) delete self->content;
-	self->content = getStr(opts, "content");
-
 	if (self->state == DOCUMENT_LOADED) webkit_web_view_stop_loading(self->view);
-
 
 	WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
 
@@ -573,14 +568,18 @@ NAN_METHOD(WebView::Load) {
 		delete style;
 		script = NULL;
 	}
-	if (isEmpty || self->content != NULL) {
-		if (self->content == NULL) self->content = g_strconcat("", NULL);
+	char* content = getStr(opts, "content");
+	if (isEmpty || content != NULL) {
+		self->userContent = TRUE;
+		if (content == NULL) content = g_strconcat("", NULL);
 		if (isEmpty) {
 			g_free(self->uri);
 			self->uri = NULL;
 		}
-		webkit_web_view_load_html(self->view, self->content, self->uri);
+		webkit_web_view_load_html(self->view, content, self->uri);
+		delete content;
 	} else {
+		self->userContent = FALSE;
 		webkit_web_view_load_uri(self->view, self->uri);
 	}
 	NanReturnUndefined();

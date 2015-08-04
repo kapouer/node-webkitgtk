@@ -71,7 +71,7 @@ private:
 	bool offscreen;
 	bool transparencySupport;
 
-	char* content = NULL;
+	bool userContent;
 
 
 	WebKitWebView* view = NULL;
