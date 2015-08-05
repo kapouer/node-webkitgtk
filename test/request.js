@@ -6,18 +6,20 @@ describe("request listener", function suite() {
 	it("should cancel the request when uri set to null or empty string", function(done) {
 		this.timeout(15000);
 		var cancelledRequests = 0;
-		WebKit().load("http://www.selmer.fr").on("request", function(request) {
-			if (/\.js$/.test(request.uri)) {
-				cancelledRequests++;
-				request.uri = null;
-			}
-		}).on("response", function(response) {
-			expect(/\.js$/.test(response.uri)).to.not.be(true);
-		}).on("load", function() {
-			expect(cancelledRequests).to.be.greaterThan(3);
-			done();
-		}).on("error", function() {
-			// just ignore errors here
+		WebKit(function(err, w) {
+			w.load("http://www.selmer.fr").on("request", function(request) {
+				if (/\.js$/.test(request.uri)) {
+					cancelledRequests++;
+					request.uri = null;
+				}
+			}).on("response", function(response) {
+				expect(/\.js$/.test(response.uri)).to.not.be(true);
+			}).once("load", function() {
+				expect(cancelledRequests).to.be.greaterThan(3);
+				done();
+			}).on("error", function() {
+				// just ignore errors here
+			});
 		});
 	});
 
@@ -43,14 +45,19 @@ describe("request listener", function suite() {
 				res.statusCode = 404;
 				res.end();
 			}
-		}).listen(8023);
-		WebKit().load("http://localhost:8023", {console:true, stall: 1000})
-		.wait('idle').html(function(err, str) {
-			expect(str).to.be(doc);
-			setTimeout(function() {
-				server.close();
-				done();
-			}, 100);
+		}).listen(function() {
+			WebKit(function(err, w) {
+				w.load("http://localhost:" + server.address().port, {console:true, stall: 1000})
+				.once('idle', function() {
+					this.html(function(err, str) {
+						expect(str).to.be(doc);
+						setTimeout(function() {
+							server.close();
+							done();
+						}, 100);
+					});
+				});
+			});
 		});
 	});
 
@@ -76,19 +83,24 @@ describe("request listener", function suite() {
 				res.statusCode = 404;
 				res.end();
 			}
-		}).listen(8024);
-		WebKit().load("http://localhost:8024", {console:true, stall: 2000})
-		.on('request', function(req) {
-			if (req.uri.indexOf('test') > 0) {
-				req.ignore = true;
-			}
-		})
-		.wait('idle').html(function(err, str) {
-			expect(str).to.be(doc);
-			setTimeout(function() {
-				server.close();
-				done();
-			}, 100);
+		}).listen(function() {
+			WebKit(function(err, w) {
+				w.load("http://localhost:" + server.address().port, {console:true, stall: 2000})
+				.on('request', function(req) {
+					if (req.uri.indexOf('test') > 0) {
+						req.ignore = true;
+					}
+				})
+				.once('idle', function() {
+					this.html(function(err, str) {
+						expect(str).to.be(doc);
+						setTimeout(function() {
+							server.close();
+							done();
+						}, 100);
+					});
+				});
+			});
 		});
 	});
 
@@ -116,19 +128,24 @@ describe("request listener", function suite() {
 				res.statusCode = 404;
 				res.end();
 			}
-		}).listen(8025);
-		WebKit().load("http://localhost:8025", {console:true, stall: 2000})
-		.on('request', function(req) {
-			if (req.uri.indexOf('test') > 0) {
-				req.cancel = true;
-			}
-		})
-		.wait('idle').html(function(err, str) {
-			expect(str).to.be(doc);
-			setTimeout(function() {
-				server.close();
-				done();
-			}, 100);
+		}).listen(function() {
+			WebKit(function(err, w) {
+				w.load("http://localhost:" + server.address().port, {console:true, stall: 2000})
+				.on('request', function(req) {
+					if (req.uri.indexOf('test') > 0) {
+						req.cancel = true;
+					}
+				})
+				.once('idle', function() {
+					this.html(function(err, str) {
+						expect(str).to.be(doc);
+						setTimeout(function() {
+							server.close();
+							done();
+						}, 100);
+					});
+				});
+			});
 		});
 	});
 });

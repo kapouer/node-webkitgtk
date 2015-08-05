@@ -2,44 +2,20 @@ var WebKit = require('../');
 var expect = require('expect.js');
 var fs = require('fs');
 
-function Load(uri, opts, cb) {
-	return WebKit(function(err, w) {
-		w.load(uri, opts, cb);
-	});
-}
-function Ready(uri, opts, cb) {
-	return WebKit(function(err, w) {
-		w.load(uri, opts, function(err) {
-			if (err) return cb(err);
-			w.once('ready', function() {
-				cb(null, w);
-			});
-		});
-	});
-}
-function Html(uri, opts, cb) {
-	return WebKit(function(err, w) {
-		w.load(uri, opts, function(err) {
-			if (err) return cb(err);
-			w.once('ready', function() {
-				w.html(cb);
-			});
-		});
-	});
-}
-
 describe("load method", function suite() {
 	it("should accept no arguments", function(done) {
-		Load("", null, function(err, str) {
+		WebKit.load("", null, function(err, w) {
 			done();
 		});
 	});
 
 	it("should load html content", function(done) {
-		Html("http://localhost", {content: '<p>test</p>'}, function(err, str) {
-			expect(err).to.not.be.ok();
-			expect(str).to.be("<html><head></head><body><p>test</p></body></html>");
-			done();
+		WebKit.load("http://localhost", {content: '<p>test</p>'}).on('ready', function() {
+			this.html(function(err, str) {
+				expect(err).to.not.be.ok();
+				expect(str).to.be("<html><head></head><body><p>test</p></body></html>");
+				done();
+			});
 		});
 	});
 
@@ -48,7 +24,7 @@ describe("load method", function suite() {
 		var haspng = false;
 		var hasjs = false;
 
-		Load("http://localhost", {
+		WebKit.load("http://localhost", {
 			content: '<script src="http://localhost/test.js"></script><img src="http://localhost/test.png" />'
 		}, function(err) {
 			expect(err).to.be(null);
@@ -73,14 +49,14 @@ describe("load method", function suite() {
 
 	it("should callback with error when url cannot be resolved", function(done) {
 		this.timeout(10000);
-		Load("http://atipepipapa-sdqdqsd.com", function(err) {
+		WebKit.load("http://atipepipapa-sdqdqsd.com", function(err) {
 			expect(err).to.be.ok();
 			done();
 		});
 	});
 
 	it("should 404", function(done) {
-		Load("http://google.com/sdfsdfsdf", function(err) {
+		WebKit.load("http://google.com/sdfsdfsdf", function(err) {
 			expect(err).to.be(404);
 			done();
 		});
@@ -88,7 +64,7 @@ describe("load method", function suite() {
 
 	it("should allow to load another uri just after", function(done) {
 		this.timeout(5000);
-		Load('http://google.com', function(err, w) {
+		WebKit.load('http://google.com', function(err, w) {
 			w.load('http://geoip.edagames.com', function() {
 				w.once('response', function(res) {
 					res.data(function(err, data) {
@@ -104,7 +80,7 @@ describe("load method", function suite() {
 		this.timeout(5000);
 		var onlyjs = /\.js/;
 		var hadmain = false;
-		Load('http://github.com', {allow: onlyjs})
+		WebKit.load('http://github.com', {allow: onlyjs})
 		.on('response', function(res) {
 			if (res.uri == this.uri) hadmain = true;
 		})
@@ -117,7 +93,7 @@ describe("load method", function suite() {
 
 	it("should time out", function(done) {
 		this.timeout(500);
-		Load('http://google.com', {timeout:50}, function(err, w) {
+		WebKit.load('http://google.com', {timeout:50}, function(err, w) {
 			expect(err).to.be.ok();
 			expect(w.status).to.be(0);
 			done();
@@ -126,7 +102,7 @@ describe("load method", function suite() {
 
 	it("should time out then unload", function(done) {
 		this.timeout(5000);
-		Load('http://google.com', {timeout:50}, function(err, w) {
+		WebKit.load('http://google.com', {timeout:50}, function(err, w) {
 			expect(err).to.be.ok();
 			expect(w.status).to.be(0);
 			w.unload(function(err) {
@@ -138,7 +114,7 @@ describe("load method", function suite() {
 
 	it("should not stop after a stop call", function(done) {
 		this.timeout(10000);
-		var w = Load('http://google.com');
+		var w = WebKit.load('http://google.com');
 		setImmediate(function() {
 			w.stop(function(err, wasLoading) {
 				expect(w.readyState).to.be('stop');
@@ -162,7 +138,7 @@ describe("load method", function suite() {
 			res.statusCode = 501;
 			res.end("fail");
 		}).listen(function() {
-			Load("http://localhost:" + server.address().port, function(err, w) {
+			WebKit.load("http://localhost:" + server.address().port, function(err, w) {
 				expect(err).to.be(501);
 				setImmediate(function() {
 					server.close();
@@ -179,7 +155,7 @@ describe("load method", function suite() {
 				res.end("fail");
 			}, 1000);
 		}).listen(function() {
-			Load("http://localhost:" + server.address().port, {timeout: 500}, function(err, w) {
+			WebKit.load("http://localhost:" + server.address().port, {timeout: 500}, function(err, w) {
 				expect(err).not.to.be(501);
 				w.stop(function(err, wasLoading) {
 					expect(err).to.not.be.ok();
@@ -201,7 +177,7 @@ describe("load method", function suite() {
 			res.statusCode = 200;
 			res.end("<html><body>test</body></html>");
 		}).listen(function() {
-			Load("http://localhost:" + server.address().port)
+			WebKit.load("http://localhost:" + server.address().port)
 			.on('request', function(req) {
 				req.headers.custom = "tada";
 				req.headers.Accept = "text/tomo";
@@ -217,7 +193,7 @@ describe("load method", function suite() {
 	});
 
 	it("should receive console events", function(done) {
-		Load('http://localhost', {
+		WebKit.load('http://localhost', {
 			content: '<html><body><script type="text/javascript">console.log(window.navigator, "two");</script></body></html>',
 			console: true
 		}).on('console', function(level, nav, two) {
@@ -232,7 +208,7 @@ describe("load method", function suite() {
 		// for super weird reasons this test fails because of the particular
 		// way the url is crafted (length of each component is critical).
 		// it won't fail after 8745c188, though
-		Load('http://localhost:16724/aaaaa/bbbbb?cccc=c', function(err) {
+		WebKit.load('http://localhost:16724/aaaaa/bbbbb?cccc=c', function(err) {
 			expect(err).to.be.ok();
 			done();
 		});
@@ -240,7 +216,7 @@ describe("load method", function suite() {
 
 	it("should be able to load twice in a row", function(done) {
 		this.timeout(10000);
-		Load('http://google.com', function(err, w) {
+		WebKit.load('http://google.com', function(err, w) {
 			w.load('http://google.com', function(err) {
 				expect(err).to.not.be.ok();
 				done();
@@ -250,7 +226,7 @@ describe("load method", function suite() {
 
 	it("should be able to fail then load", function(done) {
 		this.timeout(10000);
-		Load('http://google.com/azertyuiop404', function(err, w) {
+		WebKit.load('http://google.com/azertyuiop404', function(err, w) {
 			expect(err).to.be(404);
 			w.load('http://google.com', function(err) {
 				expect(err).to.not.be.ok();
@@ -261,7 +237,7 @@ describe("load method", function suite() {
 
 	it("should be able to load a url with a default protocol", function(done) {
 		this.timeout(4000);
-		Load('www.debian.org', function(err) {
+		WebKit.load('www.debian.org', function(err) {
 			expect(err).to.not.be.ok();
 			done();
 		});

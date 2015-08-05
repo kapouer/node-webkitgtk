@@ -36,12 +36,10 @@ describe("cookies option", function suite() {
 	});
 
 	it("should set Cookie HTTP header on first request", function(done) {
-		WebKit(function(err, w) {
-			w.load("http://localhost:"+port+"/test/one", {cookies:cookiestrOne + ";Path=/test/one"}, function(err, view) {
-				expect(err).to.not.be.ok();
-				expect(countOne).to.be(1);
-				done();
-			});
+		WebKit.load("http://localhost:" + port + "/test/one", {cookies:cookiestrOne + ";Path=/test/one"}, function(err, w) {
+			expect(err).to.not.be.ok();
+			expect(countOne).to.be(1);
+			done();
 		});
 	});
 
@@ -50,16 +48,14 @@ describe("cookies option", function suite() {
 		var cookiestr = "mycookie=myvalue";
 		var cookiestr2 = "mycookie=myvalue2";
 
-		WebKit(function(err, w) {
-			w.load("http://localhost:"+port+"/test/two", {cookies:cookiestrOne + ";Path=/test/two"}, function(err, view) {
-				expect(err).to.not.be.ok();
-				expect(countTwo).to.be(1);
-				view.unload(function() {
-					view.load("http://localhost:"+port+"/test/two", {cookies:cookiestrTwo + ";Path=/test/two"}, function(err) {
-						expect(err).to.not.be.ok();
-						expect(countTwo).to.be(2);
-						done();
-					});
+		WebKit.load("http://localhost:" + port + "/test/two", {cookies:cookiestrOne + ";Path=/test/two"}, function(err, w) {
+			expect(err).to.not.be.ok();
+			expect(countTwo).to.be(1);
+			w.unload(function() {
+				w.load("http://localhost:" + port + "/test/two", {cookies:cookiestrTwo + ";Path=/test/two"}, function(err) {
+					expect(err).to.not.be.ok();
+					expect(countTwo).to.be(2);
+					done();
 				});
 			});
 		});

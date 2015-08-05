@@ -27,32 +27,26 @@ describe("authenticate event", function suite() {
 	});
 
 	it("should be able to continue request and get a 401", function(done) {
-		WebKit(function(err, w) {
-			expect(err).to.not.be.ok();
-			w.load("http://localhost:" + port + '/one', function(err) {
-				expect(err).to.be(401);
-				done();
-			});
-		})
+		WebKit.load("http://localhost:" + port + '/one', function(err) {
+			expect(err).to.be(401);
+			done();
+		});
 	});
 
 	it("should be able to authenticate request and get a 200", function(done) {
-		WebKit(function(err, w) {
+		WebKit.load("http://localhost:" + port + '/two', function(err) {
 			expect(err).to.not.be.ok();
-			w.load("http://localhost:" + port + '/two', function(err) {
-				expect(err).to.not.be.ok();
-			});
-			w.on('authenticate', function(authRequest) {
-				expect(authRequest.host).to.be("localhost");
-				expect(authRequest.port).to.be(port);
-				expect(authRequest.realm).to.be('two');
-				authRequest.use('mylog2', 'mypass');
-			});
-			w.on('ready', function() {
-				w.html(function(err, html) {
-					expect(html).to.be("<html><head></head><body>User: mylog2</body></html>");
-					done();
-				});
+		})
+		.on('authenticate', function(authRequest) {
+			expect(authRequest.host).to.be("localhost");
+			expect(authRequest.port).to.be(port);
+			expect(authRequest.realm).to.be('two');
+			authRequest.use('mylog2', 'mypass');
+		})
+		.once('ready', function() {
+			this.html(function(err, html) {
+				expect(html).to.be("<html><head></head><body>User: mylog2</body></html>");
+				done();
 			});
 		});
 	});
@@ -60,16 +54,13 @@ describe("authenticate event", function suite() {
 	it("should be able to explicitely ignore request and get a 401", function(done) {
 		var reached = false;
 
-		WebKit(function(err, w) {
-			w.load("http://localhost:" + port + '/three', function(err) {
-				expect(err).to.be(401);
-				expect(reached).to.be(true);
-				done();
-			});
-			w.on('authenticate', function(authReq) {
-				reached = true;
-				authReq.ignore();
-			});
+		WebKit.load("http://localhost:" + port + '/three', function(err) {
+			expect(err).to.be(401);
+			expect(reached).to.be(true);
+			done();
+		}).on('authenticate', function(authReq) {
+			reached = true;
+			authReq.ignore();
 		});
 	});
 });
