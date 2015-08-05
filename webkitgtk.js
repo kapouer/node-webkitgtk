@@ -604,6 +604,12 @@ function load(uri, opts, cb) {
 }
 
 WebKit.prototype.preload = function(uri, opts, cb) {
+	if (!cb && typeof opts == "function") {
+		cb = opts;
+		opts = null;
+	}
+	if (!opts) opts = {};
+	if (!cb) cb = noop;
 	var nopts = {};
 	for (var key in opts) nopts[key] = opts[key];
 	nopts.allow = "none";
@@ -623,6 +629,7 @@ function stop(cb) {
 		loop.call(this, false);
 		cb(null, wasLoading);
 	}.bind(this);
+
 	wasLoading = this.webview.stop(fincb);
 	// immediately returned
 	if (!wasLoading) setImmediate(fincb);
@@ -758,30 +765,13 @@ function loop(start) {
 	}
 }
 
-WebKit.prototype.run = function(script, params, done, cb) {
-	if (!cb && typeof done == "function") {
-		cb = done;
-		done = null;
-	}
-	if (typeof params == "function") {
-		if (!cb) {
-			cb = params;
-			done = null;
-		}	else {
-			done = params;
-		}
+WebKit.prototype.run = function(script, params, cb) {
+	if (!cb && typeof params == "function") {
+		cb = params;
 		params = null;
 	}
 	if (params != null && !Array.isArray(params)) params = [params];
-	runcb.call(this, script, params, function(err) {
-		if (done) {
-			var args = Array.prototype.slice.call(arguments);
-			args.push(cb);
-			done.apply(this, args);
-		} else {
-			cb(err);
-		}
-	});
+	runcb.call(this, script, params, cb);
 	return this;
 };
 
@@ -950,12 +940,12 @@ WebKit.prototype.html = function(cb) {
 	return this;
 };
 
-WebKit.prototype.pdf = function(filepath, cb) {
-	var opts = {};
-	if (typeof cb != "function") {
-		opts = cb;
-		cb = arguments[2];
+WebKit.prototype.pdf = function(filepath, opts, cb) {
+	if (!cb && typeof opts == "function") {
+		cb = opts;
+		opts = null;
 	}
+	if (!opts) opts = {};
 	if (!cb) cb = noop;
 	pdf.call(this, filepath, opts, cb);
 	return this;
