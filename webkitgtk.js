@@ -26,6 +26,7 @@ function WebKit(opts, cb) {
 		return inst;
 	}
 	this.priv = initialPriv();
+	initWhen.call(this);
 	if (arguments.length) throw new Error("Use WebKit(opts, cb) as short-hand for (new Webkit()).init(opts, cb)");
 }
 
