@@ -71,7 +71,7 @@ describe("preload method", function suite() {
 			var port = server.address().port;
 			WebKit(function(err, w) {
 				w.preload("http://localhost:" + port, {console: true})
-				.once('ready', function() {
+				.when('ready', function(cb) {
 					this.html(function(err, str) {
 						expect(str).to.be(doc);
 						w.run(function(script, done) {
@@ -81,11 +81,11 @@ describe("preload method", function suite() {
 							document.head.appendChild(script);
 							done();
 						}, script, function(err) {
-							this.html(function(err, str) {
+							w.html(function(err, str) {
 								expect(err).to.not.be.ok();
-								var strc = str;
 								expect(str.replace(script, '')).to.be(doc);
-								expect(strc.indexOf(script) > 0).to.be(true);
+								expect(str.indexOf(script) > 0).to.be(true);
+								cb();
 								thenLoad(w);
 							});
 						});
@@ -93,17 +93,19 @@ describe("preload method", function suite() {
 				});
 			});
 			function thenLoad(w) {
-				w.load("http://localhost:" + port, {content: doc}).once('idle', function() {
-					w.html(function(err, str) {
-						if (err) console.error(err);
-						var wroteMeta = '<meta name="test">\n';
-						var wroteP = '<p>there</p>\n';
-						expect(str.indexOf(wroteMeta)).to.be.ok();
-						expect(str.indexOf(wroteP)).to.be.ok();
-						setTimeout(function() {
-							server.close();
-							done();
-						}, 100);
+				w.unload(function(err) {
+					w.load("http://localhost:" + port, {content: doc}).once('load', function() {
+						w.html(function(err, str) {
+							if (err) console.error(err);
+							var wroteMeta = '<meta name="test">\n';
+							var wroteP = '<p>there</p>\n';
+							expect(str.indexOf(wroteMeta)).to.be.ok();
+							expect(str.indexOf(wroteP)).to.be.ok();
+							setTimeout(function() {
+								server.close();
+								done();
+							}, 100);
+						});
 					});
 				});
 			}
