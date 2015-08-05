@@ -404,6 +404,13 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 				cb->Call(2, argv);
 				delete cb;
 			}
+			if (self->stopCallback != NULL && g_strcmp0(uri, self->uri) == 0) {
+				Handle<Value> argvstop[] = {};
+				cb = self->stopCallback;
+				self->stopCallback = NULL;
+				cb->Call(0, argvstop);
+				delete cb;
+			}
 		break;
 	}
 }
@@ -422,13 +429,6 @@ gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gcha
 			cb = self->loadCallback;
 			self->loadCallback = NULL;
 			cb->Call(2, argv);
-			delete cb;
-		}
-		if (self->stopCallback != NULL) {
-			Handle<Value> argvstop[] = {};
-			cb = self->stopCallback;
-			self->stopCallback = NULL;
-			cb->Call(0, argvstop);
 			delete cb;
 		}
 		return TRUE;
