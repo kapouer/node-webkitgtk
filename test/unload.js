@@ -45,4 +45,17 @@ describe("unload method", function suite() {
 			});
 		});
 	});
+
+	it("should allow chaining load-unload-load with content", function(done) {
+		this.timeout(2000);
+		WebKit.load('http://google.com', {content: '<html><body>pisderman</body></html>'}, function(err, w) {
+			w.unload(function(err) {
+				expect(err).to.not.be.ok();
+				w.load('http://www.selmer.fr', {content: '<html><body>volapuk</body></html>'}, function(err) {
+					expect(err).to.not.be.ok();
+					done();
+				});
+			});
+		});
+	});
 });
