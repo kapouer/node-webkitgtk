@@ -770,13 +770,10 @@ function loop(start) {
 	}
 }
 
-WebKit.prototype.run = function(script, params, cb) {
-	if (!cb && typeof params == "function") {
-		cb = params;
-		params = null;
-	}
-	if (params != null && !Array.isArray(params)) params = [params];
-	runcb.call(this, script, params, cb);
+WebKit.prototype.run = function(script, cb) {
+	var args = Array.prototype.slice.call(arguments, 1);
+	if (args.length > 0 && typeof args[args.length-1] == "function") cb = args.pop();
+	runcb.call(this, script, args, cb);
 	return this;
 };
 

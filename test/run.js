@@ -37,7 +37,7 @@ describe("run method", function suite() {
 		WebKit.load("http://localhost", {content:'<html></html>'}, function(err, w) {
 			w.run(function(obj, arr, str, done) {
 				done(null, obj.a, arr[1], str);
-			}, [{a:1}, ["a", 4], "testé\n"], function(err, a1, b4, ctest) {
+			}, {a:1}, ["a", 4], "testé\n", function(err, a1, b4, ctest) {
 				expect(err).to.not.be.ok();
 				expect(a1).to.be(1);
 				expect(b4).to.be(4);

@@ -124,3 +124,6 @@ has now the same behavior as when the event just happened.
 The chainable API has been dropped.
 .wait can be replaced by .when, see README.
 
+.run(script, param1, param2, ..., cb) like .runev,
+and there is only one callback, as a consequence of dropping chainable API.
+

@@ -17,6 +17,8 @@ Every chained calls must be replaced by callbacks.
 The `.wait()` method can be replaced by `.when()`, but the function must
 in turn invoke the callback parameter it receives.
 
+The `.run()` method now behaves like `.runev()` regarding params passing.
+
 
 
 usage
@@ -94,14 +96,12 @@ Asynchronous (life) event handlers
 WebKit
 .load("http://localhost/test", {content: "<html><body></body></html>"})
 .when("ready", function(cb) {
-  this.run(function(done) {
+  this.run(function(className, done) {
     setTimeout(function() {
-      document.body.classList.add('test');
+      document.body.classList.add(className);
       done();
     }, 100);
-  }, function() {
-    cb();
-  });
+  }, 'testClass', cb);
 })
 .when("ready", function(cb) {
   setTimeout(cb, 100);
@@ -394,25 +394,19 @@ methods
   Allow queuing of jobs on an event and before next event.  
   The actor receives a unique callback parameter, to be called when done.
 
-* run(sync-script, (next), cb)  
+* run(sync-script, <param>*, cb)  
   any synchronous script text or global function.  
-  Optional `next` has a (err, result, cb) signature and in turn *must* call cb.
+  If it's a function, multiple parameters can be passed, as long as they are
+  serializable.
 
-* run(async-script, param(s), (next), cb)  
-  async-script must be a function that calls back its last argument, which
-  accepts any number of arguments itself (with the convention that the first
-  argument represents an error) as long as they are stringifyable.  
-  `function(arg0, arg1, ..., done) { done(err, rarg0, rarg1, ...); }`.  
-  Optional `next` receives the arguments given by the `done` callback,
-  and in turn *must* call its last argument, cb (see test/run.js).  
-  This allows one to do an async task that makes use of the values returned by
-  the async-script.
+* run(async-script, <param>*, cb)  
+  async-script must be a function with callback as last argument,
+  whose arguments will be passed to cb, as long as they are stringifyable.  
 
-* runev(async-script, arg0, arg1, ..., cb)  
-  async-script must be a function that calls its last argument,  
-  like `function(arg0, arg1, ..., emit) { emit(eventName, any, other, args); }`  
-  and each call emits the named event on current view object, which can
-  be listened using view.on(event, listener).  
+* runev(async-script, <param>*, cb)  
+  async-script must be a function, it receives an `emit` function as last
+  argument, which in turn acts as event emitter: each call emits the named event
+  on current instance, and can be listened using view.on(event, listener).  
   The listener receives additional arguments as long as they're stringifyable.  
   Can be used to listen recurring events, but the gtk loop needs to be
   running, see above.  
