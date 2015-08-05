@@ -30,6 +30,20 @@ function WebKit(opts, cb) {
 
 util.inherits(WebKit, EventEmitter);
 
+WebKit.load = function(uri, opts, cb) {
+	if (!cb && typeof opts == "function") {
+		cb = opts;
+		opts = null;
+	}
+	var display = opts && opts.display || {};
+	display.cacheDir = opts && opts.cacheDir || undefined;
+	var inst = WebKit(display, function(err, w) {
+		if (err) return cb(err, w);
+		w.load(uri, opts, cb);
+	});
+	return inst;
+};
+
 WebKit.prototype.init = function(opts, cb) {
 	if (!cb && typeof opts == "function") {
 		cb = opts;
