@@ -631,6 +631,12 @@ function stop(cb) {
 }
 
 WebKit.prototype.stop = function(cb) {
+	if (this.readyState == "loading") {
+		this.once('ready', function() {
+			this.stop(cb);
+		});
+		return;
+	}
 	stop.call(this, cb);
 	return this;
 };
@@ -655,20 +661,22 @@ WebKit.prototype.unload = function(cb) {
 		cb(new Error(errorLoad(priv.state)), this);
 		return this;
 	}
-	priv.state = LOADING;
-	delete priv.stamp;
-	this.readyState = null;
-	this.status = null;
-	debug('unload');
-	loop.call(this, true);
-	this.webview.load('', {content:'<html></html>'}, function(err) {
-		debug('unload done', err);
-		loop.call(this, false);
-		priv.state = INITIALIZED;
-		priv.tickets = {};
-		priv.loopForCallbacks = 0;
-		emitLifeEvent.call(this, 'unload');
-		setImmediate(cb);
+	this.stop(function() {
+		priv.state = LOADING;
+		delete priv.stamp;
+		this.readyState = null;
+		this.status = null;
+		debug('unload');
+		loop.call(this, true);
+		this.webview.load('', {content:'<html></html>', waitFinish: true}, function(err) {
+			debug('unload done', err);
+			loop.call(this, false);
+			priv.state = INITIALIZED;
+			priv.tickets = {};
+			priv.loopForCallbacks = 0;
+			emitLifeEvent.call(this, 'unload');
+			setImmediate(cb);
+		}.bind(this));
 	}.bind(this));
 	return this;
 };

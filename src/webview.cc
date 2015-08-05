@@ -117,7 +117,7 @@ NAN_METHOD(WebView::Stop) {
 	if (self->state >= DOCUMENT_LOADING) {
 		wasLoading = TRUE;
 	}
-	self->stopCallback = new NanCallback(args[0].As<Function>());
+	if (wasLoading == TRUE) self->stopCallback = new NanCallback(args[0].As<Function>());
 	webkit_web_view_stop_loading(self->view);
 	NanReturnValue(NanNew<Boolean>(wasLoading));
 }
@@ -539,9 +539,10 @@ NAN_METHOD(WebView::Load) {
 		g_printerr("load callback is still set, this should not happen\n");
 		delete self->loadCallback;
 	}
-	self->loadCallback = loadCb;
 
 	if (self->state == DOCUMENT_LOADED) webkit_web_view_stop_loading(self->view);
+
+	self->loadCallback = loadCb;
 
 	WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
 
