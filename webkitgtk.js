@@ -133,6 +133,7 @@ function done(ev, cb) {
 	var emitted = this.priv.emittedEvents;
 	if (emitted[ev]) return cb();
 	emitted[ev] = true;
+	debug("let tracker process event after", ev);
 	runcb.call(this, hasRunEvent, [this.priv.eventName, ev], cb);
 }
 
@@ -510,7 +511,9 @@ function initPromise(ev) {
 function initWhen() {
 	if (!this.promises) this.promises = {};
 	['ready', 'load', 'idle'].forEach(function(ev) {
-		if (!this.promises[ev]) initPromise.call(this, ev);
+		var promise = this.promises[ev];
+		// get rid of non-pending promises
+		if (!promise || !promise.isPending()) initPromise.call(this, ev);
 	}.bind(this));
 }
 
