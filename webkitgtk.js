@@ -183,7 +183,6 @@ function closedListener(what) {
 				priv.loopImmediate = null;
 			}
 			delete this.webview;
-			emitAllEvents.call(this);
 			destroy.call(this, priv.destroyCb);
 			this.priv = initialPriv();
 		break;
