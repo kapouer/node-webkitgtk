@@ -14,7 +14,8 @@
   "main": "webkitgtk.js",
   "dependencies": {
     "debug": "^2.1.3",
-    "nan": "^1.7.0"
+    "nan": "^1.7.0",
+    "q": "^1.4.1"
   },
   "optionalDependencies": {
     "headless": "^1.0.0"

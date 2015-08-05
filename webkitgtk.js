@@ -4,6 +4,7 @@ var stream = require('stream');
 var fs = require('fs');
 var path = require('path');
 var url = require('url');
+var Q = require('q');
 var debug = require('debug')('webkitgtk');
 var debugStall = console.warn;
 var debugError = console.error;
@@ -41,6 +42,7 @@ WebKit.load = function(uri, opts, cb) {
 		if (err) return cb(err, w);
 		w.load(uri, opts, cb);
 	});
+	initWhen.call(inst);
 	return inst;
 };
 
@@ -74,9 +76,6 @@ WebKit.prototype.init = function(opts, cb) {
 		priv.debug = true;
 		opts.offscreen = false;
 		opts.inspector = true;
-	}
-	if (opts.manual) {
-		priv.manual = true;
 	}
 	debug('find display');
 	display.call(this, opts, function(err, child, newDisplay) {
@@ -129,25 +128,12 @@ function initialPriv() {
 	};
 }
 
-function done(ev) {
+function done(ev, cb) {
 	var emitted = this.priv.emittedEvents;
-	if (emitted[ev]) return;
-	if (ev == "idle" && !emitted.load) done.call(this, "load");
-	if (ev == "load" && !emitted.ready) done.call(this, "ready");
+	if (emitted[ev]) return cb();
 	emitted[ev] = true;
-	runcb.call(this, hasRunEvent, [this.priv.eventName, ev], function() {
-		// this catches the errors
-		if (!arguments.length) return;
-		var cb = arguments[arguments.length - 1];
-		if (typeof cb == "function") cb();
-	});
+	runcb.call(this, hasRunEvent, [this.priv.eventName, ev], cb);
 }
-
-WebKit.prototype.done = function(ev, cb) {
-	done.call(this, ev);
-	if (cb) setImmediate(cb);
-	return this;
-};
 
 function emitLifeEvent(event) {
 	var priv = this.priv;
@@ -167,9 +153,6 @@ function emitLifeEvent(event) {
 	}.bind(this));
 	debug('emit event', event);
 	this.emit(event);
-	if (!priv.manual) {
-		setImmediate(done.bind(this, event));
-	}
 }
 
 function hasRunEvent(name, event, done) {
@@ -500,6 +483,46 @@ WebKit.prototype.load = function(uri, opts, cb) {
 	return this;
 };
 
+function initPromise(ev) {
+	var prev = null;
+	if (ev == "idle") prev = this.promises.load;
+	if (ev == "load") prev = this.promises.ready;
+
+	var evDfr = Q.defer();
+	var list = [evDfr.promise];
+	if (prev) list.push(prev);
+
+	this.promises[ev] = Q.all(list);
+
+	this.once(ev, function() {
+		this.promises[ev].fail(function(err) {
+			if (err) console.error(err);
+		}).fin(function() {
+			done.call(this, ev, function(err) {
+				if (err) console.error(err);
+			});
+		}.bind(this));
+		evDfr.resolve();
+	});
+}
+
+function initWhen() {
+	if (!this.promises) this.promises = {};
+	['ready', 'load', 'idle'].forEach(function(ev) {
+		if (!this.promises[ev]) initPromise.call(this, ev);
+	}.bind(this));
+}
+
+WebKit.prototype.when = function(ev, fn) {
+	var self = this;
+	this.promises[ev] = this.promises[ev].then(function() {
+		var deferred = Q.defer();
+		fn.call(self, deferred.makeNodeResolver());
+		return deferred.promise;
+	});
+	return this;
+};
+
 function load(uri, opts, cb) {
 	if (uri && !url.parse(uri).protocol) uri = 'http://' + uri;
 
@@ -507,12 +530,16 @@ function load(uri, opts, cb) {
 	if (priv.state != INITIALIZED) return cb(new Error(errorLoad(priv.state)), this);
 
 	this.readyState = "loading";
+
+	initWhen.call(this);
+
 	priv.state = LOADING;
 	priv.previousEvents = {};
 	priv.emittedEvents = {};
 	priv.lastEvent = null;
 	priv.allow = opts.allow || "all";
 	priv.stall = opts.stall || 1000;
+
 	if (priv.stallInterval) {
 		clearInterval(priv.stallInterval);
 		delete priv.stallInterval;
