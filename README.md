@@ -14,7 +14,8 @@ The chainable API has been dropped.
 
 Every chained calls must be replaced by callbacks.
 
-The `.wait()` method must be replaced by `.once()`.
+The `.wait()` method can be replaced by `.when()`, but the function must
+in turn invoke the callback parameter it receives.
 
 
 
@@ -85,6 +86,30 @@ Webkit(function(err, w) {
   });
 });
 
+```
+
+Asynchronous (life) event handlers
+
+```js
+WebKit
+.load("http://localhost/test", {content: "<html><body></body></html>"})
+.when("ready", function(cb) {
+  this.run(function(done) {
+    setTimeout(function() {
+      document.body.classList.add('test');
+      done();
+    }, 100);
+  }, function() {
+    cb();
+  });
+})
+.when("ready", function(cb) {
+  setTimeout(cb, 100);
+})
+.when("idle", function(cb) {
+  // and so on
+  cb();
+});
 ```
 
 See test/ for more examples.
@@ -364,6 +389,10 @@ methods
   Callback receives (err, instance).
 
 * once(event, listener)   /the EventEmitter interface/
+
+* when(event, actor)  
+  Allow queuing of jobs on an event and before next event.  
+  The actor receives a unique callback parameter, to be called when done.
 
 * run(sync-script, (next), cb)  
   any synchronous script text or global function.  
