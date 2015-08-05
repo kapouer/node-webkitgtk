@@ -47,6 +47,15 @@ view.init(displayOpts, function(err, view) {
     });
   });
 });
+
+// short-hand can init display and load
+WebKit.load(uri, {
+  display: displayOpts, // optional, defaults to :0
+  style: fs.readFileSync('css/png.css') // useful stylesheet for snapshots
+}).once('idle', function() {
+  this.png().save('test.png'); // this is always the created instance in listeners
+  // ...
+});
 ```
 
 A facility for choosing/spawning a display using xvfb
