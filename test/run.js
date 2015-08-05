@@ -86,17 +86,20 @@ describe("run method", function suite() {
 		}).listen(function() {
 			WebKit(function(err, w) {
 				w.preload("http://localhost:" + server.address().port, {console: true}, function(err) {
-					w.run(function(bool, done) {
-						document.documentElement.className = "toto";
-						document.querySelector('script').src = 'test2.js';
-						done(null, "param");
-					}, false, function(err, parm) {
-						setTimeout(function() {
-							state = 1;
-						}, 1000);
-					})
+					w.when('ready', function(cb) {
+						w.run(function(bool, done) {
+							document.documentElement.className = "toto";
+							document.querySelector('script').src = 'test2.js';
+							done(null, "param");
+						}, false, function(err, parm) {
+							setTimeout(function() {
+								state = 1;
+								cb();
+							}, 1000);
+						});
+					});
 				});
-			}).once('idle', function(err) {
+			}).once('idle', function() {
 				expect(state).to.be(1);
 				state = 2;
 				this.html(function(err, str) {
