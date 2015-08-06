@@ -821,15 +821,31 @@ function prepareRun(script, ticket, args, priv) {
 		}
 		return str;
 	});
-	var arity = null;
+	var arity = 0;
+	var isfunction = false;
+	if (Buffer.isBuffer(script)) script = script.toString();
 	if (typeof script == "function") {
-		if (script.length > args.length + 1) throw new Error(".run(script, ...) where script will miss arguments");
+		arity = script.length;
+		isfunction = true;
+	} else if (typeof script == "string") {
+		var match = /^\s*function(\s+\w+)?\s*\(((?:\s*\w+\s*,)*(?:\s*\w+\s*))\)/.exec(script);
+		if (match && match.length == 3) {
+			isfunction = true;
+			arity = match[2].split(',').length;
+		}
+	}
+	var async;
+	if (arity == args.length) {
+		async = false;
+	} else if (arity == args.length + 1) {
+		async = true;
+	} else {
+		throw new Error(".run(script, ...) where script will miss arguments");
 	}
 
-	if (typeof script == "function" || Buffer.isBuffer(script)) script = script.toString();
-	var async = /^\s*function(\s+\w+)?\s*\((\s*\w+\s*,)*(\s*\w+\s*)\)/.test(script);
+	if (typeof script == "function") script = script.toString();
 	if (!async && !ticket) {
-		throw new Error("cannot call runev without function(emit) {} script signature");
+		throw new Error("cannot call runev without a script that accepts a listener function as last parameter");
 	}
 	// KeyboardEvent is the only event that can carry an arbitrary string
 	// If it isn't supported any more, send an empty event and make the webextension fetch
@@ -845,7 +861,7 @@ function prepareRun(script, ticket, args, priv) {
 		ticket: ticket
 	};
 	if (!async) {
-		if (/^\s*function(\s+\w+)?\s*\(\s*\)/.test(script)) script = '(' + script + ')()';
+		if (isfunction) script = '(' + script + ')(' + args.join(', ') + ')';
 		else script = '(function() { return ' + script + '; })()';
 		var wrap = function() {
 			var message = {};
