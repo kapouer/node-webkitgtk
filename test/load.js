@@ -120,8 +120,11 @@ describe("load method", function suite() {
 				expect(w.readyState).to.be('stop');
 				expect(err).to.not.be.ok();
 				expect(wasLoading).to.be(true);
+				done();
 			});
 		});
+		// meaning of this ?
+		/*
 		w.once('idle', function() {
 			setTimeout(function() {
 				w.stop(function(err, wasLoading) {
@@ -131,6 +134,7 @@ describe("load method", function suite() {
 				});
 			}, 1000);
 		});
+		*/
 	});
 
 	it("should fail gracefully", function(done) {
