@@ -435,11 +435,16 @@ function display(opts, cb) {
 }
 
 function errorLoad(state) {
+	var msg;
+	if (state == INITIALIZED) return;
 	if (state < INITIALIZED) {
-		return "cannot call method before init";
+		msg = "cannot call method before init";
 	} else if (state > INITIALIZED) {
-		return "cannot call method during loading";
+		msg = "cannot call method during loading";
 	}
+	var error = new Error(msg);
+	console.trace(error);
+	return error;
 }
 
 WebKit.prototype.rawload = function(uri, opts, cb) {
@@ -530,7 +535,8 @@ function load(uri, opts, cb) {
 	if (uri && !url.parse(uri).protocol) uri = 'http://' + uri;
 
 	var priv = this.priv;
-	if (priv.state != INITIALIZED) return cb(new Error(errorLoad(priv.state)), this);
+	var stateErr = errorLoad(priv.state);
+	if (stateErr) return cb(stateErr, this);
 
 	this.readyState = "loading";
 
@@ -624,7 +630,7 @@ WebKit.prototype.preload = function(uri, opts, cb) {
 function stop(cb) {
 	var priv = this.priv;
 	cb = cb || noop;
-	if (priv.state < INITIALIZED) return cb(new Error(errorLoad(priv.state)));
+	if (priv.state < INITIALIZED) return cb(errorLoad(priv.state));
 	loop.call(this, true);
 	var wasLoading = false;
 	var fincb = function() {
