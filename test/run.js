@@ -64,6 +64,21 @@ describe("run method", function suite() {
 			});
 		});
 	});
+	it("should run sync with params and callback", function(done) {
+		var doc = '<html><head></head><body>tato</body></html>';
+		WebKit.load("http://localhost", {content: doc.replace('tato', '')}).once('ready', function() {
+			var w = this;
+			w.run(function(one, two) {
+				document.body.appendChild(document.createTextNode(one + two));
+			}, 'ta', 'to', function(err) {
+				expect(err).to.not.be.ok();
+				w.html(function(err, str) {
+					expect(str).to.be(doc);
+					done();
+				});
+			});
+		});
+	});
 	it("should run long job between load and idle", function(done) {
 		this.timeout(3000);
 		var doc = '<html><head><script type="text/javascript" src="test.js"></script></body></html>';
