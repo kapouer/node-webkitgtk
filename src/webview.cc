@@ -114,7 +114,7 @@ NAN_METHOD(WebView::Stop) {
 	NanScope();
 	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
 	bool wasLoading = FALSE;
-	if (self->state >= DOCUMENT_LOADING) {
+	if (self->loadCallback != NULL) {
 		wasLoading = TRUE;
 	}
 	if (wasLoading == TRUE) self->stopCallback = new NanCallback(args[0].As<Function>());
@@ -376,7 +376,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 			if (self->state == DOCUMENT_LOADING) {
 				self->state = DOCUMENT_LOADED;
 				self->updateUri(uri);
-				if (self->loadCallback != NULL && self->waitFinish == FALSE) {
+				if (self->loadCallback != NULL && self->waitFinish == FALSE && self->stopCallback == NULL) {
 					guint status = getStatusFromView(web_view);
 					if (status == 0 && self->userContent == TRUE) status = 200;
 					Handle<Value> argv[] = {
@@ -404,7 +404,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 				cb->Call(2, argv);
 				delete cb;
 			}
-			if (self->stopCallback != NULL && g_strcmp0(uri, self->uri) == 0) {
+			if (self->stopCallback != NULL) {
 				Handle<Value> argvstop[] = {};
 				cb = self->stopCallback;
 				self->stopCallback = NULL;

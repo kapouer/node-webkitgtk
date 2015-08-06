@@ -628,7 +628,6 @@ function stop(cb) {
 	loop.call(this, true);
 	var wasLoading = false;
 	var fincb = function() {
-		if (wasLoading) priv.loopForLife = false; // because it will never call back
 		loop.call(this, false);
 		cb(null, wasLoading);
 	}.bind(this);
@@ -637,7 +636,6 @@ function stop(cb) {
 	// immediately returned
 	if (!wasLoading) setImmediate(fincb);
 	this.readyState = "stop";
-	emitAllEvents.call(this);
 }
 
 WebKit.prototype.stop = function(cb) {
@@ -665,11 +663,17 @@ WebKit.prototype.unload = function(cb) {
 	}
 	if (priv.uris) delete priv.uris;
 	cb = cb || noop;
-	if (priv.state != INITIALIZED) {
-		cb(new Error(errorLoad(priv.state)), this);
-		return this;
+
+	if (priv.state == LOADING) {
+		this.stop(function(err, wasLoading) {
+			if (err) console.error(err);
+			next.call(this);
+		}.bind(this));
+	} else {
+		next.call(this);
 	}
-	this.stop(function(err, wasLoading) {
+
+	function next() {
 		priv.state = INITIALIZED;
 		delete priv.stamp;
 		debug('unload');
@@ -689,7 +693,7 @@ WebKit.prototype.unload = function(cb) {
 				setImmediate(cb);
 			}.bind(this));
 		}.bind(this));
-	}.bind(this));
+	}
 	return this;
 };
 
