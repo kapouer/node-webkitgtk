@@ -650,12 +650,13 @@ WebKit.prototype.stop = function(cb) {
 	return this;
 };
 
-function emitAllEvents() {
-	var priv = this.priv;
-	if (!priv.lastEvent) emitLifeEvent.call(this, 'ready');
-	if (priv.lastEvent == "ready") emitLifeEvent.call(this, 'load');
-	if (priv.lastEvent == "load") emitLifeEvent.call(this, 'idle');
-	if (priv.lastEvent == "idle") emitLifeEvent.call(this, 'unload');
+function cleanLifeEvents() {
+	this.removeAllListeners('ready');
+	this.removeAllListeners('load');
+	this.removeAllListeners('idle');
+	this.removeAllListeners('unload');
+	this.removeAllListeners('busy');
+	this.promises = {};
 }
 
 WebKit.prototype.unload = function(cb) {
@@ -693,6 +694,7 @@ WebKit.prototype.unload = function(cb) {
 				priv.tickets = {};
 				emitLifeEvent.call(this, 'unload');
 				priv.loopForCallbacks = 0;
+				cleanLifeEvents.call(this);
 				setImmediate(cb);
 			}.bind(this));
 		}.bind(this));
