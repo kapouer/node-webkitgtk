@@ -1075,6 +1075,8 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	};
 	var lastEvent = EV.init;
 	var lastRunEvent = EV.init;
+	var hasLoaded = false;
+	var hasReady = false;
 	var missedEvent;
 	var preloadList = [], observer;
 
@@ -1090,7 +1092,7 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	window['hasRunEvent_' + eventName] = function(event) {
 		if (EV[event] > lastRunEvent) {
 			lastRunEvent = EV[event];
-			check('lastrun');
+			check('lastrun' + event);
 		}
 	};
 
@@ -1137,14 +1139,16 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	}
 
 	function loadListener() {
+		hasLoaded = true;
+		window.removeEventListener('load', loadListener, false);
 		if (lastEvent == EV.ready) {
-			window.removeEventListener('load', loadListener, false);
 			check('load');
-		} else {
+		} else if (lastEvent < EV.ready) {
 			missedEvent = EV.load;
 		}
 	}
 	function readyListener() {
+		hasReady = true;
 		if (lastEvent != EV.init) return;
 		document.removeEventListener('DOMContentLoaded', readyListener, false);
 		if (preloadList.length) {
@@ -1360,38 +1364,39 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		}
 		delete this._private;
 		requests.len--;
-		w.setTimeout.call(window, function() {
-			check('xhr clean');
-		});
+		check('xhr clean');
 	}
 
 	function check(from, url) {
-		w.setTimeout.call(window, function() {
-			if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall
-			&& frames.len == 0 && requests.len <= requests.stall
-			&& lastEvent <= lastRunEvent) {
-				var info = {
-					timeouts: timeouts,
-					intervals: intervals,
-					frames: frames,
-					requests: requests
-				};
-				if (lastEvent == EV.load) {
-					lastEvent += 1;
-					emitNext("idle", from, url, info);
-				} else if (lastEvent == EV.idle) {
-					emitNext("busy", from, url);
-				} else if (lastEvent == EV.init) {
-					lastEvent += 1;
-					emitNext("ready", from, url);
-				} else if (lastEvent == EV.ready) {
-					lastEvent += 1;
-					emitNext("load", from, url);
-				} else {
-					return;
-				}
+		if (lastEvent == EV.init && document.readyState != "interactive" && !preload) {
+			console.error("check() wrong call - ", from, document.readyState);
+		}
+		var info = {
+			timeouts: timeouts,
+			intervals: intervals,
+			frames: frames,
+			requests: requests,
+			lastEvent: lastEvent,
+			lastRunEvent: lastRunEvent
+		};
+		if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall
+		&& frames.len == 0 && requests.len <= requests.stall
+		&& lastEvent <= lastRunEvent) {
+			if (lastEvent == EV.load) {
+				lastEvent += 1;
+				emitNext("idle", from, url, info);
+			} else if (lastEvent == EV.idle) {
+				emitNext("busy", from, url);
+			} else if (lastEvent == EV.init && hasReady) {
+				lastEvent += 1;
+				emitNext("ready", from, url, info);
+			} else if (lastEvent == EV.ready && hasLoaded) {
+				lastEvent += 1;
+				emitNext("load", from, url, info);
+			} else {
+				return;
 			}
-		}, 0);
+		}
 	}
 
 	function emitNext(ev, from, url, info) {
