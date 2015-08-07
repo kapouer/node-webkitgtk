@@ -134,7 +134,7 @@ function done(ev, cb) {
 	if (emitted[ev]) return cb();
 	emitted[ev] = true;
 	debug("let tracker process event after", ev);
-	runcb.call(this, hasRunEvent, [this.priv.eventName, ev], cb);
+	this.run(hasRunEvent, this.priv.eventName, ev, cb);
 }
 
 function emitLifeEvent(event) {
@@ -222,7 +222,6 @@ function eventsDispatcher(err, json) {
 		return;
 	}
 	if (obj.stamp && obj.stamp != priv.stamp) {
-		debug("Ignoring message sent to another page", obj, priv.stamp);
 		return;
 	}
 	var args = obj.args || [];
@@ -949,7 +948,7 @@ function png(wstream, cb) {
 
 WebKit.prototype.html = function(cb) {
 	debug('output html');
-	runcb.call(this, function() {
+	this.run(function() {
 		var dtd = document.doctype;
 		var html = "";
 		if (dtd) {
