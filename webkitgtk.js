@@ -960,7 +960,7 @@ WebKit.prototype.html = function(cb) {
 		}
 		html += document.documentElement.outerHTML;
 		return html;
-	}, null, function(err, str) {
+	}, function(err, str) {
 		debug('output html done');
 		cb(err, str);
 	});
