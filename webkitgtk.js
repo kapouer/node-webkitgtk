@@ -141,18 +141,16 @@ function emitLifeEvent(event) {
 	var priv = this.priv;
 	if (priv.lastEvent) priv.previousEvents[priv.lastEvent] = true;
 	priv.lastEvent = event;
-	setImmediate(function() {
-		var ne = priv.nextEvents || {}; // in case load or preload wasn't called
-		var willStop = event == "unload" || this.listeners('unload').length == 0 && !ne.unload && (
-			event == "idle" || this.listeners('idle').length == 0 && !ne.idle && (
-				event == "load" || this.listeners('load').length == 0 && !ne.load &&
-					event == "ready"
-				)
-			);
-		if (willStop && priv.loopForLife) {
-			priv.loopForLife = false;
-		}
-	}.bind(this));
+	var ne = priv.nextEvents || {}; // in case load or preload wasn't called
+	var willStop = event == "unload" || this.listeners('unload').length == 0 && !ne.unload && (
+		event == "idle" || this.listeners('idle').length == 0 && !ne.idle && (
+			event == "load" || this.listeners('load').length == 0 && !ne.load &&
+				event == "ready"
+			)
+		);
+	if (willStop && priv.loopForLife) {
+		priv.loopForLife = false;
+	}
 	debug('emit event', event);
 	this.emit(event);
 }
