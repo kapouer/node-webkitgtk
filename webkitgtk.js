@@ -565,8 +565,11 @@ function load(uri, opts, cb) {
 	}
 	priv.stallInterval = setInterval(function() {
 		var now = Date.now();
+		var info;
 		for (var uri in priv.uris) {
-			if (now - priv.uris[uri].mtime > priv.stall) {
+			info = priv.uris[uri];
+			if (!info) return;
+			if (!info.loaded && now - info.mtime > priv.stall) {
 				priv.uris[uri].mtime = Infinity;
 				debugStall("Timeout %s after %s ms", uri, priv.stall);
 				responseDispatcher.call(this, {uri: uri, status: 0, stall: true});
