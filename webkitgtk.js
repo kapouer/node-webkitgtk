@@ -396,9 +396,10 @@ function responseDispatcher(binding) {
 		return;
 	}
 	if (!info) {
-		if (uri != this.uri) return console.warn(this.uri, "had an untracked response", uri, res.status, res.headers);
+		if (uri != this.uri) return console.warn(this.uri, "had an untracked response", uri, res.status);
 		info = priv.uris[uri] = {mtime: Date.now(), loaded: true};
 	}
+
 	var stalled = false;
 
 	if (info.mtime == Infinity) {
