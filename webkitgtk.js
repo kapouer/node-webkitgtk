@@ -621,7 +621,7 @@ function load(uri, opts, cb) {
 	debug('load', uri);
 	this.webview.load(uri, opts, function(err, status) {
 		var mainUri = this.webview.uri;
-		if (this.uri != mainUri) {
+		if (this.uri && this.uri != mainUri) {
 			priv.uris[mainUri] = priv.uris[this.uri];
 			delete priv.uris[this.uri];
 			this.uri = mainUri;
