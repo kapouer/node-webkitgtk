@@ -1371,9 +1371,6 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	}
 
 	function check(from, url) {
-		if (lastEvent == EV.init && document.readyState != "interactive" && !preload) {
-			console.error("check() wrong call - ", from, document.readyState);
-		}
 		var info = {
 			timeouts: timeouts,
 			intervals: intervals,
