@@ -647,11 +647,6 @@ WebKit.prototype.stop = function(cb) {
 	return this;
 };
 
-function cleanLifeEvents() {
-	this.removeAllListeners();
-	this.promises = {};
-}
-
 WebKit.prototype.unload = function(cb) {
 	var priv = this.priv;
 	if (priv.stallInterval) {
@@ -660,6 +655,13 @@ WebKit.prototype.unload = function(cb) {
 	}
 	if (priv.uris) delete priv.uris;
 	cb = cb || noop;
+
+	this.removeAllListeners('ready');
+	this.removeAllListeners('load');
+	this.removeAllListeners('idle');
+	this.removeAllListeners('unload');
+	this.removeAllListeners('busy');
+	this.promises = {};
 
 	if (priv.state == LOADING) {
 		this.stop(function(err, wasLoading) {
@@ -687,7 +689,8 @@ WebKit.prototype.unload = function(cb) {
 				priv.tickets = {};
 				emitLifeEvent.call(this, 'unload');
 				priv.loopForCallbacks = 0;
-				cleanLifeEvents.call(this);
+				this.removeAllListeners();
+				this.promises = {};
 				setImmediate(cb);
 			}.bind(this));
 		}.bind(this));
