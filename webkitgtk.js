@@ -800,17 +800,15 @@ function run(script, ticket, args, cb) {
 	} catch(e) {
 		return cb(e);
 	}
-	setImmediate(function() {
-		if (!this.webview) return cb(new Error("WebKit uninitialized"));
-		if (obj.sync) {
-			loop.call(this, true);
-			this.webview.run(obj.script, obj.ticket);
-		} else {
-			this.webview.run(obj.script, obj.ticket);
-			if (obj.ticket) loop.call(this, true);
-			else setImmediate(cb);
-		}
-	}.bind(this));
+	if (!this.webview) return cb(new Error("WebKit uninitialized"));
+	if (obj.sync) {
+		loop.call(this, true);
+		this.webview.run(obj.script, obj.ticket);
+	} else {
+		this.webview.run(obj.script, obj.ticket);
+		if (obj.ticket) loop.call(this, true);
+		else setImmediate(cb);
+	}
 }
 
 function prepareRun(script, ticket, args, priv) {
