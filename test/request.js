@@ -113,7 +113,7 @@ describe("request listener", function suite() {
 			xhr.open("GET", "/test", true);\
 			xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");\
 			xhr.send();</script></head>\
-		<body>move along</body></html>'
+		<body>move along</body></html>';
 		var server = require('http').createServer(function(req, res) {
 			if (req.url == "/") {
 				res.statusCode = 200;
