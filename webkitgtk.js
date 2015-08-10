@@ -354,6 +354,7 @@ function requestDispatcher(binding) {
 	if (req.ignore) {
 		debug("ignore request");
 		binding.ignore = "1";
+		return;
 	}
 
 	if (req.cancel) {
