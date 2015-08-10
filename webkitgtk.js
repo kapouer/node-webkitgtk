@@ -381,16 +381,18 @@ function responseDispatcher(binding) {
 	debug('response', uri);
 
 	var info = priv.uris[uri];
-	if (!info) {
-		if (uri != this.uri) return console.warn(this.uri, "had an untracked response", uri, res.status, res.headers);
-		info = priv.uris[uri] = {mtime: Date.now()};
+	if (info) {
+		if (info.loaded) return;
+		info.loaded = true;
 	}
-	if (info.loaded) return;
-	info.loaded = true;
 
 	if (res.status == 0 && !res.stall) {
 		debug('status 0, ignored');
 		return;
+	}
+	if (!info) {
+		if (uri != this.uri) return console.warn(this.uri, "had an untracked response", uri, res.status, res.headers);
+		info = priv.uris[uri] = {mtime: Date.now()};
 	}
 	var stalled = false;
 
