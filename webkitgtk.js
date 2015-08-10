@@ -563,7 +563,11 @@ function load(uri, opts, cb) {
 	priv.wasIdle = false;
 	priv.idling = false;
 	priv.loopForLife = true;
-	priv.timeout = setTimeout(stop.bind(this), opts.timeout || 30000);
+	priv.timeout = setTimeout(function() {
+		debug("Load timeout", uri);
+		this.stop();
+	}.bind(this), opts.timeout || 30000);
+
 	priv.uris = {};
 	priv.stamp = Date.now().toString();
 	if (priv.debug) priv.inspecting = true;
