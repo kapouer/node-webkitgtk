@@ -1127,8 +1127,9 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	}
 
 	function loadListener() {
-		hasLoaded = true;
+		if (hasLoaded) return;
 		window.removeEventListener('load', loadListener, false);
+		hasLoaded = true;
 		if (lastEvent == EV.ready) {
 			check('load');
 		} else if (lastEvent < EV.ready) {
@@ -1136,9 +1137,11 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		}
 	}
 	function readyListener() {
+		if (hasReady) return;
+		document.removeEventListener('DOMContentLoaded', readyListener, false);
 		hasReady = true;
 		if (lastEvent != EV.init) return;
-		document.removeEventListener('DOMContentLoaded', readyListener, false);
+
 		if (preloadList.length) {
 			w.setTimeout.call(window, function() {
 				preloadList.forEach(function(obj) {
