@@ -320,6 +320,7 @@ function Request(uri, binding) {
 
 function requestDispatcher(binding) {
 	var priv = this.priv;
+	if (!priv.uris) return;
 	var uri = binding.uri;
 	if (!uri) return; // ignore empty uri
 	debug("request", uri);
@@ -358,37 +359,38 @@ function requestDispatcher(binding) {
 		return;
 	}
 	if (uri != mainUri) {
-		if (priv.uris) priv.uris[uri] = Date.now();
+		priv.uris[uri] = Date.now();
 	}
-	if (uri && isNetworkProtocol(uri) && !req.ignore) {
+	if (isNetworkProtocol(uri)) {
 		debug("counted as pending");
 		priv.pendingRequests++;
 	}
 }
 
 function responseDispatcher(binding) {
+	var priv = this.priv;
+	if (!priv.uris) return;
 	var res = new Response(this, binding);
 	var uri = res.uri;
 	if (!uri) return;
 	debug('response', uri);
-	var priv = this.priv;
 
 	if (res.status == 0 && !res.stall) {
 		debug('status 0, ignored');
 		return;
 	}
 	var stalled = false;
-	if (priv.uris) {
-		var lastMod = priv.uris[uri];
-		if (lastMod == Infinity) {
-			stalled = true;
-		}
-		if (lastMod) delete priv.uris[uri];
-		else if (uri != this.uri) return console.warn(this.uri, "had an untracked response", uri, res.status, res.headers);
+	var lastMod = priv.uris[uri];
+	if (lastMod == Infinity) {
+		stalled = true;
 	}
-	if (uri && isNetworkProtocol(uri)) {
+	if (lastMod) delete priv.uris[uri];
+	else if (uri != this.uri) return console.warn(this.uri, "had an untracked response", uri, res.status, res.headers);
+
+	if (isNetworkProtocol(uri)) {
 		debug('counted as ending pending');
 		priv.pendingRequests--;
+		if (priv.pendingRequests < 0) console.warn("counting more responses than requests with", uri, this.uri);
 	}
 	if (!stalled) this.emit('response', res);
 }
