@@ -323,7 +323,7 @@ function requestDispatcher(binding) {
 	if (!priv.uris) return;
 	var uri = binding.uri;
 	if (!uri) return; // ignore empty uri
-	if (priv.uris[uri]) return;
+
 	debug("request", uri);
 	var mainUri = this.uri || "";
 
