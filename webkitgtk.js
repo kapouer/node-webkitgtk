@@ -651,11 +651,7 @@ WebKit.prototype.stop = function(cb) {
 };
 
 function cleanLifeEvents() {
-	this.removeAllListeners('ready');
-	this.removeAllListeners('load');
-	this.removeAllListeners('idle');
-	this.removeAllListeners('unload');
-	this.removeAllListeners('busy');
+	this.removeAllListeners();
 	this.promises = {};
 }
 
