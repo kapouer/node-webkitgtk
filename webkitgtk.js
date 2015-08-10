@@ -350,15 +350,14 @@ function requestDispatcher(binding) {
 		binding.uri = uri;
 	}
 
-	if (req.cancel) {
-		debug("cancelled after dispatch");
-		binding.cancel = "1";
-		return;
-	}
-
 	if (req.ignore) {
 		debug("ignore request");
 		binding.ignore = "1";
+	}
+
+	if (req.cancel) {
+		debug("cancelled after dispatch");
+		binding.cancel = "1";
 		return;
 	}
 
