@@ -558,7 +558,7 @@ function load(uri, opts, cb) {
 				responseDispatcher.call(this, {uri: uri, status: 0, stall: true});
 			}
 		}
-	}.bind(this), priv.stall); // let dom client cancel stalled xhr first
+	}.bind(this), 100); // let dom client cancel stalled xhr first
 	priv.navigation = opts.navigation || false;
 	priv.wasIdle = false;
 	priv.idling = false;
