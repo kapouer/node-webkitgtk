@@ -380,21 +380,23 @@ function responseDispatcher(binding) {
 	if (!uri) return;
 	debug('response', uri);
 
-	if (res.status == 0 && !res.stall) {
-		debug('status 0, ignored');
-		return;
-	}
-	var stalled = false;
 	var info = priv.uris[uri];
 	if (!info) {
 		if (uri != this.uri) return console.warn(this.uri, "had an untracked response", uri, res.status, res.headers);
 		info = priv.uris[uri] = {mtime: Date.now()};
 	}
+	if (info.loaded) return;
+	info.loaded = true;
+
+	if (res.status == 0 && !res.stall) {
+		debug('status 0, ignored');
+		return;
+	}
+	var stalled = false;
+
 	if (info.mtime == Infinity) {
 		stalled = true;
 	}
-	if (info.loaded) return;
-	info.loaded = true;
 
 	if (isNetworkProtocol(uri)) {
 		debug('counted as ending pending');
