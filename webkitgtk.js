@@ -363,6 +363,8 @@ function requestDispatcher(binding) {
 		return;
 	}
 
+	var info = priv.uris[uri];
+	if (info) return;
 	if (uri != mainUri) {
 		priv.uris[uri] = {mtime: Date.now()};
 	}
@@ -618,6 +620,12 @@ function load(uri, opts, cb) {
 	loop.call(this, true);
 	debug('load', uri);
 	this.webview.load(uri, opts, function(err, status) {
+		var mainUri = this.webview.uri;
+		if (this.uri != mainUri) {
+			priv.uris[mainUri] = priv.uris[this.uri];
+			delete priv.uris[this.uri];
+			this.uri = mainUri;
+		}
 		loop.call(this, false);
 		debug('load %s done', uri);
 		priv.state = INITIALIZED;
