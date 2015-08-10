@@ -680,7 +680,7 @@ WebKit.prototype.unload = function(cb) {
 			if (err) console.error(err);
 			debug('unload listen ready');
 			loop.call(this, true);
-			this.once('load', function() {
+			this.once('ready', function() {
 				loop.call(this, false);
 				debug('unload done');
 				this.readyState = null;
