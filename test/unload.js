@@ -29,14 +29,13 @@ describe("unload method", function suite() {
 		});
 	});
 
-	it("should remove all listeners and not fail on next load", function(done) {
+	it("should not need to remove listeners after unload", function(done) {
 		this.timeout(10000);
 		var v = new WebKit();
 		v.init(0, function(err) {
 			v.load('http://google.com', {allow: "none"});
 			v.once('ready', function() {
 				v.unload(function(err) {
-					v.removeAllListeners();
 					v.load('http://github.com', {allow:"none"});
 					v.once('ready', function() {
 						done();
@@ -57,5 +56,17 @@ describe("unload method", function suite() {
 				});
 			});
 		});
+	});
+
+	it("should allow be ok with unload after a while", function(done) {
+		this.timeout(8000);
+		WebKit.load('http://google.com').once('idle', function() {
+			setTimeout(function() {
+				this.unload(function(err) {
+					expect(err).to.not.be.ok();
+					setTimeout(done, 1000);
+				});
+			}.bind(this), 3000);
+		}).once('unload', function() {});
 	});
 });
