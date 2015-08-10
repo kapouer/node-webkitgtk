@@ -392,7 +392,7 @@ function responseDispatcher(binding) {
 	}
 	if (!info) {
 		if (uri != this.uri) return console.warn(this.uri, "had an untracked response", uri, res.status, res.headers);
-		info = priv.uris[uri] = {mtime: Date.now()};
+		info = priv.uris[uri] = {mtime: Date.now(), loaded: true};
 	}
 	var stalled = false;
 
