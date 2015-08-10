@@ -803,15 +803,18 @@ function run(script, ticket, args, cb) {
 	} catch(e) {
 		return cb(e);
 	}
-	if (!this.webview) return cb(new Error("WebKit uninitialized"));
-	if (obj.sync) {
-		loop.call(this, true);
-		this.webview.run(obj.script, obj.ticket);
-	} else {
-		this.webview.run(obj.script, obj.ticket);
-		if (obj.ticket) loop.call(this, true);
-		else setImmediate(cb);
-	}
+	// run on next loop so one can setup event listeners before
+	setImmediate(function() {
+		if (!this.webview) return cb(new Error("WebKit uninitialized"));
+		if (obj.sync) {
+			loop.call(this, true);
+			this.webview.run(obj.script, obj.ticket);
+		} else {
+			this.webview.run(obj.script, obj.ticket);
+			if (obj.ticket) loop.call(this, true);
+			else setImmediate(cb);
+		}
+	}.bind(this));
 }
 
 function prepareRun(script, ticket, args, priv) {
