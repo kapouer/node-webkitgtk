@@ -624,7 +624,8 @@ WebKit.prototype.preload = function(uri, opts, cb) {
 	return this;
 };
 
-function stop(cb) {
+WebKit.prototype.stop = function(cb) {
+	debug("stop");
 	var priv = this.priv;
 	cb = cb || noop;
 	if (priv.state < INITIALIZED) return cb(errorLoad(priv.state));
@@ -632,21 +633,13 @@ function stop(cb) {
 	var wasLoading = false;
 	var fincb = function() {
 		loop.call(this, false);
+		debug("stop done");
 		cb(null, wasLoading);
 	}.bind(this);
-
 	wasLoading = this.webview.stop(fincb);
 	// immediately returned
 	if (!wasLoading) setImmediate(fincb);
 	this.readyState = "stop";
-}
-
-WebKit.prototype.stop = function(cb) {
-	debug("stop");
-	stop.call(this, function(err, wasLoading) {
-		debug("stop done");
-		cb(err, wasLoading);
-	});
 	return this;
 };
 
