@@ -188,7 +188,7 @@ function closedListener(what) {
 }
 
 function receiveDataDispatcher(uri, length) {
-	if (uri && this.priv.uris && uri != this.uri) this.priv.uris[uri] = Date.now();
+	if (uri && this.priv.uris && uri != this.uri && this.priv.uris[uri]) this.priv.uris[uri].mtime = Date.now();
 }
 
 function authDispatcher(request) {
@@ -323,6 +323,7 @@ function requestDispatcher(binding) {
 	if (!priv.uris) return;
 	var uri = binding.uri;
 	if (!uri) return; // ignore empty uri
+	if (priv.uris[uri]) return;
 	debug("request", uri);
 	var mainUri = this.uri || "";
 
@@ -362,7 +363,7 @@ function requestDispatcher(binding) {
 	}
 
 	if (uri != mainUri) {
-		priv.uris[uri] = Date.now();
+		priv.uris[uri] = {mtime: Date.now()};
 	}
 	if (isNetworkProtocol(uri)) {
 		debug("counted as pending");
@@ -383,12 +384,16 @@ function responseDispatcher(binding) {
 		return;
 	}
 	var stalled = false;
-	var lastMod = priv.uris[uri];
-	if (lastMod == Infinity) {
+	var info = priv.uris[uri];
+	if (!info) {
+		if (uri != this.uri) return console.warn(this.uri, "had an untracked response", uri, res.status, res.headers);
+		info = priv.uris[uri] = {mtime: Date.now()};
+	}
+	if (info.mtime == Infinity) {
 		stalled = true;
 	}
-	if (lastMod) delete priv.uris[uri];
-	else if (uri != this.uri) return console.warn(this.uri, "had an untracked response", uri, res.status, res.headers);
+	if (info.loaded) return;
+	info.loaded = true;
 
 	if (isNetworkProtocol(uri)) {
 		debug('counted as ending pending');
@@ -561,8 +566,8 @@ function load(uri, opts, cb) {
 	priv.stallInterval = setInterval(function() {
 		var now = Date.now();
 		for (var uri in priv.uris) {
-			if (now - priv.uris[uri] > priv.stall) {
-				priv.uris[uri] = Infinity;
+			if (now - priv.uris[uri].mtime > priv.stall) {
+				priv.uris[uri].mtime = Infinity;
 				debugStall("Timeout %s after %s ms", uri, priv.stall);
 				responseDispatcher.call(this, {uri: uri, status: 0, stall: true});
 			}
