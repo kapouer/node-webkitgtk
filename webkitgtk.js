@@ -1101,7 +1101,6 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 			}[node.nodeName.toLowerCase()];
 			if (!att) return;
 			var val = node.hasAttribute(att) ? node[att] : null;
-			node[att] = 'null';
 			if (lastEvent == EV.init) {
 				node[att] = 'null';
 				preloadList.push({node: node, val: val, att: att});
