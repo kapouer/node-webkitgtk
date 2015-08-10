@@ -459,6 +459,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 	}
 	if (!opts) opts = {};
 	if (!cb) cb = noop;
+	initWhen.call(this);
 	var cookies = opts.cookies;
 	if (cookies) {
 		debug('load cookies');
@@ -536,8 +537,6 @@ function load(uri, opts, cb) {
 	if (stateErr) return cb(stateErr, this);
 
 	this.readyState = "loading";
-
-	initWhen.call(this);
 
 	priv.state = LOADING;
 	priv.previousEvents = {};
@@ -620,6 +619,7 @@ WebKit.prototype.preload = function(uri, opts, cb) {
 	for (var key in opts) nopts[key] = opts[key];
 	nopts.allow = "none";
 	nopts.preload = true;
+	initWhen.call(this);
 	load.call(this, uri, nopts, cb);
 	return this;
 };
