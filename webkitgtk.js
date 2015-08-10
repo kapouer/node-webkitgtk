@@ -360,7 +360,7 @@ function requestDispatcher(binding) {
 	if (uri != mainUri) {
 		if (priv.uris) priv.uris[uri] = Date.now();
 	}
-	if (uri && isNetworkProtocol(uri)) {
+	if (uri && isNetworkProtocol(uri) && !req.ignore) {
 		debug("counted as pending");
 		priv.pendingRequests++;
 	}
@@ -372,21 +372,25 @@ function responseDispatcher(binding) {
 	if (!uri) return;
 	debug('response', uri);
 	var priv = this.priv;
-	if (priv.uris) {
-		var lastMod = priv.uris[uri];
-		if (lastMod == Infinity) return;
-		if (lastMod) delete priv.uris[uri];
-		else if (uri != this.uri) return console.warn(this.uri, "had an untracked response", uri, res.status, res.headers);
-	}
+
 	if (res.status == 0 && !res.stall) {
 		debug('status 0, ignored');
 		return;
+	}
+	var stalled = false;
+	if (priv.uris) {
+		var lastMod = priv.uris[uri];
+		if (lastMod == Infinity) {
+			stalled = true;
+		}
+		if (lastMod) delete priv.uris[uri];
+		else if (uri != this.uri) return console.warn(this.uri, "had an untracked response", uri, res.status, res.headers);
 	}
 	if (uri && isNetworkProtocol(uri)) {
 		debug('counted as ending pending');
 		priv.pendingRequests--;
 	}
-	this.emit('response', res);
+	if (!stalled) this.emit('response', res);
 }
 
 function isNetworkProtocol(uri) {
@@ -751,7 +755,7 @@ function loop(start) {
 		} else if (!priv.wasBusy) {
 			priv.idleCount++;
 		}
-		if (priv.idling && !priv.wasIdle && !priv.inspecting && priv.idleCount > 0) {
+		if (priv.idling && !priv.wasIdle && !priv.inspecting && priv.idleCount > 0 && priv.pendingRequests == 0) {
 			priv.wasIdle = true;
 			this.readyState = "idling";
 			priv.idling = false;
