@@ -288,7 +288,7 @@ function Response(view, binding) {
 	this.binding = binding;
 	this.view = view;
 }
-"uri status mime headers length filename".split(' ').forEach(
+"uri status mime headers length filename stall".split(' ').forEach(
 	defineCachedGet.bind(null, Response.prototype, "binding")
 );
 function defineCachedGet(proto, prop, name) {
