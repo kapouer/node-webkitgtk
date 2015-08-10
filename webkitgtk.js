@@ -354,7 +354,6 @@ function requestDispatcher(binding) {
 	if (req.ignore) {
 		debug("ignore request");
 		binding.ignore = "1";
-		return;
 	}
 
 	if (req.cancel) {
@@ -366,7 +365,11 @@ function requestDispatcher(binding) {
 	var info = priv.uris[uri];
 	if (info) return;
 	if (uri != mainUri) {
-		priv.uris[uri] = {mtime: Date.now()};
+		info = priv.uris[uri] = {mtime: Date.now()};
+		if (req.ignore) {
+			info.loaded = true;
+			return;
+		}
 	}
 	if (isNetworkProtocol(uri)) {
 		debug("counted as pending");
