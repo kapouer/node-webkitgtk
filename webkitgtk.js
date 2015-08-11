@@ -1213,7 +1213,7 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 					if (!preload) {
 						console.error("load event should not happen before ready event", document.location.toString());
 					}
-					check('load');
+					w.setTimeout.call(window, check.bind(this, 'load'), 0);
 				}
 			}, 0);
 		} else {
