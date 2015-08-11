@@ -36,10 +36,6 @@ static void dispatch_ignore_event(WebKitWebPage* page, gchar* eventName, const g
 
 static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* request, WebKitURIResponse* redirected_response, gpointer data) {
 	GError* error = NULL;
-	// ignore redirected requests - it's transparent to the user
-	if (redirected_response != NULL) {
-		return FALSE;
-	}
 	gchar* eventName = (gchar*)data;
 	const char* uri = webkit_uri_request_get_uri(request);
 	SoupMessageHeaders* headers = webkit_uri_request_get_http_headers(request);
@@ -48,6 +44,11 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 	GVariant* variantIn = soup_headers_to_gvariant_dict(headers);
 	g_variant_dict_init(&dictIn, variantIn);
 	g_variant_dict_insert(&dictIn, "uri", "s", uri);
+
+	if (redirected_response != NULL) {
+		g_variant_dict_insert(&dictIn, "origuri", "s", webkit_uri_response_get_uri(redirected_response));
+	}
+
 	variantIn = g_variant_dict_end(&dictIn);
 
 	GVariant* tuple[1];

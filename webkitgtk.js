@@ -333,7 +333,22 @@ function requestDispatcher(binding) {
 	if (!uri) return; // ignore empty uri
 
 	debug("request", uri);
+
 	var mainUri = this.uri || "";
+
+	var info = priv.uris[uri];
+	var origuri = binding.origuri;
+	if (origuri != null) {
+		var originfo = priv.uris[origuri];
+		if (originfo) {
+			info = priv.uris[uri] = priv.uris[origuri];
+			delete priv.uris[origuri];
+			debug("redirect", origuri, "to", uri);
+		}
+		if (mainUri && origuri == mainUri) {
+			mainUri = this.uri = uri;
+		}
+	}
 
 	var cancel = false;
 	if (priv.allow == "none") {
@@ -370,14 +385,11 @@ function requestDispatcher(binding) {
 		return;
 	}
 
-	var info = priv.uris[uri];
 	if (info) return;
-	if (uri != mainUri) {
-		info = priv.uris[uri] = {mtime: Date.now()};
-		if (req.ignore) {
-			info.loaded = true;
-			return;
-		}
+	info = priv.uris[uri] = {mtime: Date.now()};
+	if (req.ignore) {
+		info.loaded = true;
+		return;
 	}
 	if (isNetworkProtocol(uri)) {
 		debug("counted as pending");
@@ -399,7 +411,9 @@ function responseDispatcher(curuticket, binding) {
 
 	var info = priv.uris[uri];
 	if (info) {
-		if (info.loaded) return;
+		if (info.loaded) {
+			return;
+		}
 		info.loaded = true;
 	}
 
@@ -407,10 +421,7 @@ function responseDispatcher(curuticket, binding) {
 		debug('status 0, ignored');
 		return;
 	}
-	if (!info) {
-		if (uri != this.uri) return console.warn(this.uri, "had an untracked response", uri, res.status);
-		info = priv.uris[uri] = {mtime: Date.now(), loaded: true};
-	}
+	if (!info) return console.warn(this.uri, "had an untracked response", uri, res.status);
 
 	var stalled = false;
 
@@ -418,7 +429,7 @@ function responseDispatcher(curuticket, binding) {
 		stalled = true;
 	}
 
-	if (isNetworkProtocol(uri)) {
+	if (!info.main && isNetworkProtocol(uri)) {
 		debug('counted as ending pending');
 		priv.pendingRequests--;
 		if (priv.pendingRequests < 0) console.warn("counting more responses than requests with", uri, this.uri);
@@ -593,7 +604,7 @@ function load(uri, opts, cb) {
 		for (var uri in priv.uris) {
 			info = priv.uris[uri];
 			if (!info) return;
-			if (!info.loaded && now - info.mtime > priv.stall) {
+			if (!info.main && !info.loaded && now - info.mtime > priv.stall) {
 				priv.uris[uri].mtime = Infinity;
 				debugStall("Timeout %s after %s ms", uri, priv.stall);
 				responseDispatcher.call(this, priv.uticket, {uri: uri, status: 0, stall: true});
@@ -637,13 +648,8 @@ function load(uri, opts, cb) {
 	loop.call(this, true);
 	debug('load', uri);
 	priv.uticket = uran();
+	priv.uris[uri] = {mtime: Date.now(), main: true};
 	this.webview.load(uri, priv.uticket, opts, function(err, status) {
-		var mainUri = this.webview.uri;
-		if (this.uri && this.uri != mainUri) {
-			priv.uris[mainUri] = priv.uris[this.uri];
-			delete priv.uris[this.uri];
-			this.uri = mainUri;
-		}
 		loop.call(this, false);
 		debug('load %s done', uri);
 		priv.state = INITIALIZED;
