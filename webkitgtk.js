@@ -1144,7 +1144,7 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 			if (!att) return;
 			var val = node.hasAttribute(att) ? node[att] : null;
 			if (lastEvent == EV.init) {
-				node[att] = 'null';
+				node[att] = undefined;
 				preloadList.push({node: node, val: val, att: att});
 			} else {
 				node[att] = val;
@@ -1195,7 +1195,7 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 					if (!preload) {
 						console.error("load event should not happen before ready event", document.location.toString());
 					}
-					loadListener();
+					check('load');
 				}
 			}, 0);
 		} else {

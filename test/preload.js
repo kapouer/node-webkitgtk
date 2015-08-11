@@ -37,6 +37,46 @@ describe("preload method", function suite() {
 		});
 	});
 
+	it("should emit ready, load, idle events", function(done) {
+		var doc = '<html><head><script>\
+		document.writeln("<meta name=\'test\'></meta>");\
+		</script>\<script type="text/javascript" src="test.js"></script>\
+		<script src="test.js"></script></head>\
+		<body onload="document.body.appendChild(document.createTextNode(\'toto\'))">\
+		<script type="text/javascript">document.writeln("<p>there</p>");</script>\
+		</body></html>'
+		var server = require('http').createServer(function(req, res) {
+			if (req.url == "/") {
+				res.statusCode = 200;
+				res.end(doc);
+			} else if (req.url == "/test.js") {
+				res.statusCode = 200;
+				res.end('document.documentElement.className="toto";');
+			} else {
+				expect("no 404").to.be("should happen");
+				res.statusCode = 404;
+				res.end();
+			}
+		}).listen(function() {
+			var evs = [];
+			WebKit(function(err, w) {
+				w.preload("http://localhost:" + server.address().port, {console:true})
+				.once('ready', function() {
+					evs.push('ready');
+				})
+				.once('load', function() {
+					evs.push('load');
+				})
+				.once('idle', function() {
+					evs.push('idle');
+					expect(evs.join(' ')).to.be('ready load idle');
+					server.close();
+					done();
+				});
+			});
+		});
+	});
+
 	it("should preload then load and wait idle", function(done) {
 		var doc = '<html><head><script>\
 		document.writeln("<meta name=\'test\'></meta>");\
