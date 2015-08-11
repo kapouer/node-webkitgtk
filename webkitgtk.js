@@ -18,7 +18,6 @@ var LOADING = 3;
 var RegEvents = /^(ready|load|idle|unload)$/;
 
 var availableDisplays = {};
-var uticket = 0;
 
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
@@ -117,7 +116,7 @@ function initialPriv() {
 		idleCount: 0,
 		ticket: 0,
 		tickets: {},
-		eventName: "webkitgtk" + Date.now(),
+		eventName: "webkitgtk" + uran(),
 		loopTimeout: null,
 		loopImmediate: null,
 		wasBusy: false,
@@ -191,7 +190,7 @@ function closedListener(what) {
 function receiveDataDispatcher(curuticket, uri, length) {
 	var priv = this.priv;
 	if (curuticket != priv.uticket) {
-		debug("ignore data from other uticket", uri);
+		debug("ignore data from other uticket", curuticket, priv.uticket, uri);
 		return;
 	}
 	if (uri && priv.uris && uri != this.uri && priv.uris[uri]) priv.uris[uri].mtime = Date.now();
@@ -246,7 +245,10 @@ function eventsDispatcher(err, json) {
 			emitLifeEvent.call(this, obj.event);
 		} else if (obj.event == "idle") {
 			priv.idling = true;
-			debug("reached idle", this.uri, info);
+			debug("reached idle", this.uri);
+			if (priv.pendingRequests > 0) {
+				debug("with pending requests", priv.pendingRequests, priv.uris);
+			}
 		} else if (obj.event == "busy") {
 			// not a life event
 			this.emit(obj.event);
@@ -390,7 +392,7 @@ function responseDispatcher(curuticket, binding) {
 	var uri = res.uri;
 	if (!uri) return;
 	if (curuticket != priv.uticket) {
-		debug("ignore response from other uticket", uri);
+		debug("ignore response from other uticket", uri, curuticket, priv.uticket, this.uri);
 		return;
 	}
 	debug('response', uri);
@@ -481,7 +483,7 @@ function errorLoad(state) {
 
 WebKit.prototype.rawload = function(uri, opts, cb) {
 	loop.call(this, true);
-	this.webview.load(uri, (++uticket).toString(), opts, function(err) {
+	this.webview.load(uri, uran(), opts, function(err) {
 		loop.call(this, false);
 		cb(err, this);
 	}.bind(this));
@@ -504,7 +506,8 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		});
 		script.push('');
 		loop.call(this, true);
-		this.webview.load(uri, (++uticket).toString(), {
+		this.priv.uticket = uran();
+		this.webview.load(uri, this.priv.uticket, {
 			script: script.join(';\n'),
 			content: "<html></html>",
 			waitFinish: true
@@ -607,7 +610,7 @@ function load(uri, opts, cb) {
 	}.bind(this), opts.timeout || 30000);
 
 	priv.uris = {};
-	priv.stamp = Date.now().toString();
+	priv.stamp = uran();
 	if (priv.debug) priv.inspecting = true;
 
 	if (this.listeners('error').length == 0) {
@@ -633,7 +636,7 @@ function load(uri, opts, cb) {
 	}).join('\n');
 	loop.call(this, true);
 	debug('load', uri);
-	priv.uticket = (++uticket).toString();
+	priv.uticket = uran();
 	this.webview.load(uri, priv.uticket, opts, function(err, status) {
 		var mainUri = this.webview.uri;
 		if (this.uri && this.uri != mainUri) {
@@ -1026,6 +1029,10 @@ function pdf(filepath, opts, cb) {
 		loop.call(this, false);
 		cb(err);
 	}.bind(this));
+}
+
+function uran() {
+	return (Date.now() * 1e4 + Math.round(Math.random() * 1e4)).toString();
 }
 
 function errorEmitter(emit) {
