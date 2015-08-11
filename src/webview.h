@@ -1,6 +1,7 @@
 #ifndef WEBKITGTK_WEBVIEW_H
 #define WEBKITGTK_WEBVIEW_H
 
+#include "selfmessage.h"
 #include <node.h>
 #include <webkit2/webkit2.h>
 #include <nan.h>
@@ -64,6 +65,7 @@ private:
 
 	gchar* uri = NULL;
 	void updateUri(const gchar*);
+	guint signalResourceResponse;
 
 	int state;
 	int authRetryCount;

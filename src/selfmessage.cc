@@ -1,8 +1,7 @@
-#include "webview.h"
 #include "selfmessage.h"
+#include <glib.h>
 
-
-SelfMessage::SelfMessage(WebView* w, NanUtf8String* m) {
+SelfMessage::SelfMessage(void* w, char* m) {
 	view = w;
 	message = m;
 }

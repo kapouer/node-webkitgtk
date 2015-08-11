@@ -18,6 +18,7 @@ var LOADING = 3;
 var RegEvents = /^(ready|load|idle|unload)$/;
 
 var availableDisplays = {};
+var uticket = 0;
 
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
@@ -187,8 +188,13 @@ function closedListener(what) {
 	}
 }
 
-function receiveDataDispatcher(uri, length) {
-	if (uri && this.priv.uris && uri != this.uri && this.priv.uris[uri]) this.priv.uris[uri].mtime = Date.now();
+function receiveDataDispatcher(curuticket, uri, length) {
+	var priv = this.priv;
+	if (curuticket != priv.uticket) {
+		debug("ignore data from other uticket", uri);
+		return;
+	}
+	if (uri && priv.uris && uri != this.uri && priv.uris[uri]) priv.uris[uri].mtime = Date.now();
 }
 
 function authDispatcher(request) {
@@ -377,12 +383,16 @@ function requestDispatcher(binding) {
 	}
 }
 
-function responseDispatcher(binding) {
+function responseDispatcher(curuticket, binding) {
 	var priv = this.priv;
 	if (!priv.uris) return;
 	var res = new Response(this, binding);
 	var uri = res.uri;
 	if (!uri) return;
+	if (curuticket != priv.uticket) {
+		debug("ignore response from other uticket", uri);
+		return;
+	}
 	debug('response', uri);
 
 	var info = priv.uris[uri];
@@ -471,7 +481,7 @@ function errorLoad(state) {
 
 WebKit.prototype.rawload = function(uri, opts, cb) {
 	loop.call(this, true);
-	this.webview.load(uri, opts, function(err) {
+	this.webview.load(uri, (++uticket).toString(), opts, function(err) {
 		loop.call(this, false);
 		cb(err, this);
 	}.bind(this));
@@ -494,7 +504,7 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		});
 		script.push('');
 		loop.call(this, true);
-		this.webview.load(uri, {
+		this.webview.load(uri, (++uticket).toString(), {
 			script: script.join(';\n'),
 			content: "<html></html>",
 			waitFinish: true
@@ -583,7 +593,7 @@ function load(uri, opts, cb) {
 			if (!info.loaded && now - info.mtime > priv.stall) {
 				priv.uris[uri].mtime = Infinity;
 				debugStall("Timeout %s after %s ms", uri, priv.stall);
-				responseDispatcher.call(this, {uri: uri, status: 0, stall: true});
+				responseDispatcher.call(this, priv.uticket, {uri: uri, status: 0, stall: true});
 			}
 		}
 	}.bind(this), 100); // let dom client cancel stalled xhr first
@@ -623,7 +633,8 @@ function load(uri, opts, cb) {
 	}).join('\n');
 	loop.call(this, true);
 	debug('load', uri);
-	this.webview.load(uri, opts, function(err, status) {
+	priv.uticket = (++uticket).toString();
+	this.webview.load(uri, priv.uticket, opts, function(err, status) {
 		var mainUri = this.webview.uri;
 		if (this.uri && this.uri != mainUri) {
 			priv.uris[mainUri] = priv.uris[this.uri];

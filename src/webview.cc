@@ -3,7 +3,6 @@
 #include "utils.h"
 #include "webview.h"
 #include "gvariantproxy.h"
-#include "selfmessage.h"
 #include "webresponse.h"
 #include "webauthrequest.h"
 #include "dbus.h"
@@ -35,6 +34,7 @@ WebView::WebView(Handle<Object> opts) {
 	NanAdjustExternalMemory(400000);
 	gtk_init(0, NULL);
 	state = 0;
+	signalResourceResponse = 0;
 
 	guid = g_dbus_generate_guid();
 
@@ -105,7 +105,6 @@ WebView::WebView(Handle<Object> opts) {
 	g_signal_connect(view, "authenticate", G_CALLBACK(WebView::Authenticate), this);
 	g_signal_connect(view, "load-failed", G_CALLBACK(WebView::Fail), this);
 	g_signal_connect(view, "load-changed", G_CALLBACK(WebView::Change), this);
-	g_signal_connect(view, "resource-load-started", G_CALLBACK(WebView::ResourceLoad), this);
 	g_signal_connect(view, "script-dialog", G_CALLBACK(WebView::ScriptDialog), this);
 	g_signal_connect(view, "decide-policy", G_CALLBACK(WebView::DecidePolicy), this);
 }
@@ -132,7 +131,6 @@ NAN_METHOD(WebView::Destroy) {
 void WebView::destroy() {
 	if (view == NULL) return;
 	unloaded();
-	g_signal_handlers_disconnect_by_data(view, this);
 	view = NULL;
 	inspector = NULL;
 	if (window != NULL) {
@@ -171,6 +169,10 @@ WebView::~WebView() {
 
 void WebView::unloaded() {
 	if (view == NULL) return;
+	if (signalResourceResponse > 0) {
+		g_signal_handler_disconnect(view, signalResourceResponse);
+		signalResourceResponse = 0;
+	}
 	WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(view);
 	if (contman != NULL) {
 		webkit_user_content_manager_remove_all_scripts(contman);
@@ -308,21 +310,25 @@ void WebView::ResourceLoad(WebKitWebView* web_view, WebKitWebResource* resource,
 }
 
 void WebView::ResourceReceiveData(WebKitWebResource* resource, guint64 length, gpointer data) {
-	WebView* self = (WebView*)data;
+	SelfMessage* sm = (SelfMessage*)data;
+	if (sm == NULL || sm->message == NULL) return;
+	WebView* self = (WebView*)(sm->view);
 	const gchar* uri = webkit_web_resource_get_uri(resource);
-	int argc = 2;
-	Handle<Value> argv[] = { NanNew<String>(uri), NanNew<Integer>((int)length) };
+	int argc = 3;
+	Handle<Value> argv[] = { NanNew<String>(sm->message), NanNew<String>(uri), NanNew<Integer>((int)length) };
 	self->receiveDataCallback->Call(argc, argv);
 }
 
 void WebView::ResourceResponse(WebKitWebResource* resource, gpointer data) {
-	WebView* self = (WebView*)data;
+	SelfMessage* sm = (SelfMessage*)data;
+	if (sm == NULL || sm->message == NULL) return;
+	WebView* self = (WebView*)(sm->view);
 	WebKitURIResponse* response = webkit_web_resource_get_response(resource);
 	Handle<Object> obj = NanNew<FunctionTemplate>(WebResponse::constructor)->GetFunction()->NewInstance();
 	WebResponse* selfResponse = node::ObjectWrap::Unwrap<WebResponse>(obj);
 	selfResponse->init(resource, response);
-	int argc = 1;
-	Handle<Value> argv[] = { obj };
+	int argc = 2;
+	Handle<Value> argv[] = { NanNew<String>(sm->message), obj };
 	self->responseCallback->Call(argc, argv);
 }
 
@@ -448,11 +454,11 @@ NAN_METHOD(WebView::Load) {
 	NanScope();
 	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
 
-	if (!args[2]->IsFunction()) {
+	if (!args[3]->IsFunction()) {
 		NanThrowError("load(uri, opts, cb) missing cb argument");
 		NanReturnUndefined();
 	}
-	NanCallback* loadCb = new NanCallback(args[2].As<Function>());
+	NanCallback* loadCb = new NanCallback(args[3].As<Function>());
 
 	if (self->state == DOCUMENT_LOADING) {
 		Handle<Value> argv[] = {
@@ -478,7 +484,7 @@ NAN_METHOD(WebView::Load) {
 
 	NanUtf8String* uri = new NanUtf8String(args[0]);
 
-	Local<Object> opts = args[1]->ToObject();
+	Local<Object> opts = args[2]->ToObject();
 
 	if (NanBooleanOptionValue(opts, H("transparent"), false) == TRUE) {
 		if (self->transparencySupport == FALSE) {
@@ -548,6 +554,8 @@ NAN_METHOD(WebView::Load) {
 
 	self->unloaded();
 
+	self->signalResourceResponse = g_signal_connect(self->view, "resource-load-started", G_CALLBACK(WebView::ResourceLoad), new SelfMessage(self, **(new NanUtf8String(args[1]))));
+
 	self->state = DOCUMENT_LOADING;
 	self->updateUri(**uri);
 	gboolean isEmpty = g_strcmp0(**uri, "") == 0;
@@ -602,13 +610,14 @@ NAN_METHOD(WebView::Load) {
 void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) {
 	GError* error = NULL;
 	SelfMessage* sm = (SelfMessage*)data;
+	WebView* self = (WebView*)(sm->view);
 	WebKitJavascriptResult* js_result = webkit_web_view_run_javascript_finish(WEBKIT_WEB_VIEW(object), result, &error);
 	if (js_result == NULL) { // if NULL, error is defined
 		Handle<Value> argv[] = {
 			NanError(error->message),
 			NanNew(sm->message)
 		};
-		sm->view->eventsCallback->Call(2, argv);
+		self->eventsCallback->Call(2, argv);
 		g_error_free(error);
 	} else {
 		webkit_javascript_result_unref(js_result);
@@ -626,7 +635,8 @@ NAN_METHOD(WebView::Run) {
 	}
 
 	NanUtf8String* script = new NanUtf8String(args[0]);
-	SelfMessage* data = new SelfMessage(self, args[1]->IsString() ? new NanUtf8String(args[1]) : NULL);
+
+	SelfMessage* data = new SelfMessage(self, args[1]->IsString() ? **(new NanUtf8String(args[1])) : NULL);
 
 	if (self->window != NULL) {
 		webkit_web_view_run_javascript(
