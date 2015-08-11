@@ -148,4 +148,41 @@ describe("request listener", function suite() {
 			});
 		});
 	});
+
+	it("should count pendingRequests correctly in case of a redirected main page", function(done) {
+		this.timeout(4000);
+		var doc = '<html><head></head><body><img src="thing.png">move along</body></html>';
+		var port;
+		var server = require('http').createServer(function(req, res) {
+			if (req.url == "/") {
+				res.statusCode = 302;
+				res.setHeader('Location', 'http://localhost:' + port  + '/?redirected');
+				res.end();
+			} else if (req.url == "/?redirected") {
+				res.statusCode = 200;
+				res.end(doc);
+			} else if (req.url == "/thing.png") {
+				res.write('stuf');
+				res.end();
+			} else {
+				expect("no 404").to.be("should happen");
+				res.statusCode = 404;
+				res.end();
+			}
+		}).listen(function() {
+			port = server.address().port;
+			WebKit(function(err, w) {
+				w.load("http://localhost:" + port, {console:true, stall: 2000})
+				.once('idle', function() {
+					this.html(function(err, str) {
+						expect(str).to.be(doc);
+						setTimeout(function() {
+							server.close();
+							done();
+						}, 100);
+					});
+				}).once('unload', function() {});
+			});
+		});
+	});
 });
