@@ -246,9 +246,6 @@ function eventsDispatcher(err, json) {
 		} else if (obj.event == "idle") {
 			priv.idling = true;
 			debug("reached idle", this.uri);
-			if (priv.pendingRequests > 0) {
-				debug("with pending requests", priv.pendingRequests, priv.uris);
-			}
 		} else if (obj.event == "busy") {
 			// not a life event
 			this.emit(obj.event);
@@ -391,7 +388,8 @@ function requestDispatcher(binding) {
 		info.loaded = true;
 		return;
 	}
-	if (isNetworkProtocol(uri)) {
+
+	if (isNetworkProtocol(uri) && this.readyState != "idle") {
 		debug("counted as pending");
 		priv.pendingRequests++;
 	}
@@ -429,7 +427,7 @@ function responseDispatcher(curuticket, binding) {
 		stalled = true;
 	}
 
-	if (!info.main && isNetworkProtocol(uri)) {
+	if (!info.main && isNetworkProtocol(uri) && this.readyState != "idle") {
 		debug('counted as ending pending');
 		priv.pendingRequests--;
 		if (priv.pendingRequests < 0) console.warn("counting more responses than requests with", uri, this.uri);
@@ -621,6 +619,7 @@ function load(uri, opts, cb) {
 	}.bind(this), opts.timeout || 30000);
 
 	priv.uris = {};
+	priv.pendingRequests = 0;
 	priv.stamp = uran();
 	if (priv.debug) priv.inspecting = true;
 
