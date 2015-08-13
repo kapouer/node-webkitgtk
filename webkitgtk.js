@@ -1436,12 +1436,13 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 			lastEvent: lastEvent,
 			lastRunEvent: lastRunEvent
 		};
-		if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall
-		&& frames.len == 0 && requests.len <= requests.stall
-		&& lastEvent <= lastRunEvent) {
+		if (lastEvent <= lastRunEvent) {
 			if (lastEvent == EV.load) {
-				lastEvent += 1;
-				emitNext("idle", from, url, info);
+				if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall
+					&& frames.len == 0 && requests.len <= requests.stall) {
+					lastEvent += 1;
+					emitNext("idle", from, url, info);
+				}
 			} else if (lastEvent == EV.idle) {
 				emitNext("busy", from, url);
 			} else if (lastEvent == EV.init && hasReady) {
