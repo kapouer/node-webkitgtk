@@ -665,10 +665,18 @@ void WebView::PngFinished(GObject* object, GAsyncResult* result, gpointer data) 
 	WebView* self = (WebView*)data;
 	GError* error = NULL;
 	cairo_surface_t* surface = webkit_web_view_get_snapshot_finish(self->view, result, &error);
-	cairo_status_t status = cairo_surface_write_to_png_stream(surface, WebView::PngWrite, self);
+	cairo_status_t status;
+	if (error == NULL) {
+		status = cairo_surface_write_to_png_stream(surface, WebView::PngWrite, self);
+	}
 	Handle<Value> argv[] = {};
-	if (status == CAIRO_STATUS_SUCCESS) argv[0] = NanNull();
-	else argv[0] = NanError(error->message);
+	if (status == CAIRO_STATUS_SUCCESS) {
+		argv[0] = NanNull();
+	} else if (error != NULL && error->message != NULL) {
+		argv[0] = NanError(error->message);
+	} else {
+		argv[0] = NanError("An error occurred while getting png snapshot");
+	}
 	self->pngCallback->Call(1, argv);
 	delete self->pngCallback;
 	self->pngCallback = NULL;
