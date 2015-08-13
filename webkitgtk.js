@@ -1231,6 +1231,16 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		}
 	}
 
+	function absolute(url) {
+		return (new URL(url, document.location)).href;
+	}
+
+	function ignoreListener(e) {
+		var uri = e && e.keyIdentifier;
+		if (!uri) return;
+		if (!requests[uri]) requests[uri] = {count: 0};
+		requests[uri].stall = true;
+	}
 	function doneTimeout(id) {
 		if (id && timeouts[id]) {
 			if (timeouts[id].stall) timeouts.stall--;
@@ -1339,17 +1349,6 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		return ws;
 	};
 
-
-	function absolute(url) {
-		return (new URL(url, document.location)).href;
-	}
-
-	function ignoreListener(e) {
-		var uri = e && e.keyIdentifier;
-		if (!uri) return;
-		if (!requests[uri]) requests[uri] = {count: 0};
-		requests[uri].stall = true;
-	}
 	var wopen = window.XMLHttpRequest.prototype.open;
 	window.XMLHttpRequest.prototype.open = function(method, url, async) {
 		if (this._private) xhrClean.call(this);
