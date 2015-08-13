@@ -1225,6 +1225,9 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 			}, 0);
 		} else {
 			check("ready");
+			if (missedEvent == EV.load) {
+				w.setTimeout.call(window, check.bind(this, 'load'), 0);
+			}
 		}
 	}
 
