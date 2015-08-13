@@ -44,7 +44,7 @@ view.init(displayOpts, function(err, view) {
   }, function(err) {
     if (err) console.error(err);
   }).once('load', function() {
-    this.png().save('test.png', function(err) {
+    this.png('test.png', function(err) {
       if (err) console.error(err);
       else console.log("screenshot saved", uri);
     });
@@ -56,7 +56,7 @@ WebKit.load(uri, {
   display: displayOpts, // optional, defaults to :0
   style: fs.readFileSync('css/png.css') // useful stylesheet for snapshots
 }).once('idle', function() {
-  this.png().save('test.png'); // this is always the created instance in listeners
+  this.png('test.png'); // this is always the created instance in listeners
   // ...
 });
 ```
