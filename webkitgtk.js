@@ -246,6 +246,7 @@ function eventsDispatcher(err, json) {
 		} else if (obj.event == "idle") {
 			priv.idling = true;
 			debug("reached idle", this.uri);
+					if (priv.uris[k].count) console.log(k, priv.uris[k]);
 		} else if (obj.event == "busy") {
 			// not a life event
 			this.emit(obj.event);
@@ -354,6 +355,8 @@ function requestDispatcher(binding) {
 		if (url.parse(uri).host != url.parse(mainUri).host) cancel = true;
 	} else if (priv.allow instanceof RegExp) {
 		if (uri != mainUri && !priv.allow.test(uri)) cancel = true;
+	} else if (priv.allow) {
+		console.info("Unknown allow value", priv.allow);
 	}
 	if (cancel) {
 		debug("cancelled before dispatch");
