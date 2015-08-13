@@ -1220,9 +1220,6 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 				preloadList = [];
 				check("ready");
 				if (missedEvent == EV.load) {
-					if (!preload) {
-						console.error("load event should not happen before ready event", document.location.toString());
-					}
 					w.setTimeout.call(window, check.bind(this, 'load'), 0);
 				}
 			}, 0);
