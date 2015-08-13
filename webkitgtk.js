@@ -443,7 +443,8 @@ function isNetworkProtocol(uri) {
 	if (p == 'http' || p == 'https') {
 		return true;
 	} else {
-		debug("is not network protocol", uri);
+		debug("is not network protocol", p);
+		return false;
 	}
 }
 
