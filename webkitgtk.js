@@ -1134,6 +1134,11 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	var missedEvent;
 	var preloadList = [], observer;
 
+	var intervals = {len: 0, stall: 0};
+	var timeouts = {len: 0, stall: 0};
+	var frames = {len: 0};
+	var requests = {len: 0, stall: 0};
+
 	if (preload) disableExternalResources();
 
 	var w = {};
@@ -1226,7 +1231,6 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		}
 	}
 
-	var timeouts = {len: 0, stall: 0};
 	function doneTimeout(id) {
 		if (id && timeouts[id]) {
 			if (timeouts[id].stall) timeouts.stall--;
@@ -1268,7 +1272,6 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		return w.clearTimeout.call(window, id);
 	};
 
-	var intervals = {len: 0, stall: 0};
 	window.setInterval = function(fn, interval) {
 		var args = Array.prototype.slice.call(arguments, 0);
 		var stall = false;
@@ -1293,7 +1296,6 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		return w.clearInterval.call(window, id);
 	};
 
-	var frames = {len: 0};
 	function doneFrame(id) {
 		if (id && frames[id]) {
 			delete frames[id];
@@ -1337,7 +1339,6 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		return ws;
 	};
 
-	var requests = {len: 0, stall: 0};
 
 	function absolute(url) {
 		return (new URL(url, document.location)).href;
