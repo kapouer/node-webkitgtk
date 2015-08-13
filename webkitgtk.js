@@ -604,7 +604,7 @@ function load(uri, opts, cb) {
 			if (!info) return;
 			if (!info.main && !info.loaded && now - info.mtime > priv.stall) {
 				priv.uris[uri].mtime = Infinity;
-				debugStall("Timeout %s after %s ms", uri, priv.stall);
+				debugStall("%s ms - %s", priv.stall, uri);
 				responseDispatcher.call(this, priv.uticket, {uri: uri, status: 0, stall: true});
 			}
 		}
@@ -614,7 +614,7 @@ function load(uri, opts, cb) {
 	priv.idling = false;
 	priv.loopForLife = true;
 	priv.timeout = setTimeout(function() {
-		debug("Load timeout", uri);
+		debugStall("%s ms - %s", opts.timeout || 30000, uri);
 		this.stop();
 	}.bind(this), opts.timeout || 30000);
 
