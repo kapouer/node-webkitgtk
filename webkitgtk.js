@@ -349,14 +349,15 @@ function requestDispatcher(binding) {
 	}
 
 	var cancel = false;
-	if (priv.allow == "none") {
+	var allow = priv.allow;
+	if (allow == "none") {
 		if (uri != mainUri) cancel = true;
-	} else if (priv.allow == "same-origin") {
+	} else if (allow == "same-origin") {
 		if (url.parse(uri).host != url.parse(mainUri).host) cancel = true;
-	} else if (priv.allow instanceof RegExp) {
-		if (uri != mainUri && !priv.allow.test(uri)) cancel = true;
-	} else if (priv.allow) {
-		console.info("Unknown allow value", priv.allow);
+	} else if (allow instanceof RegExp) {
+		if (uri != mainUri && !allow.test(uri)) cancel = true;
+	} else if (typeof allow == "string" && allow != "all") {
+		console.info("Unknown allow value", allow);
 	}
 	if (cancel) {
 		debug("cancelled before dispatch");
