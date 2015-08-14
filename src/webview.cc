@@ -63,7 +63,16 @@ WebView::WebView(Handle<Object> opts) {
 	webkit_web_context_set_process_model(context, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
 	webkit_web_context_set_cache_model(context, WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
 	webkit_web_context_set_tls_errors_policy(context, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
-	webkit_cookie_manager_set_accept_policy(webkit_web_context_get_cookie_manager(context), WEBKIT_COOKIE_POLICY_ACCEPT_NO_THIRD_PARTY);
+
+	const gchar* cookiePolicy = getStr(opts, "cookiePolicy");
+	WebKitCookieManager* cookieManager = webkit_web_context_get_cookie_manager(context);
+	if (!g_strcmp0(cookiePolicy, "never")) {
+		webkit_cookie_manager_set_accept_policy(cookieManager, WEBKIT_COOKIE_POLICY_ACCEPT_NEVER);
+	} else if (!g_strcmp0(cookiePolicy, "always")) {
+		webkit_cookie_manager_set_accept_policy(cookieManager, WEBKIT_COOKIE_POLICY_ACCEPT_ALWAYS);
+	} else {
+		webkit_cookie_manager_set_accept_policy(cookieManager, WEBKIT_COOKIE_POLICY_ACCEPT_NO_THIRD_PARTY);
+	}
 
 	const gchar* wePath = getStr(opts, "webextension");
 	if (wePath != NULL) {

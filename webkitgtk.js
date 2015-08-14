@@ -95,6 +95,7 @@ WebKit.prototype.init = function(opts, cb) {
 			policyListener: policyDispatcher.bind(this),
 			authListener: authDispatcher.bind(this),
 			closedListener: closedListener.bind(this),
+			cookiePolicy: opts.cookiePolicy || "",
 			cacheDir: opts.cacheDir,
 			offscreen: opts.offscreen,
 			inspector: opts.inspector

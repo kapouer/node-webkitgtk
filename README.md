@@ -255,6 +255,9 @@ init(opts, cb) options
   shows a real window with a web inspector.  
   As a commodity, *the inspector must be closed* to get the `idle` event fired.
 
+- cookiePolicy  
+  string, "always", "never", any other string defaults to "no third party".
+
 If width, height, depth options are given, an xvfb instance listening
 given display port will be spawn using `headless` module.
 
