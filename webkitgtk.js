@@ -404,7 +404,7 @@ function requestDispatcher(binding) {
 	}
 	info.count++;
 
-	if (info.remote && this.readyState != "idle") {
+	if (!info.ignore && info.remote && this.readyState != "idle") {
 		priv.pendingRequests++;
 		debug("counted as pending", priv.pendingRequests, uri, info);
 	}
@@ -437,7 +437,7 @@ function responseDispatcher(curuticket, binding) {
 
 	var stalled = false;
 	var decrease = 0;
-	if (info.main || !info.remote) {
+	if (info.main || !info.remote || info.ignore) {
 
 	} else if (info.mtime == Infinity) {
 		stalled = true;
