@@ -251,7 +251,6 @@ function eventsDispatcher(err, json) {
 		} else if (obj.event == "idle") {
 			priv.idling = true;
 			debug("reached idle", this.uri);
-					if (priv.uris[k].count) console.log(k, priv.uris[k]);
 		} else if (obj.event == "busy") {
 			// not a life event
 			this.emit(obj.event);
