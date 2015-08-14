@@ -190,11 +190,15 @@ function closedListener(what) {
 
 function receiveDataDispatcher(curuticket, uri, length) {
 	var priv = this.priv;
+	if (!uri) return;
 	if (curuticket != priv.uticket) {
 		debug("ignore data from other uticket", curuticket, priv.uticket, uri);
 		return;
 	}
-	if (uri && priv.uris && uri != this.uri && priv.uris[uri]) priv.uris[uri].mtime = Date.now();
+	var info = priv.uris && priv.uris[uri];
+	if (!info) return;
+	if (!info.mtime || info.mtime == Infinity) return;
+	info.mtime = Date.now();
 }
 
 function authDispatcher(request) {
@@ -331,18 +335,17 @@ function requestDispatcher(binding) {
 	var uri = binding.uri;
 	if (!uri) return; // ignore empty uri
 
-	debug("request", uri);
+	debug('request', uri.substring(0, 255));
 
 	var mainUri = this.uri || "";
 
 	var info = priv.uris[uri];
+
 	var origuri = binding.origuri;
 	if (origuri != null) {
 		var originfo = priv.uris[origuri];
 		if (originfo) {
 			info = priv.uris[uri] = priv.uris[origuri];
-			delete priv.uris[origuri];
-			debug("redirect", origuri, "to", uri);
 		}
 		if (mainUri && origuri == mainUri) {
 			mainUri = this.uri = uri;
@@ -361,7 +364,7 @@ function requestDispatcher(binding) {
 		console.info("Unknown allow value", allow);
 	}
 	if (cancel) {
-		debug("cancelled before dispatch");
+		debug("cancelled before dispatch", uri);
 		binding.cancel = "1";
 		return;
 	}
@@ -387,16 +390,24 @@ function requestDispatcher(binding) {
 		return;
 	}
 
-	if (info) return;
-	info = priv.uris[uri] = {mtime: Date.now()};
-	if (req.ignore) {
-		info.loaded = true;
-		return;
+	if (!info) {
+		info = priv.uris[uri] = {
+			mtime: Date.now(),
+			count: 0,
+			remote: isNetworkProtocol(uri)
+		};
+		if (req.ignore) {
+			info.loaded = true;
+			info.ignore = true;
+		}
+	} else if (!info.count && info.mtime != Infinity) {
+		info.mtime = Date.now();
 	}
+	info.count++;
 
-	if (isNetworkProtocol(uri) && this.readyState != "idle") {
-		debug("counted as pending");
+	if (info.remote && this.readyState != "idle") {
 		priv.pendingRequests++;
+		debug("counted as pending", priv.pendingRequests, uri, info);
 	}
 }
 
@@ -406,35 +417,43 @@ function responseDispatcher(curuticket, binding) {
 	var res = new Response(this, binding);
 	var uri = res.uri;
 	if (!uri) return;
+
 	if (curuticket != priv.uticket) {
 		debug("ignore response from other uticket", uri, curuticket, priv.uticket, this.uri);
 		return;
 	}
-	debug('response', uri);
+
+	debug('response', uri.substring(0, 255));
 
 	var info = priv.uris[uri];
-	if (info) {
-		if (info.loaded) {
-			return;
-		}
-		info.loaded = true;
-	}
 
-	if (res.status == 0 && !res.stall) {
-		debug('status 0, ignored');
+	if (!info) {
+		if (res.status == 0) {
+			debug('ignored response', uri);
+		} else {
+			console.warn(this.uri, "had an untracked response", uri, res.status);
+		}
 		return;
 	}
-	if (!info) return console.warn(this.uri, "had an untracked response", uri, res.status);
 
 	var stalled = false;
+	var decrease = 0;
+	if (info.main || !info.remote) {
 
-	if (info.mtime == Infinity) {
+	} else if (info.mtime == Infinity) {
 		stalled = true;
+		decrease = -info.count;
+		info.count = 0;
+	} else if (info.count) {
+		decrease = -1;
+		info.count--;
+	} else {
+		console.log("what ?", uri, info);
 	}
 
-	if (!info.main && isNetworkProtocol(uri) && this.readyState != "idle") {
-		debug('counted as ending pending');
-		priv.pendingRequests--;
+	if (decrease != 0) {
+		priv.pendingRequests += decrease;
+		debug('counted as ending pending', priv.pendingRequests, uri, info);
 		if (priv.pendingRequests < 0) console.warn("counting more responses than requests with", uri, this.uri);
 	}
 	if (!stalled) this.emit('response', res);
@@ -607,11 +626,13 @@ function load(uri, opts, cb) {
 		var info;
 		for (var uri in priv.uris) {
 			info = priv.uris[uri];
-			if (!info) return;
-			if (!info.main && !info.loaded && now - info.mtime > priv.stall) {
-				priv.uris[uri].mtime = Infinity;
+			if (!info) {
+				continue;
+			}
+			if (info.remote && info.count && (now - info.mtime > priv.stall)) {
+				info.mtime = Infinity;
 				debugStall("%s ms - %s", priv.stall, uri);
-				responseDispatcher.call(this, priv.uticket, {uri: uri, status: 0, stall: true});
+				responseDispatcher.call(this, priv.uticket, {uri: uri, status: 0});
 			}
 		}
 	}.bind(this), 100); // let dom client cancel stalled xhr first
