@@ -6,8 +6,10 @@ var path = require('path');
 var url = require('url');
 var Q = require('q');
 var debug = require('debug')('webkitgtk');
-var debugStall = console.warn;
-var debugError = console.error;
+
+// available after init
+var debugStall;
+var debugError;
 
 // internal state, does not match readyState
 var CREATED = 0;
@@ -54,6 +56,14 @@ WebKit.prototype.init = function(opts, cb) {
 	}
 	if (opts == null) opts = {};
 	else if (typeof opts != "object") opts = {display: opts};
+
+	if (opts.verbose) {
+		debugStall = console.warn;
+		debugError = console.error;
+	} else {
+		debugStall = require('debug')('webkitgtk:timeout');
+		debugError = require('debug')('webkitgtk:error');
+	}
 
 	var priv = this.priv;
 	if (priv.state >= INITIALIZING) return cb(new Error("init must not be called twice"), this);

@@ -244,6 +244,11 @@ init(opts, cb) options
   number, 32
   Framebuffer pixel depth
 
+- verbose  
+  boolean, default false  
+  log client errors and stalled requests, otherwise available as
+  DEBUG=webkitgtk:timeout,webkitgtk:error.
+
 - cacheDir  
   string, $user_cache_dir/node-webkitgtk  
   path to webkitgtk cache directory.  
