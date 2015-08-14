@@ -127,3 +127,11 @@ The chainable API has been dropped.
 .run(script, param1, param2, ..., cb) like .runev,
 and there is only one callback, as a consequence of dropping chainable API.
 
+
+2.1.0
+-----
+
+Added cookiePolicy instance (init) option.
+
+"idle" event is now much more accurate - meaning it can hang sometimes too,
+though it would be considered a bug in that case.
