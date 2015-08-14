@@ -447,7 +447,7 @@ function responseDispatcher(curuticket, binding) {
 		decrease = -1;
 		info.count--;
 	} else {
-		console.log("what ?", uri, info);
+		debug("should not happen", uri, info);
 	}
 
 	if (decrease != 0) {
