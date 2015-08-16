@@ -236,10 +236,11 @@ function eventsDispatcher(err, json) {
 	}
 	var obj = JSON.parse(json);
 	if (!obj) {
-		console.error("received invalid event", json);
+		debugError("received invalid event", json);
 		return;
 	}
 	if (obj.stamp && obj.stamp != priv.stamp) {
+		debugWarn("event stamp mismatch", obj.event, priv.stamp);
 		return;
 	}
 	var args = obj.args || [];
