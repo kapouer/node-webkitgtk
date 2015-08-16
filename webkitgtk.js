@@ -228,9 +228,9 @@ function policyDispatcher(type, uri) {
 function eventsDispatcher(err, json) {
 	var priv = this.priv;
 	if (err) {
-		console.error("Error in event dispatcher", err, json);
+		debugError("Error in event dispatcher", err, json);
 		if (priv.debug) {
-			console.info("This error might occur because of HTTP response Header Content-Security-Policy");
+			debugWarn("This error might occur because of HTTP response Header Content-Security-Policy");
 		}
 		return;
 	}
@@ -371,7 +371,7 @@ function requestDispatcher(binding) {
 	} else if (allow instanceof RegExp) {
 		if (uri != mainUri && !allow.test(uri)) cancel = true;
 	} else if (typeof allow == "string" && allow != "all") {
-		console.info("Unknown allow value", allow);
+		debugError("Unknown allow value", allow);
 	}
 	if (cancel) {
 		debug("cancelled before dispatch", uri);
@@ -502,7 +502,7 @@ function display(opts, cb) {
 		}, display - 1, function(err, child, display) {
 			if (err) cb(err);
 			else {
-				console.log("Spawned xvfb on DISPLAY=:" + display);
+				debugWarn("Spawned xvfb on DISPLAY=:" + display);
 				cb(null, child, display);
 				process.on('exit', function() {
 					child.kill();
