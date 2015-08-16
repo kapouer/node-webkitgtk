@@ -131,7 +131,6 @@ function initialPriv() {
 		loopTimeout: null,
 		loopImmediate: null,
 		wasBusy: false,
-		wasIdle: false,
 		idling: false,
 		previousEvents: {},
 		lastEvent: null,
@@ -225,6 +224,15 @@ function policyDispatcher(type, uri) {
 	}
 }
 
+function checkIdle() {
+	var priv = this.priv;
+	if (priv.idling && priv.pendingRequests == 0) {
+		this.readyState = "idling";
+		priv.idling = false;
+		emitLifeEvent.call(this, 'idle');
+	}
+}
+
 function eventsDispatcher(err, json) {
 	var priv = this.priv;
 	if (err) {
@@ -261,6 +269,7 @@ function eventsDispatcher(err, json) {
 			emitLifeEvent.call(this, obj.event);
 		} else if (obj.event == "idle") {
 			priv.idling = true;
+			checkIdle.call(this);
 			debug("reached idle", this.uri);
 		} else if (obj.event == "busy") {
 			// not a life event
@@ -466,6 +475,7 @@ function responseDispatcher(curuticket, binding) {
 		debug('counted as ending pending', priv.pendingRequests, uri, info);
 		if (priv.pendingRequests < 0) console.warn("counting more responses than requests with", uri, this.uri);
 	}
+	checkIdle.call(this);
 	if (!stalled) this.emit('response', res);
 }
 
@@ -647,7 +657,6 @@ function load(uri, opts, cb) {
 		}
 	}.bind(this), 100); // let dom client cancel stalled xhr first
 	priv.navigation = opts.navigation || false;
-	priv.wasIdle = false;
 	priv.idling = false;
 	priv.loopForLife = true;
 	priv.timeout = setTimeout(function() {
@@ -840,12 +849,6 @@ function loop(start) {
 			priv.idleCount = 0;
 		} else if (!priv.wasBusy) {
 			priv.idleCount++;
-		}
-		if (priv.idling && !priv.wasIdle && !priv.inspecting && priv.idleCount > 0 && priv.pendingRequests == 0) {
-			priv.wasIdle = true;
-			this.readyState = "idling";
-			priv.idling = false;
-			emitLifeEvent.call(this, 'idle');
 		}
 		priv.wasBusy = busy;
 		if (busy) {
