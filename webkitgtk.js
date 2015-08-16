@@ -1169,8 +1169,8 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	var missedEvent;
 	var preloadList = [], observer;
 
-	var intervals = {len: 0, stall: 0};
-	var timeouts = {len: 0, stall: 0};
+	var intervals = {len: 0, stall: 0, inc: 1};
+	var timeouts = {len: 0, stall: 0, inc: 1};
 	var frames = {len: 0};
 	var requests = {len: 0, stall: 0};
 
@@ -1277,14 +1277,20 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		requests[uri].stall = true;
 	}
 	function doneTimeout(id) {
-		if (id && timeouts[id]) {
-			if (timeouts[id].stall) timeouts.stall--;
+		var t;
+		var obj = id != null && timeouts[id];
+		if (obj) {
+			if (obj.stall) timeouts.stall--;
 			delete timeouts[id];
 			timeouts.len--;
 			if (timeouts.len <= timeouts.stall) {
 				check('timeout');
 			}
+			t = obj.t;
+		} else {
+			t = id;
 		}
+		return t;
 	}
 	window.setTimeout = function setTimeout(fn, timeout) {
 		var args = Array.prototype.slice.call(arguments, 0);
@@ -1307,14 +1313,15 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 			doneTimeout(obj.id);
 			if (err) throw err; // rethrow
 		}.bind(null, obj);
-		var id = w.setTimeout.apply(window, args);
-		timeouts[id] = {stall: stall};
+		var t = w.setTimeout.apply(window, args);
+		var id = ++timeouts.inc;
+		timeouts[id] = {stall: stall, t: t};
 		obj.id = id;
 		return id;
 	};
 	window.clearTimeout = function(id) {
-		doneTimeout(id);
-		return w.clearTimeout.call(window, id);
+		var t = doneTimeout(id);
+		return w.clearTimeout.call(window, t);
 	};
 
 	window.setInterval = function(fn, interval) {
@@ -1325,20 +1332,26 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 			intervals.stall++;
 		}
 		intervals.len++;
-		var id = w.setInterval.apply(window, args);
-		intervals[id] = {stall: stall};
+		var t = w.setInterval.apply(window, args);
+		var id = ++intervals.inc;
+		intervals[id] = {stall: stall, t: t};
 		return id;
 	};
 	window.clearInterval = function(id) {
-		if (id && intervals[id]) {
-			if (intervals[id].stall) intervals.stall--;
+		var t;
+		var obj = id != null && intervals[id];
+		if (obj) {
+			if (obj.stall) intervals.stall--;
 			delete intervals[id];
 			intervals.len--;
 			if (intervals.len <= intervals.stall) {
 				check('interval');
 			}
+			t = obj.t;
+		} else {
+			t = id;
 		}
-		return w.clearInterval.call(window, id);
+		return w.clearInterval.call(window, t);
 	};
 
 	function doneFrame(id) {
@@ -1370,7 +1383,7 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		return w.cancelAnimationFrame.call(window, id);
 	};
 
-	window.WebSocket = function() {
+	if (window.WebSocket) window.WebSocket = function() {
 		var ws = new w.WebSocket(Array.prototype.slice.call(arguments, 0));
 		function checkws() {
 			check('websocket');
