@@ -59,9 +59,11 @@ WebKit.prototype.init = function(opts, cb) {
 
 	if (opts.verbose) {
 		debugStall = console.warn;
+		debugWarn = console.warn;
 		debugError = console.error;
 	} else {
 		debugStall = require('debug')('webkitgtk:timeout');
+		debugWarn = require('debug')('webkitgtk:warn');
 		debugError = require('debug')('webkitgtk:error');
 	}
 
