@@ -972,7 +972,7 @@ function prepareRun(script, ticket, args, priv) {
 		.replace(/TICKET/g, JSON.stringify(ticket))
 		.replace('SCRIPT', script)
 		.replace('DISPATCHER', dispatcher)
-		.replace('STAMP', '"' + priv.stamp + '"');
+		.replace(/STAMP/g, '"' + priv.stamp + '"');
 		obj.script = '(' + wrap + ')()';
 	} else {
 		var wrap = function(err, result) {
