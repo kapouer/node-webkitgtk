@@ -477,8 +477,8 @@ function responseDispatcher(curuticket, binding) {
 		debug('counted as ending pending', priv.pendingRequests, uri, info);
 		if (priv.pendingRequests < 0) console.warn("counting more responses than requests with", uri, this.uri);
 	}
-	checkIdle.call(this);
 	if (!stalled) this.emit('response', res);
+	checkIdle.call(this);
 }
 
 function isNetworkProtocol(uri) {
