@@ -959,9 +959,8 @@ function prepareRun(script, ticket, args, priv) {
 		if (isfunction) script = '(' + script + ')(' + args.join(', ') + ')';
 		else script = '(function() { return ' + script + '; })()';
 		var wrap = function() {
-			var message = {};
+			var message = {stamp: STAMP};
 			if (TICKET) message.ticket = TICKET;
-			else if (STAMP) message.stamp = STAMP;
 			try {
 				message.args = [ SCRIPT ];
 			} catch(e) {
@@ -972,15 +971,14 @@ function prepareRun(script, ticket, args, priv) {
 		.replace(/TICKET/g, JSON.stringify(ticket))
 		.replace('SCRIPT', script)
 		.replace('DISPATCHER', dispatcher)
-		.replace(/STAMP/g, '"' + priv.stamp + '"');
+		.replace('STAMP', '"' + priv.stamp + '"');
 		obj.script = '(' + wrap + ')()';
 	} else {
 		var wrap = function(err, result) {
-			var message = {};
+			var message = {stamp: STAMP};
 			message.args = Array.prototype.slice.call(arguments, 1);
 			if (!TICKET) {
 				message.event = err;
-				message.stamp = STAMP;
 			} else {
 				message.ticket = TICKET;
 				if (err) message.error = err;
