@@ -949,8 +949,7 @@ function prepareRun(script, ticket, args, priv) {
 		var msg, evt = document.createEvent("KeyboardEvent"); \
 		try { msg = JSON.stringify(message); } catch (e) { msg = JSON.stringify(message + "");} \
 		evt.initKeyboardEvent("' + priv.eventName + '", false, true, null, msg); \
-		window.dispatchEvent(evt); \
-		';
+		window.dispatchEvent(evt);';
 	var obj = {
 		sync: !async,
 		ticket: ticket
