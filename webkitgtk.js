@@ -71,29 +71,25 @@ WebKit.prototype.init = function(opts, cb) {
 	if (priv.state >= INITIALIZING) return cb(new Error("init must not be called twice"), this);
 	priv.state = INITIALIZING;
 
-	var ndis = opts.display != null ? opts.display : process.env.DISPLAY;
-	if (typeof ndis == "string") {
-		var match = /^(?:(\d+)x(\d+)x(\d+))?\:(\d+)$/.exec(ndis);
-		if (match) {
-			if (match[1] != null) opts.width = match[1];
-			if (match[2] != null) opts.height = match[2];
-			if (match[3] != null) opts.depth = match[3];
-			if (match[4] != null) ndis = match[4];
-		}
-	}
-	ndis = parseInt(ndis);
-	if (isNaN(ndis)) ndis = 0;
-	opts.display = ndis;
 	if (opts.offscreen == null) opts.offscreen = true;
 	if (opts.debug) {
 		priv.debug = true;
 		opts.offscreen = false;
 		opts.inspector = true;
 	}
-	debug('find display');
+	debug('init');
+	this.binding(opts, function(err) {
+		priv.state = INITIALIZED;
+		cb(null, this);
+	}.bind(this));
+	return this;
+};
+
+WebKit.prototype.binding = function(opts, cb) {
 	display.call(this, opts, function(err, child, newDisplay) {
-		if (err) return cb(err, this);
+		if (err) return cb(err);
 		debug('display found', newDisplay);
+		var priv = this.priv;
 		if (child) priv.xvfb = child;
 		process.env.DISPLAY = ":" + newDisplay;
 		var Bindings = require(__dirname + '/lib/webkitgtk.node');
@@ -113,10 +109,8 @@ WebKit.prototype.init = function(opts, cb) {
 			inspector: opts.inspector
 		});
 		debug('new instance created');
-		priv.state = INITIALIZED;
-		cb(null, this);
+		cb();
 	}.bind(this));
-	return this;
 };
 
 function initialPriv() {
@@ -496,7 +490,19 @@ function noop(err) {
 }
 
 function display(opts, cb) {
-	var display = opts.display;
+	var display = opts.display != null ? opts.display : process.env.DISPLAY;
+	if (typeof display == "string") {
+		var match = /^(?:(\d+)x(\d+)x(\d+))?\:(\d+)$/.exec(display);
+		if (match) {
+			if (match[1] != null) opts.width = match[1];
+			if (match[2] != null) opts.height = match[2];
+			if (match[3] != null) opts.depth = match[3];
+			if (match[4] != null) display = match[4];
+		}
+	}
+	display = parseInt(display);
+	if (isNaN(display)) display = 0;
+	opts.display = display;
 	if (availableDisplays[display]) {
 		return setImmediate(cb.bind(this, null, null, display));
 	}
@@ -538,21 +544,8 @@ function errorLoad(state) {
 }
 
 WebKit.prototype.rawload = function(uri, opts, cb) {
-	loop.call(this, true);
-	this.webview.load(uri, uran(), opts, function(err) {
-		loop.call(this, false);
-		cb(err, this);
-	}.bind(this));
-};
-
-WebKit.prototype.load = function(uri, opts, cb) {
-	if (!cb && typeof opts == "function") {
-		cb = opts;
-		opts = null;
-	}
-	if (!opts) opts = {};
-	if (!cb) cb = noop;
-	initWhen.call(this);
+	var priv = this.priv;
+	priv.uticket = uran();
 	var cookies = opts.cookies;
 	if (cookies) {
 		debug('load cookies');
@@ -562,22 +555,36 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		});
 		script.push('');
 		loop.call(this, true);
-		this.priv.uticket = uran();
-		this.webview.load(uri, this.priv.uticket, {
+		this.webview.load(uri, priv.uticket, {
 			script: script.join(';\n'),
 			content: "<html></html>",
 			waitFinish: true
 		}, function(err) {
 			loop.call(this, false);
 			debug('load cookies done', err);
-			if (err) return cb(err, this);
-			setImmediate(function() {
-				load.call(this, uri, opts, cb);
-			}.bind(this));
+			next.call(this, err);
 		}.bind(this));
 	} else {
-		load.call(this, uri, opts, cb);
+		next.call(this);
 	}
+	function next(err) {
+		if (err) return cb(err);
+		loop.call(this, true);
+		this.webview.load(uri, this.priv.uticket, opts, function(err, status) {
+			loop.call(this, false);
+			cb(err, status);
+		}.bind(this));
+	}
+};
+
+WebKit.prototype.load = function(uri, opts, cb) {
+	if (!cb && typeof opts == "function") {
+		cb = opts;
+		opts = null;
+	}
+	if (!opts) opts = {};
+	if (!cb) cb = noop;
+	load.call(this, uri, opts, cb);
 	return this;
 };
 
@@ -631,6 +638,8 @@ function load(uri, opts, cb) {
 	if (stateErr) return cb(stateErr, this);
 
 	this.readyState = "loading";
+
+	initWhen.call(this);
 
 	priv.state = LOADING;
 	priv.previousEvents = {};
@@ -692,12 +701,11 @@ function load(uri, opts, cb) {
 	opts.script += '\n' + scripts.map(function(fn) {
 		return prepareRun(fn.fn || fn, null, fn.args || null, priv).script;
 	}).join('\n');
-	loop.call(this, true);
+
 	debug('load', uri);
 	priv.uticket = uran();
 	priv.uris[uri] = {mtime: Date.now(), main: true};
-	this.webview.load(uri, priv.uticket, opts, function(err, status) {
-		loop.call(this, false);
+	this.rawload(uri, opts, function(err, status) {
 		debug('load %s done', uri);
 		priv.state = INITIALIZED;
 		if (priv.timeout) {
@@ -707,7 +715,7 @@ function load(uri, opts, cb) {
 		this.status = status;
 		if (!err && status < 200 || status >= 400) err = status;
 		cb(err, this);
-		if (!err && priv.inspecting) {
+		if (!err && priv.inspecting && this.webview.inspect) {
 			this.webview.inspect();
 		}
 	}.bind(this));
@@ -724,7 +732,6 @@ WebKit.prototype.preload = function(uri, opts, cb) {
 	for (var key in opts) nopts[key] = opts[key];
 	nopts.allow = "none";
 	nopts.preload = true;
-	initWhen.call(this);
 	load.call(this, uri, nopts, cb);
 	return this;
 };
@@ -741,7 +748,7 @@ WebKit.prototype.stop = function(cb) {
 		debug("stop done");
 		cb(null, wasLoading);
 	}.bind(this);
-	wasLoading = this.webview.stop(fincb);
+	wasLoading = this.webview.stop && this.webview.stop(fincb);
 	// immediately returned
 	if (!wasLoading) setImmediate(fincb);
 	this.readyState = "stop";
@@ -802,7 +809,8 @@ WebKit.prototype.unload = function(cb) {
 function destroy(cb) {
 	if (this.webview) {
 		this.priv.destroyCb = cb;
-		this.webview.destroy();
+		if (this.webview.destroy) this.webview.destroy();
+		else setImmediate(closedListener.bind(this, 'window'));
 	} else {
 		setImmediate(cb);
 	}
@@ -817,6 +825,7 @@ WebKit.prototype.destroy = function(cb) {
 };
 
 function loop(start) {
+	if (!this.webview || !this.webview.loop) return;
 	var priv = this.priv;
 	if (start) {
 		priv.loopForCallbacks++;
@@ -952,9 +961,10 @@ function prepareRun(script, ticket, args, priv) {
 	// If it isn't supported any more, send an empty event and make the webextension fetch
 	// the data (stored in a global window variable).
 	var dispatcher = '\
-		var msg, evt = document.createEvent("KeyboardEvent"); \
+		var msg, en = "' + priv.eventName + '", evt = document.createEvent("KeyboardEvent"); \
 		try { msg = JSON.stringify(message); } catch (e) { msg = JSON.stringify(message + "");} \
-		evt.initKeyboardEvent("' + priv.eventName + '", false, true, null, msg); \
+		if (evt.initKeyboardEvent) evt.initKeyboardEvent(en, false, true, null, msg); \
+		else { evt.initEvent(en, false, true); evt.char = msg; }\
 		window.dispatchEvent(evt);';
 	var obj = {
 		sync: !async,
@@ -1149,8 +1159,9 @@ function errorEmitter(emit) {
 }
 
 function consoleEmitter(emit) {
+	if (!window.console) return;
 	['log', 'error', 'info', 'warn'].forEach(function(meth) {
-		console[meth] = function() {
+		window.console[meth] = function() {
 			var args = ['console', meth].concat(Array.prototype.slice.call(arguments));
 			emit.apply(null, args);
 		};
@@ -1195,10 +1206,11 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	};
 
 	document.charset = charset;
-
-	window.addEventListener('load', loadListener, false);
 	window.addEventListener('r' + eventName, ignoreListener, false);
-	document.addEventListener('DOMContentLoaded', readyListener, false);
+	if (document.readyState != 'loading') readyListener();
+	else document.addEventListener('DOMContentLoaded', readyListener, false);
+	if (document.readyState == 'complete') loadListener();
+	else window.addEventListener('load', loadListener, false);
 
 	function disableExternalResources() {
 		var count = 0;
