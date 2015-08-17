@@ -10,7 +10,7 @@ var request = function() { // lazy loading request
 		console.error("Please `npm install request` to be able to load remote documents");
 		process.exit(1);
 	}
-	return request.apply(undefined, arguments);
+	return request;
 }
 
 module.exports = function(WebKit) {
@@ -25,7 +25,6 @@ WebKit.prototype.binding = function(opts, cfg, cb) {
 };
 
 WebKit.prototype.rawload = function(uri, opts, cb) {
-	var cookies = opts.cookies;
 	var jsdomOpts = {
 		resourceLoader: resourceLoader.bind(this),
 		features: {}
@@ -42,6 +41,12 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	}
 
 	jsdomOpts.url = uri;
+	var cookies = opts.cookies;
+	if (cookies) {
+		if (!Array.isArray(cookies)) cookies = [cookies];
+		if (cookies.length) cookies = cookies.join(';');
+		else cookies = null;
+	}
 
 	jsdomOpts.created = function(err, window) {
 		window.raise = function(ev, msg, obj) {
@@ -52,12 +57,10 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		if (err) return cb(err);
 		window.uri = uri;
 		this.webview = window;
+
 		if (cookies) {
 			debug('load cookies');
-			if (!Array.isArray(cookies)) cookies = [cookies];
-			cookies.forEach(function(cookie) {
-				window.document.cookie = cookie;
-			});
+			window.document.cookie = cookies;
 		}
 		if (opts.console) window.console = console;
 		if (!window.URL) {
@@ -78,6 +81,10 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		cb(null, 200);
 	}.bind(this);
 
+	this.webview = {
+		uri: uri
+	};
+
 	setImmediate(function() {
 		if ((!uri || uri == "about:blank") && opts.content == null) {
 			opts.content = '<html><head></head><body></body></html>';
@@ -86,22 +93,11 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			jsdom(opts.content, jsdomOpts);
 		} else {
 			// trick to have a main uri before loading main doc
-			this.webview = {
-				loading: true,
-				uri: uri,
-				stop: function(cb) {
-					if (this.webview.loading) {
-						this.webview.loading = false;
-						loader.req.abort();
-						setImmediate(cb);
-						return true;
-					} else {
-						return false;
-					}
-					// return nothing and WebKit.stop will callback on our behalf
-				}.bind(this)
-			};
-			var loader = resourceLoader.call(this, {url: {href: uri}}, function(err, body) {
+			this.webview.loading = true;
+			var loader = resourceLoader.call(this, {
+				url: { href: uri },
+				cookie: cookies
+			}, function(err, body) {
 				this.webview.loading = false;
 				var status = 200;
 				if (err) {
@@ -111,6 +107,17 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 				if (err || status != 200) return cb(err, status);
 				jsdom(body, jsdomOpts);
 			}.bind(this));
+			this.webview.stop = function stop(cb) {
+				if (this.webview.loading) {
+					this.webview.loading = false;
+					loader.req.abort();
+					setImmediate(cb);
+					return true;
+				} else {
+					return false;
+				}
+				// return nothing and WebKit.stop will callback on our behalf
+			}.bind(this);
 		}
 	}.bind(this));
 };
@@ -151,7 +158,15 @@ function resourceLoader(resource, cb) {
 	delete reqObj.uri;
 	delete reqObj.cancel;
 	delete reqObj.ignore;
-	return request({url: uri, headers: reqObj}, function(err, res, body) {
+	var reqOpts = {
+		url: uri,
+		headers: reqObj,
+		jar: request().jar()
+	};
+	if (resource.cookie) {
+		reqOpts.jar.setCookie(request().cookie(resource.cookie), uri);
+	}
+	return request()(reqOpts, function(err, res, body) {
 		var status = res && res.statusCode || 0;
 		if (!err && status != 200) err = new HTTPError(status);
 		var headers = res && res.headers || {};
