@@ -210,7 +210,7 @@ function handleXhr(window) {
 		var xhrOpen = xhr.open;
 		var privUrl;
 		xhr.open = function(method, url) {
-			if (method.toLowerCase() == "get") privUrl = (new window.URL(url, window.document.location.toString())).href;
+			if (method.toLowerCase() == "get") privUrl = (new window.URL(url)).href;
 			return xhrOpen.apply(this, Array.prototype.slice.call(arguments, 0));
 		};
 		xhr.send = function(data) {
