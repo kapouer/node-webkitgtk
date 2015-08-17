@@ -753,7 +753,7 @@ WebKit.prototype.stop = function(cb) {
 		debug("stop done");
 		cb(null, wasLoading);
 	}.bind(this);
-	wasLoading = this.webview.stop && this.webview.stop(fincb);
+	wasLoading = this.webview && this.webview.stop && this.webview.stop(fincb);
 	// immediately returned
 	if (!wasLoading) setImmediate(fincb);
 	this.readyState = "stop";

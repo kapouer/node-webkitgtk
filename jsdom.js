@@ -1,5 +1,7 @@
 var debug = require('debug')('webkitgtk');
 var jsdom = require('jsdom').jsdom;
+var httpCodes = require('http').STATUS_CODES;
+
 var request = function() { // lazy loading request
 	var request;
 	try {
@@ -41,18 +43,13 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 
 	jsdomOpts.created = function(err, window) {
 		window.raise = function(ev, msg, obj) {
-			if (obj && obj.error) throw obj.error;
+			if (obj && obj.error) {
+				throw obj.error;
+			}
 		};
 		if (err) return cb(err);
+		window.uri = uri;
 		this.webview = window;
-
-		Object.defineProperty(window, "uri", {
-			get: function() {
-				var uri = this.document.location.toString();
-				if (uri == "about:blank") uri = "";
-				return uri;
-			}
-		});
 		if (cookies) {
 			debug('load cookies');
 			if (!Array.isArray(cookies)) cookies = [cookies];
@@ -80,20 +77,39 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		cb(null, status);
 	}.bind(this);
 
-	if (opts.content != null) {
-		jsdomOpts.html = opts.content;
-		setImmediate(jsdom.bind(null, opts.content, jsdomOpts));
-	} else {
-		request(uri, function(err, res, body) {
-			var status = res && res.statusCode || 0;
-			if (err || status != 200) return cb(err, status);
-			jsdomOpts.html = body;
+	setImmediate(function() {
+		if (opts.content != null) {
+			jsdomOpts.html = opts.content;
 			jsdom(opts.content, jsdomOpts);
-		});
-	}
+		} else {
+			// trick to have a main uri before loading main doc
+			this.webview = {uri: uri, stop: function(cb) {
+				if (loader.req) loader.req.abort();
+				// return nothing and WebKit.stop will callback on our behalf
+			}};
+			var loader = resourceLoader.call(this, {url: {href: uri}}, function(err, body) {
+				var status = 200;
+				if (err) {
+					status = err.code || 0;
+					if (typeof status == "string") status = 0;
+				}
+				if (err || status != 200) return cb(err, status);
+				jsdomOpts.html = body;
+				var window = jsdom(opts.content, jsdomOpts);
+			});
+		}
+	}.bind(this));
 };
 
 };
+
+function HTTPError(code) {
+	Error.call(this, httpCodes[code]);
+	this.code = code;
+	return this;
+};
+HTTPError.prototype = Object.create(Error.prototype);
+HTTPError.prototype.constructor = HTTPError;
 
 function emitIgnore(reqObj) {
 	var evt = this.webview.document.createEvent("KeyboardEvent");
@@ -107,24 +123,30 @@ function resourceLoader(resource, cb) {
 	var uri = resource.url && resource.url.href;
 	debug("resource loader", uri);
 	var priv = this.priv;
-	var reqObj = {uri: uri, headers: {Accept: "*/*"}};
+	var reqObj = {uri: uri, main: true, headers: {Accept: "*/*"}};
 	priv.cfg.requestListener(reqObj);
 	if (reqObj.ignore) emitIgnore.call(this, reqObj);
 	if (reqObj.cancel) {
 		priv.cfg.responseListener(uticket, {uri: uri, length: 0, headers: {}, status: 0});
-		return cb(new Error("Ressource canceled"));
+		var err = new Error("Ressource canceled");
+		err.statusCode = 0;
+		return cb(err);
 	}
 	var uticket = priv.uticket;
 	// actual get
-	request(uri, function(err, res, body) {
+	return request(uri, function(err, res, body) {
 		var status = res && res.statusCode || 0;
+		if (!err && status != 200) err = new HTTPError(status);
 		var headers = res && res.headers || {};
 		priv.cfg.responseListener(uticket, {
 			uri: uri,
 			headers: headers,
 			length: body ? body.length : 0,
 			mime: headers['content-type'],
-			status: status
+			status: status,
+			data: function(cb) {
+				cb(null, body);
+			}
 		});
 		cb(err, body);
 	}.bind(this))

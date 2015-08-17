@@ -65,12 +65,11 @@ describe("load method", function suite() {
 	it("should allow to load another uri just after", function(done) {
 		this.timeout(5000);
 		WebKit.load('http://google.com', function(err, w) {
-			w.load('http://geoip.edagames.com', function() {
-				w.once('response', function(res) {
-					res.data(function(err, data) {
-						expect(JSON.parse(data.toString()).country).to.be.ok();
-						done();
-					});
+			w.load('http://geoip.edagames.com')
+			.once('response', function(res) {
+				res.data(function(err, data) {
+					expect(JSON.parse(data.toString()).country).to.be.ok();
+					done();
 				});
 			});
 		});
