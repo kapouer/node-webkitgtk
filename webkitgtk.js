@@ -78,14 +78,27 @@ WebKit.prototype.init = function(opts, cb) {
 		opts.inspector = true;
 	}
 	debug('init');
-	this.binding(opts, function(err) {
+	this.binding(opts, {
+		eventName: priv.eventName,
+		requestListener: requestDispatcher.bind(this),
+		receiveDataListener: receiveDataDispatcher.bind(this),
+		responseListener: responseDispatcher.bind(this),
+		eventsListener: eventsDispatcher.bind(this),
+		policyListener: policyDispatcher.bind(this),
+		authListener: authDispatcher.bind(this),
+		closedListener: closedListener.bind(this),
+		cookiePolicy: opts.cookiePolicy || "",
+		cacheDir: opts.cacheDir,
+		offscreen: opts.offscreen,
+		inspector: opts.inspector
+	}, function(err) {
 		priv.state = INITIALIZED;
 		cb(null, this);
 	}.bind(this));
 	return this;
 };
 
-WebKit.prototype.binding = function(opts, cb) {
+WebKit.prototype.binding = function(opts, cfg, cb) {
 	display.call(this, opts, function(err, child, newDisplay) {
 		if (err) return cb(err);
 		debug('display found', newDisplay);
@@ -93,21 +106,8 @@ WebKit.prototype.binding = function(opts, cb) {
 		if (child) priv.xvfb = child;
 		process.env.DISPLAY = ":" + newDisplay;
 		var Bindings = require(__dirname + '/lib/webkitgtk.node');
-		this.webview = new Bindings({
-			webextension: __dirname + '/lib/ext',
-			eventName: priv.eventName,
-			requestListener: requestDispatcher.bind(this),
-			receiveDataListener: receiveDataDispatcher.bind(this),
-			responseListener: responseDispatcher.bind(this),
-			eventsListener: eventsDispatcher.bind(this),
-			policyListener: policyDispatcher.bind(this),
-			authListener: authDispatcher.bind(this),
-			closedListener: closedListener.bind(this),
-			cookiePolicy: opts.cookiePolicy || "",
-			cacheDir: opts.cacheDir,
-			offscreen: opts.offscreen,
-			inspector: opts.inspector
-		});
+		cfg.webextension = __dirname + '/lib/ext';
+		this.webview = new Bindings(cfg);
 		debug('new instance created');
 		cb();
 	}.bind(this));
@@ -695,8 +695,11 @@ function load(uri, opts, cb) {
 	if (Buffer.isBuffer(opts.style)) opts.style = opts.style.toString();
 	if (Buffer.isBuffer(opts.script)) opts.script = opts.script.toString();
 	var scripts = [errorEmitter];
-	if (opts.console) scripts.push(consoleEmitter);
-	scripts.push({fn: stateTracker, args: [opts.preload, opts.charset || "utf-8", priv.eventName, priv.stall, 200, 200]});
+	if (opts.console && !priv.jsdom) scripts.push(consoleEmitter);
+	scripts.push({
+		fn: stateTracker,
+		args: [opts.preload && !priv.jsdom, opts.charset || "utf-8", priv.eventName, priv.stall, 200, 200]
+	});
 	if (!opts.script) opts.script = "";
 	opts.script += '\n' + scripts.map(function(fn) {
 		return prepareRun(fn.fn || fn, null, fn.args || null, priv).script;
@@ -706,7 +709,7 @@ function load(uri, opts, cb) {
 	priv.uticket = uran();
 	priv.uris[uri] = {mtime: Date.now(), main: true};
 	this.rawload(uri, opts, function(err, status) {
-		debug('load %s done', uri);
+		debug('load done %s', uri);
 		priv.state = INITIALIZED;
 		if (priv.timeout) {
 			clearTimeout(priv.timeout);
@@ -1206,9 +1209,14 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	};
 
 	document.charset = charset;
+
 	window.addEventListener('r' + eventName, ignoreListener, false);
+
+	console.log(document.readyState);
+
 	if (document.readyState != 'loading') readyListener();
 	else document.addEventListener('DOMContentLoaded', readyListener, false);
+
 	if (document.readyState == 'complete') loadListener();
 	else window.addEventListener('load', loadListener, false);
 
