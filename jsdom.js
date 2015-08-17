@@ -39,6 +39,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		jsdomOpts.FetchExternalResources = ['script'];
 		jsdomOpts.ProcessExternalResources = ['script'];
 	}
+
 	jsdomOpts.url = uri;
 
 	jsdomOpts.created = function(err, window) {
@@ -72,14 +73,12 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		}.bind(this), false);
 
 		if (opts.script) window.run(opts.script);
-		var status = 200;
-		this.status = status;
-		cb(null, status);
+		this.status = 200;
+		cb(null, 200);
 	}.bind(this);
 
 	setImmediate(function() {
 		if (opts.content != null) {
-			jsdomOpts.html = opts.content;
 			jsdom(opts.content, jsdomOpts);
 		} else {
 			// trick to have a main uri before loading main doc
