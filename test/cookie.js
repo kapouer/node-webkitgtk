@@ -9,10 +9,22 @@ describe("cookies option", function suite() {
 	var cookiestrOne = "mycookie=myvalue";
 	var countTwo = 0;
 	var cookiestrTwo = "mycookie=myvalue2";
+	var hadXhr = false;
 
 	before(function(done) {
 		server = require('http').createServer(function(req, res) {
-			if (req.url == "/test/one") {
+			if (req.url == "/test/xhr/json") {
+				expect(req.headers.cookie).to.be(cookiestrOne);
+				hadXhr = true;
+				res.setHeader('Content-Type', 'application/json');
+				res.write('{"data": "stuff"}');
+			} else if (req.url == "/test/xhr") {
+				res.write('<html><head><script type="text/javascript">\
+				var xhr = new XMLHttpRequest(); \
+				xhr.open("get", "/test/xhr/json", true);\
+				xhr.send();\
+				</script></head><body>test</body></html>');
+			} else if (req.url == "/test/one") {
 				if (countOne == 0) expect(req.headers.cookie).to.be(cookiestrOne);
 				countOne++;
 				res.write('<html><body><img src="myimg.png"/></body></html>');
@@ -58,6 +70,14 @@ describe("cookies option", function suite() {
 					done();
 				});
 			});
+		});
+	});
+
+	it("should set Cookie HTTP header on xhr request", function(done) {
+		WebKit.load("http://localhost:" + port + "/test/xhr", {cookies:cookiestrOne + ";Path=/test/xhr"})
+		.once('idle', function() {
+			expect(hadXhr).to.be(true);
+			done();
 		});
 	});
 });
