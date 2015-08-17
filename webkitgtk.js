@@ -915,6 +915,9 @@ function run(script, ticket, args, cb) {
 	// run on next loop so one can setup event listeners before
 	setImmediate(function() {
 		if (!this.webview) return cb(new Error("WebKit uninitialized"));
+		if (!this.webview.run) {
+			return cb(new Error("webview not available yet"));
+		}
 		if (obj.sync) {
 			loop.call(this, true);
 			this.webview.run(obj.script, obj.ticket);
