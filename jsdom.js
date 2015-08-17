@@ -17,11 +17,8 @@ module.exports = function(WebKit) {
 
 WebKit.prototype.binding = function(opts, cfg, cb) {
 	this.priv.jsdom = {
-		features: {
-			MutationEvents : '2.0',
-			QuerySelector : true
-		},
-		resourceLoader:  resourceLoader.bind(this)
+		MutationEvents : '2.0',
+		QuerySelector : true
 	};
 	this.priv.cfg = cfg;
 	cb();
@@ -29,15 +26,19 @@ WebKit.prototype.binding = function(opts, cfg, cb) {
 
 WebKit.prototype.rawload = function(uri, opts, cb) {
 	var cookies = opts.cookies;
-	var jsdomOpts = {};
+	var jsdomOpts = {
+		resourceLoader: resourceLoader.bind(this),
+		features: {}
+	};
 	var priv = this.priv;
-	for (var jk in priv.jsdom) jsdomOpts[jk] = priv.jsdom[jk];
+
+	for (var jk in priv.jsdom) jsdomOpts.features[jk] = priv.jsdom[jk];
 	if (opts.preload) {
-		jsdomOpts.FetchExternalResources = [];
-		jsdomOpts.ProcessExternalResources = [];
+		jsdomOpts.features.FetchExternalResources = [];
+		jsdomOpts.features.ProcessExternalResources = [];
 	} else {
-		jsdomOpts.FetchExternalResources = ['script'];
-		jsdomOpts.ProcessExternalResources = ['script'];
+		jsdomOpts.features.FetchExternalResources = ['script'];
+		jsdomOpts.features.ProcessExternalResources = ['script'];
 	}
 
 	jsdomOpts.url = uri;
@@ -78,21 +79,28 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	}.bind(this);
 
 	setImmediate(function() {
+		if ((!uri || uri == "about:blank") && opts.content == null) {
+			opts.content = '<html><head></head><body></body></html>';
+		}
 		if (opts.content != null) {
 			jsdom(opts.content, jsdomOpts);
 		} else {
 			// trick to have a main uri before loading main doc
-			this.webview = {loading: true, uri: uri, stop: function(cb) {
-				if (this.webview.loading) {
-					this.webview.loading = false;
-					loader.req.abort();
-					setImmediate(cb);
-					return true;
-				} else {
-					return false;
-				}
-				// return nothing and WebKit.stop will callback on our behalf
-			}.bind(this)};
+			this.webview = {
+				loading: true,
+				uri: uri,
+				stop: function(cb) {
+					if (this.webview.loading) {
+						this.webview.loading = false;
+						loader.req.abort();
+						setImmediate(cb);
+						return true;
+					} else {
+						return false;
+					}
+					// return nothing and WebKit.stop will callback on our behalf
+				}.bind(this)
+			};
 			var loader = resourceLoader.call(this, {url: {href: uri}}, function(err, body) {
 				this.webview.loading = false;
 				var status = 200;
