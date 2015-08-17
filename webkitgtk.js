@@ -616,7 +616,9 @@ function initWhen() {
 	['ready', 'load', 'idle'].forEach(function(ev) {
 		var promise = this.promises[ev];
 		// get rid of non-pending promises
-		if (!promise || !promise.isPending()) initPromise.call(this, ev);
+		if (!promise || !promise.isPending()) {
+			initPromise.call(this, ev);
+		}
 	}.bind(this));
 }
 
@@ -1211,8 +1213,6 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	document.charset = charset;
 
 	window.addEventListener('r' + eventName, ignoreListener, false);
-
-	console.log(document.readyState);
 
 	if (document.readyState != 'loading') readyListener();
 	else document.addEventListener('DOMContentLoaded', readyListener, false);
