@@ -11,7 +11,25 @@ var request = function() { // lazy loading request
 		process.exit(1);
 	}
 	return request;
+};
+
+function modURL(document) {
+	var Mod;
+	try {
+		Mod = require('urlutils');
+	} catch(e) {
+		console.error("Please `npm install urlutils` when using jsdom 3");
+		process.exit(1);
+	}
+	function URL(url, base) {
+		// work around current urlutils limitation
+		if (!base) base = document.location.href;
+		return Mod(url, base);
+	}
+	return URL;
 }
+
+
 
 module.exports = function(WebKit) {
 
@@ -63,14 +81,8 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			window.document.cookie = cookies;
 		}
 		if (opts.console) window.console = console;
-		if (!window.URL) {
-			try {
-				window.URL = require("urlutils");
-			} catch(e) {
-				console.error("Please `npm install urlutils` to provide window.URL");
-				process.exit(1);
-			}
-		}
+		if (!window.URL) window.URL = modURL(window.document);
+
 		handleXhr.call(this, window);
 		window.addEventListener(priv.eventName, function(e) {
 			priv.cfg.eventsListener(null, e.char);
