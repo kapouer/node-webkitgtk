@@ -6,12 +6,10 @@
 #include <nan.h>
 #include "utils.h"
 
-using namespace v8;
-
 class WebAuthRequest : public node::ObjectWrap {
 public:
-	static Persistent<FunctionTemplate> constructor;
-	static void Init(Handle<Object>);
+	static Nan::Persistent<v8::FunctionTemplate> constructor;
+	static void Init(v8::Handle<v8::Object>);
 	static NAN_METHOD(New);
 
 	WebKitAuthenticationRequest* request = NULL;

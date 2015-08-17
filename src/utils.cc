@@ -1,11 +1,13 @@
 #include "utils.h"
 
+using namespace v8;
+
 gchar* getStr(Handle<Object> opts, const gchar* name) {
-	NanUtf8String* str = NULL;
+	Nan::Utf8String* str = NULL;
 	if (opts->Has(H(name))) {
 		Handle<Value> opt = opts->Get(H(name));
 		if (opt->IsString()) {
-			str = new NanUtf8String(opt);
+			str = new Nan::Utf8String(opt);
 		}
 	}
 	if (str != NULL && str->length() > 1) {
@@ -15,12 +17,12 @@ gchar* getStr(Handle<Object> opts, const gchar* name) {
 	}
 }
 
-NanCallback* getCb(Handle<Object> opts, const gchar* name) {
-	NanCallback* cb = NULL;
+Nan::Callback* getCb(Handle<Object> opts, const gchar* name) {
+	Nan::Callback* cb = NULL;
 	if (opts->Has(H(name))) {
 		Handle<Value> opt = opts->Get(H(name));
 		if (opt->IsFunction()) {
-			cb = new NanCallback(opt.As<Function>());
+			cb = new Nan::Callback(opt.As<Function>());
 		}
 	}
 	return cb;

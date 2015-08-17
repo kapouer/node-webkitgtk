@@ -8,8 +8,6 @@
 #include <gtk/gtkunixprint.h>
 #include <map>
 
-using namespace v8;
-
 static const GDBusNodeInfo* introspection_data;
 
 class WebView : public node::ObjectWrap {
@@ -19,7 +17,7 @@ public:
 	static const int DOCUMENT_LOADING = 1;
 	static const int DOCUMENT_LOADED = 2;
 
-	static void Init(Handle<Object>, Handle<Object>);
+	static void Init(v8::Handle<v8::Object>, v8::Handle<v8::Object>);
 	static void Exit(void*);
 
 #if WEBKIT_CHECK_VERSION(2,7,4)
@@ -55,8 +53,8 @@ public:
 	WebKitUserScript* userScript;
 	WebKitUserStyleSheet* userStyleSheet;
 private:
-	static v8::Persistent<v8::Function> constructor;
-	WebView(Handle<Object>);
+	static Nan::Persistent<v8::Function> constructor;
+	WebView(v8::Handle<v8::Object>);
 	~WebView();
 
 	gchar* guid;
@@ -81,23 +79,23 @@ private:
 	GtkWidget* window = NULL;
 	WebKitWebInspector* inspector = NULL;
 
-	NanCallback* eventsCallback = NULL;
+	Nan::Callback* eventsCallback = NULL;
 	char* eventName = NULL;
 
-	NanCallback* pngCallback = NULL;
-	NanUtf8String* pngFilename = NULL;
+	Nan::Callback* pngCallback = NULL;
+	Nan::Utf8String* pngFilename = NULL;
 
-	NanCallback* printCallback = NULL;
-	NanUtf8String* printUri = NULL;
+	Nan::Callback* printCallback = NULL;
+	Nan::Utf8String* printUri = NULL;
 
-	NanCallback* loadCallback = NULL;
-	NanCallback* stopCallback = NULL;
-	NanCallback* requestCallback = NULL;
-	NanCallback* receiveDataCallback = NULL;
-	NanCallback* responseCallback = NULL;
-	NanCallback* policyCallback = NULL;
-	NanCallback* authCallback = NULL;
-	NanCallback* closeCallback = NULL;
+	Nan::Callback* loadCallback = NULL;
+	Nan::Callback* stopCallback = NULL;
+	Nan::Callback* requestCallback = NULL;
+	Nan::Callback* receiveDataCallback = NULL;
+	Nan::Callback* responseCallback = NULL;
+	Nan::Callback* policyCallback = NULL;
+	Nan::Callback* authCallback = NULL;
+	Nan::Callback* closeCallback = NULL;
 
 	static NAN_METHOD(New);
 	static NAN_METHOD(Load);

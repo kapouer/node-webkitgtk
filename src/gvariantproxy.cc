@@ -3,7 +3,7 @@
 
 using namespace v8;
 
-Persistent<FunctionTemplate> GVariantProxy::constructor;
+Nan::Persistent<FunctionTemplate> GVariantProxy::constructor;
 
 GVariantProxy::GVariantProxy() {
 }
@@ -30,23 +30,23 @@ static bool PropertyIndexedAccessCheck(Local<Object>, uint32_t, AccessType, Loca
 }
 
 static NAN_PROPERTY_GETTER(GetNamedProperty) {
-	NanScope();
-	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(args.Holder());
+	Nan::HandleScope scope;
+	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(info.Holder());
 	const gchar* val;
 	if (self->dict != NULL) {
-		NanUtf8String* prop = new NanUtf8String(property->ToString());
+		Nan::Utf8String* prop = new Nan::Utf8String(property->ToString());
 		if (!g_variant_dict_lookup(self->dict, **prop, "s", &val)) val = NULL;
 		delete prop;
 	}
-	if (val == NULL) NanReturnUndefined();
-	else NanReturnValue(NanNew<String>(val));
+	if (val == NULL) return;
+	else info.GetReturnValue().Set(Nan::New<String>(val).ToLocalChecked());
 }
 static NAN_PROPERTY_SETTER(SetNamedProperty) {
-	NanScope();
-	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(args.Holder());
-	if (self->dict == NULL) NanReturnUndefined();
-	NanUtf8String* prop = new NanUtf8String(property->ToString());
-	NanUtf8String* val = new NanUtf8String(value->ToString());
+	Nan::HandleScope scope;
+	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(info.Holder());
+	if (self->dict == NULL) return;
+	Nan::Utf8String* prop = new Nan::Utf8String(property->ToString());
+	Nan::Utf8String* val = new Nan::Utf8String(value->ToString());
 	gchar* valstr = NULL;
 	if (!value->IsUndefined() && !value->IsNull()) {
 		valstr = **val;
@@ -54,26 +54,26 @@ static NAN_PROPERTY_SETTER(SetNamedProperty) {
 	g_variant_dict_insert(self->dict, **prop, "s", valstr);
 	delete val;
 	delete prop;
-	NanReturnUndefined();
+	return;
 }
 static NAN_PROPERTY_QUERY(QueryNamedProperty) {
-	NanScope();
+	Nan::HandleScope scope;
 	gboolean hasProp = FALSE;
-	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(args.Holder());
+	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(info.Holder());
 	if (self->dict != NULL) {
-		NanUtf8String* prop = new NanUtf8String(property->ToString());
+		Nan::Utf8String* prop = new Nan::Utf8String(property->ToString());
 		hasProp = g_variant_dict_contains(self->dict, **prop);
 		delete prop;
 	}
-	NanReturnValue(NanNew<Integer>(hasProp));
+	info.GetReturnValue().Set(Nan::New<Integer>(hasProp));
 }
 static NAN_PROPERTY_DELETER(DeleteNamedProperty) {
-	NanScope();
+	Nan::HandleScope scope;
 	bool hasProp = FALSE;
-	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(args.Holder());
-	NanUtf8String* prop = NULL;
+	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(info.Holder());
+	Nan::Utf8String* prop = NULL;
 	if (self->dict != NULL) {
-		prop = new NanUtf8String(property->ToString());
+		prop = new Nan::Utf8String(property->ToString());
 		hasProp = g_variant_dict_contains(self->dict, **prop);
 	}
 	if (hasProp) {
@@ -81,13 +81,13 @@ static NAN_PROPERTY_DELETER(DeleteNamedProperty) {
 		g_variant_dict_insert(self->dict, **prop, "s", &stub);
 	}
 	if (prop != NULL) delete prop;
-	NanReturnValue(NanNew<Boolean>(hasProp));
+	info.GetReturnValue().Set(Nan::New<Boolean>(hasProp));
 }
 static NAN_PROPERTY_ENUMERATOR(EnumerateNamedProperties) {
-	NanScope();
-	Handle<Array> array = NanNew<Array>();
-	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(args.Holder());
-	if (self->dict == NULL) NanReturnValue(array);
+	Nan::HandleScope scope;
+	Handle<Array> array = Nan::New<Array>();
+	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(info.Holder());
+	if (self->dict == NULL) info.GetReturnValue().Set(array);
 	GVariantIter iter;
 	GVariant* val;
 	gchar* key;
@@ -95,19 +95,20 @@ static NAN_PROPERTY_ENUMERATOR(EnumerateNamedProperties) {
 	int i = 0;
 	while (g_variant_iter_next(&iter, "{sv}", &key, &val)) {
 		if (!g_strcmp0(key, "uri")) continue;
-		array->Set(NanNew<Number>(i++), NanNew<String>(key));
+		array->Set(Nan::New<Number>(i++), Nan::New<String>(key).ToLocalChecked());
 		g_free(key);
 	}
-	NanReturnValue(array);
+	info.GetReturnValue().Set(array);
 }
 
 void GVariantProxy::Init(Handle<Object> target) {
-	NanScope();
-	Local<FunctionTemplate> tpl = NanNew<FunctionTemplate>(GVariantProxy::New);
+	Nan::HandleScope scope;
+	Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(GVariantProxy::New);
 	Local<ObjectTemplate> otmpl = tpl->InstanceTemplate();
 	otmpl->SetInternalFieldCount(1);
 
-	otmpl->SetNamedPropertyHandler(
+	Nan::SetNamedPropertyHandler(
+		otmpl,
 		GetNamedProperty,
 		SetNamedProperty,
 		QueryNamedProperty,
@@ -118,14 +119,14 @@ void GVariantProxy::Init(Handle<Object> target) {
 		PropertyNamedAccessCheck,
 		PropertyIndexedAccessCheck
 	);
-	tpl->SetClassName(NanNew("GVariantProxy"));
-	target->Set(NanNew("GVariantProxy"), tpl->GetFunction());
-	NanAssignPersistent(constructor, tpl);
+	tpl->SetClassName(Nan::New("GVariantProxy").ToLocalChecked());
+	target->Set(Nan::New("GVariantProxy").ToLocalChecked(), tpl->GetFunction());
+	constructor.Reset(tpl);
 }
 
 NAN_METHOD(GVariantProxy::New) {
-	NanScope();
+	Nan::HandleScope scope;
 	GVariantProxy* self = new GVariantProxy();
-	self->Wrap(args.This());
-	NanReturnValue(args.This());
+	self->Wrap(info.This());
+	info.GetReturnValue().Set(info.This());
 }

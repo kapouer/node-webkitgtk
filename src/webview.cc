@@ -9,7 +9,7 @@
 
 using namespace v8;
 
-Persistent<Function> WebView::constructor;
+Nan::Persistent<Function> WebView::constructor;
 
 static const GDBusInterfaceVTable interface_vtable = {
 	WebView::handle_method_call,
@@ -31,7 +31,7 @@ WebView::WebView(Handle<Object> opts) {
 	this->offscreen = opts->Get(H("offscreen"))->BooleanValue();
 	bool hasInspector = opts->Get(H("inspector"))->BooleanValue();
 
-	NanAdjustExternalMemory(400000);
+	Nan::AdjustExternalMemory(400000);
 	gtk_init(0, NULL);
 	state = 0;
 	signalResourceResponse = 0;
@@ -49,7 +49,7 @@ WebView::WebView(Handle<Object> opts) {
 	if (server == NULL) {
 		g_printerr("Error creating server at address %s: %s\n", address, error->message);
 		g_error_free(error);
-		NanThrowError("WebKitGtk could not create dbus server");
+		Nan::ThrowError("WebKitGtk could not create dbus server");
 		return;
 	}
 	g_signal_connect(this->server, "new-connection", G_CALLBACK(on_new_connection), this);
@@ -120,22 +120,22 @@ WebView::WebView(Handle<Object> opts) {
 }
 
 NAN_METHOD(WebView::Stop) {
-	NanScope();
-	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
+	Nan::HandleScope scope;
+	WebView* self = ObjectWrap::Unwrap<WebView>(info.This());
 	bool wasLoading = FALSE;
 	if (self->loadCallback != NULL) {
 		wasLoading = TRUE;
 	}
-	if (wasLoading == TRUE) self->stopCallback = new NanCallback(args[0].As<Function>());
+	if (wasLoading == TRUE) self->stopCallback = new Nan::Callback(info[0].As<Function>());
 	webkit_web_view_stop_loading(self->view);
-	NanReturnValue(NanNew<Boolean>(wasLoading));
+	info.GetReturnValue().Set(Nan::New<Boolean>(wasLoading));
 }
 
 NAN_METHOD(WebView::Destroy) {
-	NanScope();
-	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
+	Nan::HandleScope scope;
+	WebView* self = ObjectWrap::Unwrap<WebView>(info.This());
 	self->destroy();
-	NanReturnUndefined();
+	return;
 }
 
 void WebView::destroy() {
@@ -210,24 +210,24 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 	introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
 	g_assert(introspection_data != NULL);
 
-	Local<FunctionTemplate> tpl = NanNew<FunctionTemplate>(WebView::New);
-	tpl->SetClassName(NanNew("WebView"));
+	Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(WebView::New);
+	tpl->SetClassName(Nan::New("WebView").ToLocalChecked());
 	tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
-	NODE_SET_PROTOTYPE_METHOD(tpl, "load", WebView::Load);
-	NODE_SET_PROTOTYPE_METHOD(tpl, "loop", WebView::Loop);
-	NODE_SET_PROTOTYPE_METHOD(tpl, "run", WebView::Run);
-	NODE_SET_PROTOTYPE_METHOD(tpl, "png", WebView::Png);
-	NODE_SET_PROTOTYPE_METHOD(tpl, "pdf", WebView::Print);
-	NODE_SET_PROTOTYPE_METHOD(tpl, "stop", WebView::Stop);
-	NODE_SET_PROTOTYPE_METHOD(tpl, "destroy", WebView::Destroy);
-	NODE_SET_PROTOTYPE_METHOD(tpl, "inspect", WebView::Inspect);
+	Nan::SetPrototypeMethod(tpl, "load", WebView::Load);
+	Nan::SetPrototypeMethod(tpl, "loop", WebView::Loop);
+	Nan::SetPrototypeMethod(tpl, "run", WebView::Run);
+	Nan::SetPrototypeMethod(tpl, "png", WebView::Png);
+	Nan::SetPrototypeMethod(tpl, "pdf", WebView::Print);
+	Nan::SetPrototypeMethod(tpl, "stop", WebView::Stop);
+	Nan::SetPrototypeMethod(tpl, "destroy", WebView::Destroy);
+	Nan::SetPrototypeMethod(tpl, "inspect", WebView::Inspect);
 
 	ATTR(tpl, "uri", get_prop, NULL);
 
-	NanAssignPersistent(constructor, tpl->GetFunction());
+	constructor.Reset(tpl->GetFunction());
 
-	module->Set(NanNew("exports"), tpl->GetFunction());
+	module->Set(Nan::New("exports").ToLocalChecked(), tpl->GetFunction());
 	GVariantProxy::Init(exports);
 	WebResponse::Init(exports);
 	WebAuthRequest::Init(exports);
@@ -235,7 +235,7 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 
 void WebView::InspectorClosed(WebKitWebInspector* inspector, gpointer data) {
 	WebView* self = (WebView*)data;
-	Handle<Value> argv[] = { NanNew<String>("inspector") };
+	Handle<Value> argv[] = { Nan::New<String>("inspector").ToLocalChecked() };
 	self->closeCallback->Call(1, argv);
 }
 
@@ -246,7 +246,7 @@ void WebView::WindowClosed(GtkWidget* window, gpointer data) {
 	}
 	WebView* self = (WebView*)data;
 	self->window = NULL;
-	Handle<Value> argv[] = { NanNew<String>("window") };
+	Handle<Value> argv[] = { Nan::New<String>("window").ToLocalChecked() };
 	self->closeCallback->Call(1, argv);
 }
 
@@ -261,7 +261,7 @@ gboolean WebView::Authenticate(WebKitWebView* view, WebKitAuthenticationRequest*
 		// return TRUE;
 	// }
 
-	Handle<Object> obj = NanNew<FunctionTemplate>(WebAuthRequest::constructor)->GetFunction()->NewInstance();
+	Handle<Object> obj = Nan::New<FunctionTemplate>(WebAuthRequest::constructor)->GetFunction()->NewInstance();
 	WebAuthRequest* selfAuthRequest = node::ObjectWrap::Unwrap<WebAuthRequest>(obj);
 	selfAuthRequest->init(request);
 
@@ -289,8 +289,8 @@ gboolean WebView::DecidePolicy(WebKitWebView* web_view, WebKitPolicyDecision* de
 		WebKitNavigationPolicyDecision* navDecision = WEBKIT_NAVIGATION_POLICY_DECISION(decision);
 		WebKitNavigationAction* navAction = webkit_navigation_policy_decision_get_navigation_action(navDecision);
 		WebKitURIRequest* navRequest = webkit_navigation_action_get_request(navAction);
-		Local<String> uri = NanNew<String>(webkit_uri_request_get_uri(navRequest));
-		Local<String> type = NanNew<String>("navigation");
+		Local<String> uri = Nan::New<String>(webkit_uri_request_get_uri(navRequest)).ToLocalChecked();
+		Local<String> type = Nan::New<String>("navigation").ToLocalChecked();
 		Handle<Value> argv[] = { type, uri };
 		Handle<Value> ignore = self->policyCallback->Call(2, argv);
 		if (ignore->IsBoolean() && ignore->BooleanValue() == true) {
@@ -325,7 +325,7 @@ void WebView::ResourceReceiveData(WebKitWebResource* resource, guint64 length, g
 	WebView* self = (WebView*)(sm->view);
 	const gchar* uri = webkit_web_resource_get_uri(resource);
 	int argc = 3;
-	Handle<Value> argv[] = { NanNew<String>(sm->message), NanNew<String>(uri), NanNew<Integer>((int)length) };
+	Handle<Value> argv[] = { Nan::New<String>(sm->message).ToLocalChecked(), Nan::New<String>(uri).ToLocalChecked(), Nan::New<Integer>((int)length) };
 	self->receiveDataCallback->Call(argc, argv);
 }
 
@@ -334,11 +334,11 @@ void WebView::ResourceResponse(WebKitWebResource* resource, gpointer data) {
 	if (sm == NULL || sm->message == NULL) return;
 	WebView* self = (WebView*)(sm->view);
 	WebKitURIResponse* response = webkit_web_resource_get_response(resource);
-	Handle<Object> obj = NanNew<FunctionTemplate>(WebResponse::constructor)->GetFunction()->NewInstance();
+	Handle<Object> obj = Nan::New<FunctionTemplate>(WebResponse::constructor)->GetFunction()->NewInstance();
 	WebResponse* selfResponse = node::ObjectWrap::Unwrap<WebResponse>(obj);
 	selfResponse->init(resource, response);
 	int argc = 2;
-	Handle<Value> argv[] = { NanNew<String>(sm->message), obj };
+	Handle<Value> argv[] = { Nan::New<String>(sm->message).ToLocalChecked(), obj };
 	self->responseCallback->Call(argc, argv);
 }
 
@@ -368,7 +368,7 @@ void WebView::updateUri(const gchar* uri) {
 
 void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpointer data) {
 	WebView* self = (WebView*)data;
-	NanCallback* cb;
+	Nan::Callback* cb;
 	const gchar* uri = webkit_web_view_get_uri(web_view);
 //	g_print("change %d %d %s %s\n", load_event, self->state, self->uri, uri);
 	switch (load_event) {
@@ -396,8 +396,8 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 					guint status = getStatusFromView(web_view);
 					if (status == 0 && self->userContent == TRUE) status = 200;
 					Handle<Value> argv[] = {
-						NanNull(),
-						NanNew<Integer>(status)
+						Nan::Null(),
+						Nan::New<Integer>(status)
 					};
 					cb = self->loadCallback;
 					self->loadCallback = NULL;
@@ -412,8 +412,8 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 				guint status = getStatusFromView(web_view);
 				if (status == 0 && self->userContent == TRUE) status = 200;
 				Handle<Value> argv[] = {
-					NanNull(),
-					NanNew<Integer>(status)
+					Nan::Null(),
+					Nan::New<Integer>(status)
 				};
 				cb = self->loadCallback;
 				self->loadCallback = NULL;
@@ -433,14 +433,14 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 
 gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gchar* failing_uri, GError* error, gpointer data) {
 	WebView* self = (WebView*)data;
-	NanCallback* cb;
+	Nan::Callback* cb;
 //  g_print("fail %d %d %s %s\n", load_event, self->state, self->uri, failing_uri);
 	if (self->state >= DOCUMENT_LOADING && g_strcmp0(failing_uri, self->uri) == 0) {
 		if (self->loadCallback != NULL) {
 			self->state = DOCUMENT_ERROR;
 			Handle<Value> argv[] = {
-				NanError(error->message),
-				NanNew<Integer>(getStatusFromView(web_view))
+				Nan::Error(error->message),
+				Nan::New<Integer>(getStatusFromView(web_view))
 			};
 			cb = self->loadCallback;
 			self->loadCallback = NULL;
@@ -454,47 +454,47 @@ gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gcha
 }
 
 NAN_METHOD(WebView::New) {
-	NanScope();
-	WebView* self = new WebView(args[0]->ToObject());
-	self->Wrap(args.This());
-	NanReturnValue(args.This());
+	Nan::HandleScope scope;
+	WebView* self = new WebView(info[0]->ToObject());
+	self->Wrap(info.This());
+	info.GetReturnValue().Set(info.This());
 }
 
 NAN_METHOD(WebView::Load) {
-	NanScope();
-	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
+	Nan::HandleScope scope;
+	WebView* self = ObjectWrap::Unwrap<WebView>(info.This());
 
-	if (!args[3]->IsFunction()) {
-		NanThrowError("load(uri, opts, cb) missing cb argument");
-		NanReturnUndefined();
+	if (!info[3]->IsFunction()) {
+		Nan::ThrowError("load(uri, opts, cb) missing cb argument");
+		return;
 	}
-	NanCallback* loadCb = new NanCallback(args[3].As<Function>());
+	Nan::Callback* loadCb = new Nan::Callback(info[3].As<Function>());
 
 	if (self->state == DOCUMENT_LOADING) {
 		Handle<Value> argv[] = {
-			NanError("A document is already being loaded")
+			Nan::Error("A document is already being loaded")
 		};
 		if (loadCb != NULL) {
 			loadCb->Call(1, argv);
 			delete loadCb;
 		}
-		NanReturnUndefined();
+		return;
 	}
 
-	if (!args[0]->IsString()) {
+	if (!info[0]->IsString()) {
 		Handle<Value> argv[] = {
-			NanError("load(uri, opts, cb) expected a string for uri argument")
+			Nan::Error("load(uri, opts, cb) expected a string for uri argument")
 		};
 		if (loadCb != NULL) {
 			loadCb->Call(1, argv);
 			delete loadCb;
 		}
-		NanReturnUndefined();
+		return;
 	}
 
-	NanUtf8String* uri = new NanUtf8String(args[0]);
+	Nan::Utf8String* uri = new Nan::Utf8String(info[0]);
 
-	Local<Object> opts = args[2]->ToObject();
+	Local<Object> opts = info[2]->ToObject();
 
 	if (NanBooleanOptionValue(opts, H("transparent"), false) == TRUE) {
 		if (self->transparencySupport == FALSE) {
@@ -564,7 +564,7 @@ NAN_METHOD(WebView::Load) {
 
 	self->unloaded();
 
-	self->signalResourceResponse = g_signal_connect(self->view, "resource-load-started", G_CALLBACK(WebView::ResourceLoad), new SelfMessage(self, **(new NanUtf8String(args[1]))));
+	self->signalResourceResponse = g_signal_connect(self->view, "resource-load-started", G_CALLBACK(WebView::ResourceLoad), new SelfMessage(self, **(new Nan::Utf8String(info[1]))));
 
 	self->state = DOCUMENT_LOADING;
 	self->updateUri(**uri);
@@ -614,7 +614,7 @@ NAN_METHOD(WebView::Load) {
 		self->userContent = FALSE;
 		webkit_web_view_load_uri(self->view, self->uri);
 	}
-	NanReturnUndefined();
+	return;
 }
 
 void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) {
@@ -624,8 +624,8 @@ void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) 
 	WebKitJavascriptResult* js_result = webkit_web_view_run_javascript_finish(WEBKIT_WEB_VIEW(object), result, &error);
 	if (js_result == NULL) { // if NULL, error is defined
 		Handle<Value> argv[] = {
-			NanError(error->message),
-			NanNew(sm->message)
+			Nan::Error(error->message),
+			Nan::New<String>(sm->message).ToLocalChecked()
 		};
 		self->eventsCallback->Call(2, argv);
 		g_error_free(error);
@@ -637,16 +637,16 @@ void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) 
 }
 
 NAN_METHOD(WebView::Run) {
-	NanScope();
-	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
-	if (!args[0]->IsString()) {
-		NanThrowError("run(script, ticket) missing script argument");
-		NanReturnUndefined();
+	Nan::HandleScope scope;
+	WebView* self = ObjectWrap::Unwrap<WebView>(info.This());
+	if (!info[0]->IsString()) {
+		Nan::ThrowError("run(script, ticket) missing script argument");
+		return;
 	}
 
-	NanUtf8String* script = new NanUtf8String(args[0]);
+	Nan::Utf8String* script = new Nan::Utf8String(info[0]);
 
-	SelfMessage* data = new SelfMessage(self, args[1]->IsString() ? **(new NanUtf8String(args[1])) : NULL);
+	SelfMessage* data = new SelfMessage(self, info[1]->IsString() ? **(new Nan::Utf8String(info[1])) : NULL);
 
 	if (self->window != NULL) {
 		webkit_web_view_run_javascript(
@@ -658,14 +658,14 @@ NAN_METHOD(WebView::Run) {
 		);
 	}
 	delete script;
-	NanReturnUndefined();
+	return;
 }
 
 cairo_status_t WebView::PngWrite(void* closure, const unsigned char* data, unsigned int length) {
 	WebView* self = (WebView*)closure;
 	Handle<Value> argv[] = {
-		NanNull(),
-		NanNewBufferHandle(reinterpret_cast<const char*>(data), length)
+		Nan::Null(),
+		Nan::NewBuffer(reinterpret_cast<char*>(const_cast<unsigned char*>(data)), length).ToLocalChecked()
 	};
 	self->pngCallback->Call(2, argv);
 	return CAIRO_STATUS_SUCCESS;
@@ -681,11 +681,11 @@ void WebView::PngFinished(GObject* object, GAsyncResult* result, gpointer data) 
 	}
 	Handle<Value> argv[] = {};
 	if (status == CAIRO_STATUS_SUCCESS) {
-		argv[0] = NanNull();
+		argv[0] = Nan::Null();
 	} else if (error != NULL && error->message != NULL) {
-		argv[0] = NanError(error->message);
+		argv[0] = Nan::Error(error->message);
 	} else {
-		argv[0] = NanError(cairo_status_to_string(status));
+		argv[0] = Nan::Error(cairo_status_to_string(status));
 	}
 	self->pngCallback->Call(1, argv);
 	delete self->pngCallback;
@@ -693,18 +693,18 @@ void WebView::PngFinished(GObject* object, GAsyncResult* result, gpointer data) 
 }
 
 NAN_METHOD(WebView::Png) {
-	NanScope();
-	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
+	Nan::HandleScope scope;
+	WebView* self = ObjectWrap::Unwrap<WebView>(info.This());
 
-	if (!args[0]->IsFunction()) {
-		NanThrowError("png(cb) missing cb argument");
-		NanReturnUndefined();
+	if (!info[0]->IsFunction()) {
+		Nan::ThrowError("png(cb) missing cb argument");
+		return;
 	}
 	if (self->pngCallback != NULL) {
-		NanThrowError("cannot call png(cb) while another call is not yet finished");
-		NanReturnUndefined();
+		Nan::ThrowError("cannot call png(cb) while another call is not yet finished");
+		return;
 	}
-	self->pngCallback = new NanCallback(args[0].As<Function>());
+	self->pngCallback = new Nan::Callback(info[0].As<Function>());
 	webkit_web_view_get_snapshot(
 		self->view,
 		WEBKIT_SNAPSHOT_REGION_FULL_DOCUMENT,
@@ -713,7 +713,7 @@ NAN_METHOD(WebView::Png) {
 		WebView::PngFinished,
 		self
 	);
-	NanReturnUndefined();
+	return;
 }
 
 void WebView::PrintFinished(WebKitPrintOperation* op, gpointer data) {
@@ -729,7 +729,7 @@ void WebView::PrintFinished(WebKitPrintOperation* op, gpointer data) {
 void WebView::PrintFailed(WebKitPrintOperation* op, gpointer error, gpointer data) {
 	WebView* self = (WebView*)data;
 	Handle<Value> argv[] = {
-		NanError(((GError*)error)->message)
+		Nan::Error(((GError*)error)->message)
 	};
 	self->printCallback->Call(1, argv);
 	delete self->printCallback;
@@ -757,24 +757,24 @@ static GtkUnit getUnit(gchar* name) {
 }
 
 NAN_METHOD(WebView::Print) {
-	NanScope();
-	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
+	Nan::HandleScope scope;
+	WebView* self = ObjectWrap::Unwrap<WebView>(info.This());
 
 	if (self->printUri != NULL) {
-		NanThrowError("print() can be executed only one at a time");
-		NanReturnUndefined();
+		Nan::ThrowError("print() can be executed only one at a time");
+		return;
 	}
-	if (!args[0]->IsString()) {
-		NanThrowError("print(filename, opts, cb) missing filename argument");
-		NanReturnUndefined();
+	if (!info[0]->IsString()) {
+		Nan::ThrowError("print(filename, opts, cb) missing filename argument");
+		return;
 	}
-	self->printUri = new NanUtf8String(args[0]);
-	if (!args[2]->IsFunction()) {
-		NanThrowError("print(filename, opts, cb) missing cb argument");
-		NanReturnUndefined();
+	self->printUri = new Nan::Utf8String(info[0]);
+	if (!info[2]->IsFunction()) {
+		Nan::ThrowError("print(filename, opts, cb) missing cb argument");
+		return;
 	}
-	self->printCallback = new NanCallback(args[2].As<Function>());
-	Local<Object> opts = args[1]->ToObject();
+	self->printCallback = new Nan::Callback(info[2].As<Function>());
+	Local<Object> opts = info[1]->ToObject();
 
 	WebKitPrintOperation* op = webkit_print_operation_new(self->view);
 
@@ -847,42 +847,42 @@ NAN_METHOD(WebView::Print) {
 	webkit_print_operation_print(op);
 	g_object_unref(op);
 	g_object_unref(settings);
-	NanReturnUndefined();
+	return;
 }
 
 NAN_GETTER(WebView::get_prop) {
-	NanScope();
-	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
+	Nan::HandleScope scope;
+	WebView* self = ObjectWrap::Unwrap<WebView>(info.This());
 	std::string propstr = TOSTR(property);
 
 	if (propstr == "uri") {
-		if (self->uri != NULL) NanReturnValue(NanNew<String>(self->uri));
-		else NanReturnUndefined();
+		if (self->uri != NULL) info.GetReturnValue().Set(Nan::New<String>(self->uri).ToLocalChecked());
+		else return;
 	} else {
-		NanReturnUndefined();
+		return;
 	}
 }
 
 NAN_METHOD(WebView::Loop) {
-	NanScope();
+	Nan::HandleScope scope;
 	bool block = FALSE;
 	int pendings = 0;
-	if (args[0]->IsBoolean()) block = args[0]->BooleanValue();
+	if (info[0]->IsBoolean()) block = info[0]->BooleanValue();
 	while (gtk_events_pending()) {
 		pendings++;
 		gtk_main_iteration_do(block);
 		if (!block) break;
 	}
-	NanReturnValue(NanNew<Integer>(pendings));
+	info.GetReturnValue().Set(Nan::New<Integer>(pendings));
 }
 
 NAN_METHOD(WebView::Inspect) {
-	NanScope();
-	WebView* self = ObjectWrap::Unwrap<WebView>(args.This());
+	Nan::HandleScope scope;
+	WebView* self = ObjectWrap::Unwrap<WebView>(info.This());
 	if (self->inspector != NULL) {
 		webkit_web_inspector_show(self->inspector);
 	}
-	NanReturnUndefined();
+	return;
 }
 
 gboolean WebView::on_new_connection(GDBusServer* server, GDBusConnection* connection, gpointer data) {
@@ -908,7 +908,7 @@ gpointer data) {
 		GVariant* variant = g_variant_get_child_value(parameters, 0);
 		GVariantDict dict;
 		g_variant_dict_init(&dict, variant);
-		Handle<Object> obj = NanNew<FunctionTemplate>(GVariantProxy::constructor)->GetFunction()->NewInstance();
+		Handle<Object> obj = Nan::New<FunctionTemplate>(GVariantProxy::constructor)->GetFunction()->NewInstance();
 		GVariantProxy* prox = node::ObjectWrap::Unwrap<GVariantProxy>(obj);
 		prox->init(variant);
 		Handle<Value> argv[] = {
@@ -922,8 +922,8 @@ gpointer data) {
 		const gchar* message;
 		g_variant_get(parameters, "(&s)", &message);
 		Handle<Value> argv[] = {
-			NanNull(),
-			NanNew(message)
+			Nan::Null(),
+			Nan::New(message).ToLocalChecked()
 		};
 		self->eventsCallback->Call(2, argv);
 		g_dbus_method_invocation_return_value(invocation, NULL);
@@ -931,7 +931,7 @@ gpointer data) {
 }
 
 void WebView::Exit(void*) {
-	NanScope();
+	Nan::HandleScope scope;
 	for (ObjMap::iterator it = instances.begin(); it != instances.end(); it++) {
 		if (it->second != NULL) it->second->destroy();
 	}

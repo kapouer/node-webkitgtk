@@ -3,7 +3,7 @@
 
 using namespace v8;
 
-Persistent<FunctionTemplate> WebResponse::constructor;
+Nan::Persistent<FunctionTemplate> WebResponse::constructor;
 
 WebResponse::WebResponse() {}
 
@@ -22,11 +22,11 @@ void WebResponse::init(WebKitWebResource* resource, WebKitURIResponse* response)
 }
 
 void WebResponse::Init(Handle<Object> target) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	Local<FunctionTemplate> tpl = NanNew<FunctionTemplate>(WebResponse::New);
+	Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(WebResponse::New);
 	tpl->InstanceTemplate()->SetInternalFieldCount(1);
-	tpl->SetClassName(NanNew("WebResponse"));
+	tpl->SetClassName(Nan::New("WebResponse").ToLocalChecked());
 
 	ATTR(tpl, "uri", get_prop, NULL);
 	ATTR(tpl, "status", get_prop, NULL);
@@ -35,30 +35,30 @@ void WebResponse::Init(Handle<Object> target) {
 	ATTR(tpl, "length", get_prop, NULL);
 	ATTR(tpl, "filename", get_prop, NULL);
 
-	NODE_SET_PROTOTYPE_METHOD(tpl, "data", WebResponse::Data);
+	Nan::SetPrototypeMethod(tpl, "data", WebResponse::Data);
 
-	target->Set(NanNew("WebResponse"), tpl->GetFunction());
-	NanAssignPersistent(constructor, tpl);
+	target->Set(Nan::New("WebResponse").ToLocalChecked(), tpl->GetFunction());
+	constructor.Reset(tpl);
 }
 
 NAN_METHOD(WebResponse::New) {
-	NanScope();
+	Nan::HandleScope scope;
 	WebResponse* self = new WebResponse();
-	self->Wrap(args.This());
-	NanReturnValue(args.This());
+	self->Wrap(info.This());
+	info.GetReturnValue().Set(info.This());
 }
 
 NAN_METHOD(WebResponse::Data) {
-	NanScope();
-	WebResponse* self = ObjectWrap::Unwrap<WebResponse>(args.This());
+	Nan::HandleScope scope;
+	WebResponse* self = ObjectWrap::Unwrap<WebResponse>(info.This());
 	if (self->resource == NULL) {
-		NanThrowError("cannot call data(cb) on a response decision");
-		NanReturnUndefined();
+		Nan::ThrowError("cannot call data(cb) on a response decision");
+		return;
 	}
-	self->dataCallback = new NanCallback(args[0].As<Function>());
+	self->dataCallback = new Nan::Callback(info[0].As<Function>());
 
 	webkit_web_resource_get_data(self->resource, NULL, WebResponse::DataFinished, self);
-	NanReturnUndefined();
+	return;
 }
 
 void WebResponse::DataFinished(GObject* object, GAsyncResult* result, gpointer data) {
@@ -68,7 +68,7 @@ void WebResponse::DataFinished(GObject* object, GAsyncResult* result, gpointer d
 	guchar* buf = webkit_web_resource_get_data_finish(self->resource, result, &length, &error);
 	if (buf == NULL) { // if NULL, error is defined
 		Handle<Value> argv[] = {
-			NanError(error != NULL ? error->message : "Empty buffer")
+			Nan::Error(error != NULL ? error->message : "Empty buffer")
 		};
 		self->dataCallback->Call(1, argv);
 		delete self->dataCallback;
@@ -77,56 +77,56 @@ void WebResponse::DataFinished(GObject* object, GAsyncResult* result, gpointer d
 		return;
 	}
 	Handle<Value> argv[] = {
-		NanNull(),
-		NanNewBufferHandle(reinterpret_cast<const char*>(buf), length)
+		Nan::Null(),
+		Nan::NewBuffer(reinterpret_cast<char*>(buf), length).ToLocalChecked()
 	};
 	self->dataCallback->Call(2, argv);
 }
 
 NAN_GETTER(WebResponse::get_prop) {
-	NanScope();
-	WebResponse* self = node::ObjectWrap::Unwrap<WebResponse>(args.Holder());
+	Nan::HandleScope scope;
+	WebResponse* self = node::ObjectWrap::Unwrap<WebResponse>(info.Holder());
 
 	std::string propstr = TOSTR(property);
 
 	if (propstr == "uri") {
-		NanReturnValue(NanNew<String>(webkit_web_resource_get_uri(self->resource)));
+		info.GetReturnValue().Set(Nan::New<String>(webkit_web_resource_get_uri(self->resource)).ToLocalChecked());
 	} else if (propstr == "mime" && self->response != NULL) {
-		NanReturnValue(NanNew<String>(webkit_uri_response_get_mime_type(self->response)));
+		info.GetReturnValue().Set(Nan::New<String>(webkit_uri_response_get_mime_type(self->response)).ToLocalChecked());
 	} else if (propstr == "status") {
 		guint status = 0;
 		if (self->response != NULL) {
 			status = webkit_uri_response_get_status_code(self->response);
 			if (status == 0 && webkit_uri_response_get_content_length(self->response) > 0) status = 200;
 		}
-		NanReturnValue(NanNew<Integer>(status));
+		info.GetReturnValue().Set(Nan::New<Integer>(status));
 	} else if (propstr == "headers") {
-		if (self->response == NULL) NanReturnNull();
-		Handle<Object> obj = NanNew<FunctionTemplate>(GVariantProxy::constructor)->GetFunction()->NewInstance();
+		if (self->response == NULL) info.GetReturnValue().Set(Nan::Null());
+		Handle<Object> obj = Nan::New<FunctionTemplate>(GVariantProxy::constructor)->GetFunction()->NewInstance();
 		GVariantProxy* prox = node::ObjectWrap::Unwrap<GVariantProxy>(obj);
 		prox->init(soup_headers_to_gvariant_dict(webkit_uri_response_get_http_headers(self->response)));
-		NanReturnValue(obj);
+		info.GetReturnValue().Set(obj);
 	} else if (propstr == "length") {
 		if (self->response != NULL) {
-			NanReturnValue(NanNew<Integer>((int)webkit_uri_response_get_content_length(self->response)));
+			info.GetReturnValue().Set(Nan::New<Integer>((int)webkit_uri_response_get_content_length(self->response)));
 		} else {
-			NanReturnValue(NanNew<Integer>(0));
+			info.GetReturnValue().Set(Nan::New<Integer>(0));
 		}
 	} else if (propstr == "filename") {
-		if (self->response == NULL) NanReturnNull();
+		if (self->response == NULL) info.GetReturnValue().Set(Nan::Null());
 		const char* filename = webkit_uri_response_get_suggested_filename(self->response);
-		if (filename == NULL) NanReturnNull();
-		else NanReturnValue(NanNew<String>(filename));
+		if (filename == NULL) info.GetReturnValue().Set(Nan::Null());
+		else info.GetReturnValue().Set(Nan::New<String>(filename).ToLocalChecked());
 	}
-	NanReturnUndefined();
+	return;
 }
 
 // NAN_SETTER(WebResponse::set_prop) {
-	// NanScope();
-	// WebResponse* self = node::ObjectWrap::Unwrap<WebResponse>(args.Holder());
+	// Nan::HandleScope scope;
+	// WebResponse* self = node::ObjectWrap::Unwrap<WebResponse>(info.Holder());
 	// std::string propstr = TOSTR(property);
 	// if (propstr == "cancel") {
 		// self->cancel = value->BooleanValue();
 	// }
-	// NanThrowError("Cannot a property on response object");
+	// Nan::ThrowError("Cannot a property on response object");
 // }
