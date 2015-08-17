@@ -110,7 +110,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			this.webview.stop = function stop(cb) {
 				if (this.webview.loading) {
 					this.webview.loading = false;
-					loader.req.abort();
+					if (loader.req) loader.req.abort();
 					setImmediate(cb);
 					return true;
 				} else {
