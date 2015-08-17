@@ -79,6 +79,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		if (cookies) {
 			debug('load cookies');
 			window.document.cookie = cookies;
+			window.document._cookieDomain = window.document.location.hostname;
 		}
 		if (opts.console) window.console = console;
 		if (!window.URL) window.URL = modURL(window.document);
