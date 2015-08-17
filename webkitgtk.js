@@ -1500,10 +1500,10 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 
 	function check(from, url) {
 		var info = {
-			timeouts: timeouts,
-			intervals: intervals,
-			frames: frames,
-			requests: requests,
+			timeouts: timeouts.len - timeouts.stall,
+			intervals: intervals.len - intervals.stall,
+			frames: frames.len,
+			requests: requests.len - requests.stall,
 			lastEvent: lastEvent,
 			lastRunEvent: lastRunEvent
 		};
