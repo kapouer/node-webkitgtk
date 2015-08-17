@@ -6,6 +6,10 @@ Pilot webkitgtk from Node.js with a simple API.
 Falls back to jsdom if the module cannot be compiled (with obvious
 limitations like inability to render the DOM nor output png or pdf).
 
+Typically, [express-dom](https://github.com/kapouer/express-dom) can run
+on webkitgtk's jsdom mode - developers can work on other platforms where
+jsdom builds fine.
+
 *this module uses only system-installed, shared libraries*  
 it doesn't embed static libraries at all.
 
