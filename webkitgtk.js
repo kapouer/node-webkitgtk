@@ -664,7 +664,7 @@ function load(uri, opts, cb) {
 			}
 			if (info.remote && info.count && (now - info.mtime > priv.stall)) {
 				info.mtime = Infinity;
-				debugStall("%s ms - %s", priv.stall, uri);
+				if (!info.ignore) debugStall("%s ms - %s", priv.stall, uri);
 				responseDispatcher.call(this, priv.uticket, {uri: uri, status: 0});
 			}
 		}
