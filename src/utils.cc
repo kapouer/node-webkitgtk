@@ -5,7 +5,7 @@ using namespace v8;
 gchar* getStr(Handle<Object> opts, const gchar* name) {
 	Nan::Utf8String* str = NULL;
 	if (opts->Has(H(name))) {
-		Handle<Value> opt = opts->Get(H(name));
+		Local<Value> opt = opts->Get(H(name));
 		if (opt->IsString()) {
 			str = new Nan::Utf8String(opt);
 		}
@@ -20,7 +20,7 @@ gchar* getStr(Handle<Object> opts, const gchar* name) {
 Nan::Callback* getCb(Handle<Object> opts, const gchar* name) {
 	Nan::Callback* cb = NULL;
 	if (opts->Has(H(name))) {
-		Handle<Value> opt = opts->Get(H(name));
+		Local<Value> opt = opts->Get(H(name));
 		if (opt->IsFunction()) {
 			cb = new Nan::Callback(opt.As<Function>());
 		}

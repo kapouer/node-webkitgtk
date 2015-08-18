@@ -67,7 +67,7 @@ void WebResponse::DataFinished(GObject* object, GAsyncResult* result, gpointer d
 	gsize length;
 	guchar* buf = webkit_web_resource_get_data_finish(self->resource, result, &length, &error);
 	if (buf == NULL) { // if NULL, error is defined
-		Handle<Value> argv[] = {
+		Local<Value> argv[] = {
 			Nan::Error(error != NULL ? error->message : "Empty buffer")
 		};
 		self->dataCallback->Call(1, argv);
@@ -76,7 +76,7 @@ void WebResponse::DataFinished(GObject* object, GAsyncResult* result, gpointer d
 		self->dataCallback = NULL;
 		return;
 	}
-	Handle<Value> argv[] = {
+	Local<Value> argv[] = {
 		Nan::Null(),
 		Nan::NewBuffer(reinterpret_cast<char*>(buf), length).ToLocalChecked()
 	};
@@ -102,7 +102,7 @@ NAN_GETTER(WebResponse::get_prop) {
 		info.GetReturnValue().Set(Nan::New<Integer>(status));
 	} else if (propstr == "headers") {
 		if (self->response == NULL) info.GetReturnValue().Set(Nan::Null());
-		Handle<Object> obj = Nan::New<FunctionTemplate>(GVariantProxy::constructor)->GetFunction()->NewInstance();
+		Local<Object> obj = Nan::New<FunctionTemplate>(GVariantProxy::constructor)->GetFunction()->NewInstance();
 		GVariantProxy* prox = node::ObjectWrap::Unwrap<GVariantProxy>(obj);
 		prox->init(soup_headers_to_gvariant_dict(webkit_uri_response_get_http_headers(self->response)));
 		info.GetReturnValue().Set(obj);

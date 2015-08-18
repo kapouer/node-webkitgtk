@@ -85,7 +85,7 @@ static NAN_PROPERTY_DELETER(DeleteNamedProperty) {
 }
 static NAN_PROPERTY_ENUMERATOR(EnumerateNamedProperties) {
 	Nan::HandleScope scope;
-	Handle<Array> array = Nan::New<Array>();
+	Local<Array> array = Nan::New<Array>();
 	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(info.Holder());
 	if (self->dict == NULL) info.GetReturnValue().Set(array);
 	GVariantIter iter;

@@ -1,7 +1,6 @@
 #ifndef WEBKITGTK_WEBVIEW_H
 #define WEBKITGTK_WEBVIEW_H
 
-#include "selfmessage.h"
 #include <node.h>
 #include <webkit2/webkit2.h>
 #include <nan.h>
@@ -9,6 +8,22 @@
 #include <map>
 
 static const GDBusNodeInfo* introspection_data;
+
+class ViewClosure {
+public:
+	void* view;
+	void* closure;
+
+	ViewClosure(void* v, void* c) {
+		view = v;
+		closure = c;
+	}
+
+	~ViewClosure() {
+		view = NULL;
+		closure = NULL;
+	}
+};
 
 class WebView : public node::ObjectWrap {
 public:
@@ -36,7 +51,7 @@ public:
 	static void ResourceReceiveData(WebKitWebResource*, guint64, gpointer);
 	static void Change(WebKitWebView*, WebKitLoadEvent, gpointer);
 	static gboolean Fail(WebKitWebView*, WebKitLoadEvent, gchar*, GError*, gpointer);
-	static gboolean ScriptDialog(WebKitWebView*, WebKitScriptDialog*, gpointer);
+	static gboolean ScriptDialog(WebKitWebView*, WebKitScriptDialog*, WebView*);
 	static void PngFinished(GObject*, GAsyncResult*, gpointer);
 	static cairo_status_t PngWrite(void*, const unsigned char*, unsigned int);
 	static void RunFinished(GObject*, GAsyncResult*, gpointer);
