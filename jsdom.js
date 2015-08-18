@@ -157,7 +157,7 @@ function resourceLoader(resource, cb) {
 	var uri = resource.url && resource.url.href;
 	debug("resource loader", uri);
 	var priv = this.priv;
-	var reqObj = {uri: uri};
+	var reqObj = {uri: uri, Accept: "*/*"};
 	priv.cfg.requestListener(reqObj);
 	if (reqObj.ignore) emitIgnore.call(this, reqObj);
 	if (reqObj.cancel) {
@@ -208,10 +208,19 @@ function handleXhr(window) {
 		var xhr = wxhr();
 		var xhrSend = xhr.send;
 		var xhrOpen = xhr.open;
+		var xhrSetRequestHeader = xhr.setRequestHeader;
 		var privUrl;
+		var reqObj = {
+			Accept: "*/*"
+		};
 		xhr.open = function(method, url) {
 			if (method.toLowerCase() == "get") privUrl = (new window.URL(url)).href;
 			return xhrOpen.apply(this, Array.prototype.slice.call(arguments, 0));
+		};
+		xhr.setRequestHeader = function(name, val) {
+			var ret = xhrSetRequestHeader.call(xhr, name, val);
+			reqObj[name] = val;
+			return ret;
 		};
 		xhr.send = function(data) {
 			// while xhr is typically not reused, it can happen, so support it
@@ -220,9 +229,11 @@ function handleXhr(window) {
 				if (this.readyState != this.DONE) return;
 				self.removeEventListener(listenXhr);
 				var headers = {};
-				['Content-Type', 'Content-Length', 'ETag', 'Location'].forEach(function(name) {
+				self.getAllResponseHeaders().split('\r\n').map(function(line) {
+					return line.split(':').shift();
+				}).forEach(function(name) {
 					var val = self.getResponseHeader(name);
-					if (val) headers[name] = val;
+					if (val != null) headers[name] = val;
 				});
 				priv.cfg.responseListener(uticket, {
 					uri: privUrl,
@@ -238,7 +249,7 @@ function handleXhr(window) {
 			} catch(e) {
 				err = e;
 			}
-			var reqObj = {uri: privUrl};
+			reqObj.uri = privUrl;
 			priv.cfg.requestListener(reqObj);
 			if (reqObj.ignore) emitIgnore.call(this, reqObj);
 			if (reqObj.cancel) this.abort();
