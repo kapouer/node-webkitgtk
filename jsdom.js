@@ -214,6 +214,30 @@ function handleXhr(window) {
 		var reqObj = {
 			Accept: "*/*"
 		};
+		function listenXhr(e) {
+			if (this.readyState != this.DONE) return;
+			// crash - probably a node-xmlhttprequest bug
+			// this.removeEventListener("readystatechange", listenXhr, false);
+			var headers = {};
+			var contentType;
+			this.getAllResponseHeaders().split('\r\n').map(function(line) {
+				return line.split(':').shift();
+			}).forEach(function(name) {
+				var val = this.getResponseHeader(name);
+				if (name.toLowerCase() == "content-type") contentType = val;
+				if (val != null) headers[name] = val;
+			}.bind(this));
+			if (this.responseType == 'document' && contentType.indexOf('text/html') >= 0) {
+				this.responseXML = jsdom(this.responseText, webview.priv.jsdom);
+			}
+			priv.cfg.responseListener(uticket, {
+				uri: privUrl,
+				status: this.status,
+				headers: headers,
+				mime: contentType
+			});
+		}
+
 		xhr.open = function(method, url) {
 			if (method.toLowerCase() == "get") privUrl = (new window.URL(url)).href;
 			return xhrOpen.apply(this, Array.prototype.slice.call(arguments, 0));
@@ -225,24 +249,6 @@ function handleXhr(window) {
 		};
 		xhr.send = function(data) {
 			// while xhr is typically not reused, it can happen, so support it
-			function listenXhr(e) {
-				if (this.readyState != this.DONE) return;
-				this.removeEventListener(listenXhr);
-				var headers = {};
-				this.getAllResponseHeaders().split('\r\n').map(function(line) {
-					return line.split(':').shift();
-				}).forEach(function(name) {
-					var val = this.getResponseHeader(name);
-					if (val != null) headers[name] = val;
-				}.bind(this));
-				priv.cfg.responseListener(uticket, {
-					uri: privUrl,
-					status: this.status,
-					headers: headers,
-					mime: headers['Content-Type']
-				});
-			}
-			this.addEventListener("readystatechange", listenXhr);
 			var ret, err;
 			try {
 				ret = xhrSend.call(this, data);
@@ -260,6 +266,9 @@ function handleXhr(window) {
 			if (err) throw err; // rethrow
 			return ret;
 		};
+
+		xhr.addEventListener("readystatechange", listenXhr, false);
+
 		return xhr;
 	};
 }
