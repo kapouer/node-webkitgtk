@@ -201,6 +201,7 @@ function resourceLoader(resource, cb) {
 }
 
 function handleXhr(window) {
+	var webview = this;
 	var priv = this.priv;
 	var uticket = priv.uticket;
 	var wxhr = window.XMLHttpRequest;
@@ -224,20 +225,19 @@ function handleXhr(window) {
 		};
 		xhr.send = function(data) {
 			// while xhr is typically not reused, it can happen, so support it
-			var self = this;
 			function listenXhr(e) {
 				if (this.readyState != this.DONE) return;
-				self.removeEventListener(listenXhr);
+				this.removeEventListener(listenXhr);
 				var headers = {};
-				self.getAllResponseHeaders().split('\r\n').map(function(line) {
+				this.getAllResponseHeaders().split('\r\n').map(function(line) {
 					return line.split(':').shift();
 				}).forEach(function(name) {
-					var val = self.getResponseHeader(name);
+					var val = this.getResponseHeader(name);
 					if (val != null) headers[name] = val;
-				});
+				}.bind(this));
 				priv.cfg.responseListener(uticket, {
 					uri: privUrl,
-					status: self.status,
+					status: this.status,
 					headers: headers,
 					mime: headers['Content-Type']
 				});
@@ -251,11 +251,11 @@ function handleXhr(window) {
 			}
 			reqObj.uri = privUrl;
 			priv.cfg.requestListener(reqObj);
-			if (reqObj.ignore) emitIgnore.call(this, reqObj);
+			if (reqObj.ignore) emitIgnore.call(webview, reqObj);
 			if (reqObj.cancel) this.abort();
 			if (this.readyState == 4 || err) {
 				// free it now
-				listenXhr(err);
+				listenXhr.call(this, err);
 			} // else the call was asynchronous and no error was thrown
 			if (err) throw err; // rethrow
 			return ret;
