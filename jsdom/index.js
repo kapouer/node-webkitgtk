@@ -83,6 +83,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		}
 		if (opts.console) window.console = console;
 		if (!window.URL) window.URL = modURL(window.document);
+		require('./classlist')(window);
 
 		handleXhr.call(this, window);
 		window.addEventListener(priv.eventName, function(e) {
@@ -272,3 +273,4 @@ function handleXhr(window) {
 		return xhr;
 	};
 }
+
