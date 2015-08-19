@@ -3,7 +3,7 @@ var expect = require('expect.js');
 var fs = require('fs');
 
 describe("error reporting", function suite() {
-	it("should catch script errors", function(done) {
+	it("should catch async script errors", function(done) {
 		this.timeout(1000);
 		var w = WebKit.load("", function(err) {
 			w.run(function(done) {
@@ -19,6 +19,17 @@ describe("error reporting", function suite() {
 				done();
 			});
 			w.on('unload', function() {});
+		});
+	});
+	it("should catch sync script errors", function(done) {
+		this.timeout(1000);
+		var w = WebKit.load("http://localhost", {content: '<html></html>'}, function(err) {
+			w.run(function() {
+				document.createWhatever("tata");
+			}, function(err) {
+				expect(err && err.line).to.be.ok();
+				done();
+			});
 		});
 	});
 	it("should log uncaught Error instances with actual exception stack", function(done) {
