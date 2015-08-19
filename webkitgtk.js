@@ -278,8 +278,18 @@ function eventsDispatcher(err, json) {
 		if (cb) {
 			loop.call(this, false);
 			delete priv.tickets[obj.ticket];
+			if (obj.error && !util.isError(obj.error)) {
+				var typeErr = obj.error.type || 'Error';
+				var customErr = new global[typeErr]();
+				for (var k in obj.error) customErr[k] = obj.error[k];
+				obj.error = customErr;
+			}
 			args.unshift(obj.error);
-			cb.apply(this, args);
+			try {
+				cb.apply(this, args);
+			} catch(e) {
+				setImmediate(function(ex) {throw ex;}.bind(null, e));
+			}
 		} else {
 			// could be reached by dropped events
 			debug("event without pending ticket", json);
@@ -696,7 +706,8 @@ function load(uri, opts, cb) {
 	if (Buffer.isBuffer(opts.content)) opts.content = opts.content.toString();
 	if (Buffer.isBuffer(opts.style)) opts.style = opts.style.toString();
 	if (Buffer.isBuffer(opts.script)) opts.script = opts.script.toString();
-	var scripts = [errorEmitter];
+	var scripts = [];
+	if (!priv.jsdom) scripts.push(errorEmitter);
 	if (opts.console && !priv.jsdom) scripts.push(consoleEmitter);
 	scripts.push({
 		fn: stateTracker,
@@ -987,7 +998,14 @@ function prepareRun(script, ticket, args, priv) {
 			try {
 				message.args = [ SCRIPT ];
 			} catch(e) {
-				message.error = e;
+				message.error = {
+					message: e.message,
+					name: e.name,
+					description: e.description,
+					lineNumber: e.lineNumber,
+					columnNumber: e.columnNumber,
+					stack: e.stack
+				};
 			}
 			DISPATCHER
 		}.toString()

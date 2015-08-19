@@ -27,7 +27,7 @@ describe("error reporting", function suite() {
 			w.run(function() {
 				document.createWhatever("tata");
 			}, function(err) {
-				expect(err && err.line).to.be.ok();
+				expect(err && err.stack).to.be.ok();
 				done();
 			});
 		});
