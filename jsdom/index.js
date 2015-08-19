@@ -74,7 +74,15 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		};
 		if (err) return cb(err);
 		window.uri = uri;
+		var runlist = this.webview._runlist;
 		this.webview = window;
+		runlist.forEach(function(script) {
+			try {
+				window.run(script);
+			} catch(e) {
+
+			}
+		});
 
 		if (cookies) {
 			debug('load cookies');
@@ -96,13 +104,18 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	}.bind(this);
 
 	this.webview = {
-		uri: uri
+		uri: uri,
+		_runlist: [],
+		run: function(script) {
+			this._runlist.push(script);
+		}
 	};
 
+	if ((!uri || uri == "about:blank") && opts.content == null) {
+		opts.content = '<html><head></head><body></body></html>';
+	}
+
 	setImmediate(function() {
-		if ((!uri || uri == "about:blank") && opts.content == null) {
-			opts.content = '<html><head></head><body></body></html>';
-		}
 		if (opts.content != null) {
 			jsdom(opts.content, jsdomOpts);
 		} else {
