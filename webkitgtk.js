@@ -238,13 +238,17 @@ function eventsDispatcher(err, json) {
 		}
 		return;
 	}
+	if (!priv.stamp) {
+		// no stamp means nothing is expected
+		return;
+	}
 	var obj = JSON.parse(json);
 	if (!obj) {
 		debugError("received invalid event", json);
 		return;
 	}
 	if (obj.stamp && obj.stamp != priv.stamp) {
-		debugWarn("event stamp mismatch", obj.event, priv.stamp);
+		// typically happens when a page was stopped / unloaded
 		return;
 	}
 	var args = obj.args || [];
