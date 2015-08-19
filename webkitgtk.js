@@ -910,7 +910,7 @@ WebKit.prototype.runev = function(script, cb) {
 };
 
 function runcb(script, args, cb) {
-	var ticket = (this.priv.ticket++).toString();
+	var ticket = (++this.priv.ticket).toString();
 	this.priv.tickets[ticket] = cb;
 	run.call(this, script, ticket, args, cb);
 }
