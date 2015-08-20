@@ -222,15 +222,6 @@ load(uri, opts, cb) options
   charset.  
   Useful to fix Script errors when serving utf-8 encoded javascript files.
 
-- manual  
-  boolean, default false  
-  By default, browser triggers life events and webkitgtk module reemits them
-  on next nodejs loop.  
-  If more control is needed, life events can be put on hold until .done(event)
-  is called.  
-  Typically, `page.wait('idle').run(...).run(...).html().done('idle')`
-  where `.run` calls are placed from different external client programs.
-
 
 init(opts, cb) options
 ----------------------
@@ -318,9 +309,6 @@ These are lifecycle events:
 * idle  
   when all requests are finished, failed, or just hanging, and when the
   gtk loop has been doing nothing for a couple of cycles.  
-  This event is used to automatically pause the view.  
-  Use .on('idle', function() { this.loop(true); }) to restart the gtk
-  loop if needed.
 
 * unload  
   same as window's unload event  
@@ -423,8 +411,7 @@ methods
   argument, which in turn acts as event emitter: each call emits the named event
   on current instance, and can be listened using view.on(event, listener).  
   The listener receives additional arguments as long as they're stringifyable.  
-  Can be used to listen recurring events, but the gtk loop needs to be
-  running, see above.  
+  Can be used to listen recurring events.  
 
 * png(writableStream or filename, [cb])  
   takes a png snapshot of the whole document right now.  
@@ -478,39 +465,6 @@ WebKit({debug: true}, function(err, w) {
   w.once('unload');
 });
 ```
-
-
-gtk loop and events
--------------------
-
-webkit cannot run if its gtk event loop isn't run, and running the gtk
-loop is done by calling gtk_main_iteration_do on each Node.js process
-event loop. It works all right, but as long as setImmediate is called,
-the current node process won't stop either.
-
-To allow the gtk loop to stop when running it is no longer useful,
-webkitgtk starts running the gtk loop when these methods are called:
-
-* load
-* run (but not runev)
-* pdf
-* png
-* html
-
-and it stops running the gtk loop when these conditions are met:
-
-* when a lifecycle event happen and the next lifecycle event has no
-  listener
-* when all callbacks have been invoked and the next lifecycle event
-  has no listener
-
-For example, if there are no "idle" listeners after "load" is emitted,
-the loop won't be kept running.
-
-Note that calling runev() won't start the gtk loop, so one has to add a lifecycle
-event listener to process and receive events sent by runev script.
-
-To keep the gtk loop running forever, just listen to "unload" event.
 
 
 about plugins
