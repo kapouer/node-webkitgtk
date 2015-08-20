@@ -135,3 +135,16 @@ Added cookiePolicy instance (init) option.
 
 "idle" event is now much more accurate - meaning it can hang sometimes too,
 though it would be considered a bug in that case.
+
+
+2.2.0
+-----
+
+No API change but partial fallback to jsdom is available when bindings are not buildable.
+
+2.3.0
+-----
+
+No more complex gtk loop management. The gtk loop is run for all modules in the default uv loop.
+Main change: it's not possible to "pause" a view (it wasn't really possible anyway),
+and it's no longer necessary to listen "unload" event to keep events running.
