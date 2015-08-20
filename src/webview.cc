@@ -1,11 +1,13 @@
 #include <JavaScriptCore/JSValueRef.h>
 #include <JavaScriptCore/JSStringRef.h>
+#include <node.h>
 #include "utils.h"
 #include "webview.h"
 #include "gvariantproxy.h"
 #include "webresponse.h"
 #include "webauthrequest.h"
 #include "dbus.h"
+
 
 using namespace v8;
 
@@ -17,6 +19,7 @@ static const GDBusInterfaceVTable interface_vtable = {
 	NULL,
 	NULL
 };
+static uv_timer_t timeout_handle;
 
 WebView::WebView(Handle<Object> opts) {
 	this->eventName = getStr(opts, "eventName");
@@ -32,7 +35,7 @@ WebView::WebView(Handle<Object> opts) {
 	bool hasInspector = opts->Get(H("inspector"))->BooleanValue();
 
 	Nan::AdjustExternalMemory(400000);
-	gtk_init(0, NULL);
+
 	state = 0;
 	signalResourceResponse = 0;
 
@@ -190,7 +193,11 @@ void WebView::unloaded() {
 	}
 }
 
-
+void timeout_cb(uv_timer_t *handle, int status) {
+	while (gtk_events_pending()) {
+		gtk_main_iteration_do(true);
+	}
+}
 
 void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 	node::AtExit(Exit);
@@ -215,7 +222,6 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 	tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
 	Nan::SetPrototypeMethod(tpl, "load", WebView::Load);
-	Nan::SetPrototypeMethod(tpl, "loop", WebView::Loop);
 	Nan::SetPrototypeMethod(tpl, "run", WebView::Run);
 	Nan::SetPrototypeMethod(tpl, "png", WebView::Png);
 	Nan::SetPrototypeMethod(tpl, "pdf", WebView::Print);
@@ -231,6 +237,10 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 	GVariantProxy::Init(exports);
 	WebResponse::Init(exports);
 	WebAuthRequest::Init(exports);
+
+	gtk_init(0, NULL);
+	uv_timer_init(uv_default_loop(), &timeout_handle);
+	uv_timer_start(&timeout_handle, timeout_cb, 0, 5);
 }
 
 void WebView::InspectorClosed(WebKitWebInspector* inspector, gpointer data) {
@@ -880,19 +890,6 @@ NAN_GETTER(WebView::get_prop) {
 	}
 }
 
-NAN_METHOD(WebView::Loop) {
-	Nan::HandleScope scope;
-	bool block = FALSE;
-	int pendings = 0;
-	if (info[0]->IsBoolean()) block = info[0]->BooleanValue();
-	while (gtk_events_pending()) {
-		pendings++;
-		gtk_main_iteration_do(block);
-		if (!block) break;
-	}
-	info.GetReturnValue().Set(Nan::New<Integer>(pendings));
-}
-
 NAN_METHOD(WebView::Inspect) {
 	Nan::HandleScope scope;
 	WebView* self = ObjectWrap::Unwrap<WebView>(info.This());
@@ -948,6 +945,7 @@ gpointer data) {
 }
 
 void WebView::Exit(void*) {
+	uv_timer_stop(&timeout_handle);
 	Nan::HandleScope scope;
 	for (ObjMap::iterator it = instances.begin(); it != instances.end(); it++) {
 		if (it->second != NULL) it->second->destroy();

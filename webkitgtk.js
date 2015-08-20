@@ -117,16 +117,9 @@ function initialPriv() {
 	return {
 		state: CREATED,
 		pendingRequests: 0,
-		loopForCallbacks: 0,
-		loopForLife: false,
-		loopCount: 0,
-		idleCount: 0,
 		ticket: 0,
 		tickets: {},
 		eventName: "webkitgtk" + uran(),
-		loopTimeout: null,
-		loopImmediate: null,
-		wasBusy: false,
 		idling: false,
 		previousEvents: {},
 		lastEvent: null,
@@ -147,16 +140,6 @@ function emitLifeEvent(event) {
 	var priv = this.priv;
 	if (priv.lastEvent) priv.previousEvents[priv.lastEvent] = true;
 	priv.lastEvent = event;
-	var ne = priv.nextEvents || {}; // in case load or preload wasn't called
-	var willStop = event == "unload" || this.listeners('unload').length == 0 && !ne.unload && (
-		event == "idle" || this.listeners('idle').length == 0 && !ne.idle && (
-			event == "load" || this.listeners('load').length == 0 && !ne.load &&
-				event == "ready"
-			)
-		);
-	if (willStop && priv.loopForLife) {
-		priv.loopForLife = false;
-	}
 	debug('emit event', event);
 	this.emit(event);
 }
@@ -178,14 +161,6 @@ function closedListener(what) {
 			priv.inspecting = false;
 		return;
 		case "window":
-			if (priv.loopTimeout) {
-				clearTimeout(priv.loopTimeout);
-				priv.loopTimeout = null;
-			}
-			if (priv.loopImmediate) {
-				clearImmediate(priv.loopImmediate);
-				priv.loopImmediate = null;
-			}
 			delete this.webview;
 			destroy.call(this, priv.destroyCb);
 			this.priv = initialPriv();
@@ -280,7 +255,6 @@ function eventsDispatcher(err, json) {
 	} else if (obj.ticket) {
 		var cb = priv.tickets[obj.ticket];
 		if (cb) {
-			loop.call(this, false);
 			delete priv.tickets[obj.ticket];
 			if (obj.error && !util.isError(obj.error)) {
 				var typeErr = obj.error.type || 'Error';
@@ -343,12 +317,7 @@ function defineCachedGet(proto, prop, name) {
 
 Response.prototype.data = function(cb) {
 	if (!cb) throw new Error("Missing callback");
-	var view = this.view;
-	loop.call(view, true);
-	this.binding.data(function(err, data) {
-		loop.call(view, false);
-		cb(err, data);
-	});
+	this.binding.data(cb);
 	return this;
 };
 
@@ -568,13 +537,11 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 		});
 		script.push('');
-		loop.call(this, true);
 		this.webview.load(uri, priv.uticket, {
 			script: script.join(';\n'),
 			content: "<html></html>",
 			waitFinish: true
 		}, function(err) {
-			loop.call(this, false);
 			debug('load cookies done', err);
 			next.call(this, err);
 		}.bind(this));
@@ -583,11 +550,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	}
 	function next(err) {
 		if (err) return cb(err);
-		loop.call(this, true);
-		this.webview.load(uri, this.priv.uticket, opts, function(err, status) {
-			loop.call(this, false);
-			cb(err, status);
-		}.bind(this));
+		this.webview.load(uri, this.priv.uticket, opts, cb);
 	}
 };
 
@@ -685,7 +648,6 @@ function load(uri, opts, cb) {
 	}.bind(this), 100); // let dom client cancel stalled xhr first
 	priv.navigation = opts.navigation || false;
 	priv.idling = false;
-	priv.loopForLife = true;
 	priv.timeout = setTimeout(function() {
 		debugStall("%s ms - %s", opts.timeout || 30000, uri);
 		this.stop();
@@ -761,10 +723,8 @@ WebKit.prototype.stop = function(cb) {
 	var priv = this.priv;
 	cb = cb || noop;
 	if (priv.state < INITIALIZED) return cb(errorLoad(priv.state));
-	loop.call(this, true);
 	var wasLoading = false;
 	var fincb = function() {
-		loop.call(this, false);
 		debug("stop done");
 		cb(null, wasLoading);
 	}.bind(this);
@@ -807,16 +767,13 @@ WebKit.prototype.unload = function(cb) {
 		this.load('', {content:'<html></html>'}, function(err) {
 			if (err) console.error(err);
 			debug('unload listen ready');
-			loop.call(this, true);
 			this.once('ready', function() {
-				loop.call(this, false);
 				debug('unload done');
 				this.readyState = null;
 				this.status = null;
 				priv.state = INITIALIZED;
 				priv.tickets = {};
 				emitLifeEvent.call(this, 'unload');
-				priv.loopForCallbacks = 0;
 				this.removeAllListeners();
 				this.promises = {};
 				setImmediate(cb);
@@ -843,61 +800,6 @@ WebKit.prototype.destroy = function(cb) {
 	destroy.call(this, cb);
 	return this;
 };
-
-function loop(start) {
-	if (!this.webview || !this.webview.loop) return;
-	var priv = this.priv;
-	if (start) {
-		priv.loopForCallbacks++;
-	} else if (start === false) {
-		priv.loopForCallbacks--;
-	}
-	var loopFun = function() {
-		if (!priv.loopImmediate && !priv.loopTimeout) {
-			return;
-		}
-		priv.loopImmediate = null;
-		priv.loopTimeout = null;
-		priv.loopCount++;
-		if (priv.loopForCallbacks < 0) {
-			console.error("FIXME loopForCallbacks should be >= 0");
-			priv.loopForCallbacks = 0;
-		}
-		if (priv.pendingRequests < 0) {
-			console.error("FIXME pendingRequests should be >= 0");
-			priv.pendingRequests = 0;
-		}
-		if (!this.webview) {
-			return;
-		}
-		if (priv.loopForCallbacks == 0 && !priv.loopForLife) {
-			priv.loopCount = 0;
-			debug("loop stopped - no pending callbacks - no next life event to listen to");
-			if (!priv.debug || !priv.inspecting) return;
-		}
-		var busy = this.webview.loop(true);
-		if (busy) {
-			priv.idleCount = 0;
-		} else if (!priv.wasBusy) {
-			priv.idleCount++;
-		}
-		priv.wasBusy = busy;
-		if (busy) {
-			priv.loopImmediate = setImmediate(loopFun);
-		} else {
-			var delay = priv.idleCount * 4;
-			priv.loopTimeout = setTimeout(loopFun, Math.min(delay, 300));
-		}
-	}.bind(this);
-
-	if (priv.loopTimeout) {
-		clearTimeout(priv.loopTimeout);
-		priv.loopTimeout = null;
-	}
-	if (!priv.loopImmediate) {
-		priv.loopImmediate = setImmediate(loopFun);
-	}
-}
 
 WebKit.prototype.run = function(script, cb) {
 	var args = Array.prototype.slice.call(arguments, 1);
@@ -934,12 +836,10 @@ function run(script, ticket, args, cb) {
 			return cb(new Error("webview not available yet"));
 		}
 		if (obj.sync) {
-			loop.call(this, true);
 			this.webview.run(obj.script, obj.ticket);
 		} else {
 			this.webview.run(obj.script, obj.ticket);
-			if (obj.ticket) loop.call(this, true);
-			else setImmediate(cb);
+			if (!obj.ticket) setImmediate(cb);
 		}
 	}.bind(this));
 }
@@ -1055,14 +955,11 @@ WebKit.prototype.png = function(obj, cb) {
 };
 
 function png(wstream, cb) {
-	loop.call(this, true);
 	this.webview.png(function(err, buf) {
 		if (err) {
-			loop.call(this, false);
 			wstream.emit('error', err);
 			cb(err);
 		} else if (buf == null) {
-			loop.call(this, false);
 			wstream.end();
 			if (wstream instanceof stream.Readable) {
 				cb();
@@ -1108,9 +1005,7 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 };
 
 function pdf(filepath, opts, cb) {
-	loop.call(this, true);
 	this.webview.pdf("file://" + path.resolve(filepath), opts, function(err) {
-		loop.call(this, false);
 		cb(err);
 	}.bind(this));
 }
