@@ -933,6 +933,7 @@ gpointer data) {
 		tuple[0] = g_variant_dict_end(prox->dict);
 		g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(tuple, 1));
 	} else if (g_strcmp0(method_name, "NotifyEvent") == 0) {
+		g_dbus_method_invocation_return_value(invocation, NULL);
 		const gchar* message;
 		g_variant_get(parameters, "(&s)", &message);
 		Local<Value> argv[] = {
@@ -940,7 +941,6 @@ gpointer data) {
 			Nan::New(message).ToLocalChecked()
 		};
 		self->eventsCallback->Call(2, argv);
-		g_dbus_method_invocation_return_value(invocation, NULL);
 	}
 }
 
