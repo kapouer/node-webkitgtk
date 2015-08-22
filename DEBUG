@@ -1,23 +1,25 @@
-Create a new view, let the node process open (long setTimeout),
-and then one can:
+# dbus
 
 dbus-send --session --print-reply --type=method_call --dest='org.nodejs.WebKitGtk' '/org/nodejs/WebKitGtk' org.nodejs.WebKitGtk.HandleRequest string:"http://www.test.com/test.js"
 
-to check if the dbus server is running well.
 
+# gdb
 
-Calls to g_print() won't be printed to the terminal, but they can be
-searched in strace output: `strace -s 128 -f node test.js 2> test.trace`.
-
-Build the module with symbols for debugging:
 node-gyp rebuild --debug
-and then just use
 gdb nodejs
 > run test.js
 
+
+# glib logs
 
 To debug glib warnings:
 G_DEBUG=fatal_warnings gdb nodejs
 ...
 
 will break on failed assertions
+
+
+# js logs
+
+DEBUG=webkitgtk node test.js
+

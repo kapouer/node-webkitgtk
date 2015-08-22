@@ -447,24 +447,28 @@ properties
   is opening.
 
 
-how to debug
-------------
+debugging
+---------
 
 `DEBUG=webkitgtk node myscript.js`
 to print all logs.
 
-Stalled xhr requests (see stall option) are printed using console.warn.
-Errors on page are printed using console.error.
+In a production environment, it could be useful to set the init option
+verbose = true
+or, equivalently, the environment variables
+DEBUG=webkitgtk:timeout,webkitgtk:error,webkitgtk:warn
+
 
 This will keep the page running, output console to terminal, and open
 a gtk window with inspector open:
 
 ```
-WebKit({debug: true}, function(err, w) {
+WebKit({debug: true, verbose: true}, function(err, w) {
   w.load(url, {console: true});
-  w.once('unload');
 });
 ```
+
+For debugging of node-webkitgtk itself, please read ./DEBUG.
 
 
 about plugins
