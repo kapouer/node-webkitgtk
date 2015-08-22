@@ -880,15 +880,6 @@ function prepareRun(script, ticket, args, priv) {
 	if (!async && !ticket) {
 		throw new Error("cannot call runev without a script that accepts a listener function as last parameter");
 	}
-	// KeyboardEvent is the only event that can carry an arbitrary string
-	// If it isn't supported any more, send an empty event and make the webextension fetch
-	// the data (stored in a global window variable).
-	var dispatcher = '\
-		var msg, en = "' + priv.eventName + '", evt = document.createEvent("KeyboardEvent"); \
-		try { msg = JSON.stringify(message); } catch (e) { msg = JSON.stringify(message + "");} \
-		if (evt.initKeyboardEvent) evt.initKeyboardEvent(en, false, true, null, msg); \
-		else { evt.initEvent(en, false, true); evt.char = msg; }\
-		window.dispatchEvent(evt);';
 	var obj = {
 		sync: !async,
 		ticket: ticket
@@ -896,7 +887,7 @@ function prepareRun(script, ticket, args, priv) {
 	if (!async) {
 		if (isfunction) script = '(' + script + ')(' + args.join(', ') + ')';
 		else script = '(function() { return ' + script + '; })()';
-		dispatcher = '\
+		var syncDispatcher = '\
 			var msg, en = "' + priv.eventName + '"; \
 			try { msg = JSON.stringify(message); } catch (e) { msg = JSON.stringify(message + "");} \
 			return msg;';
@@ -919,10 +910,19 @@ function prepareRun(script, ticket, args, priv) {
 		}.toString()
 		.replace(/TICKET/g, JSON.stringify(ticket))
 		.replace('SCRIPT', script)
-		.replace('DISPATCHER', dispatcher)
+		.replace('DISPATCHER', syncDispatcher)
 		.replace('STAMP', '"' + priv.stamp + '"');
 		obj.script = '(' + wrap + ')()';
 	} else {
+		// KeyboardEvent is the only event that can carry an arbitrary string
+		// If it isn't supported any more, send an empty event and make the webextension fetch
+		// the data (stored in a global window variable).
+		var asyncDispatcher = '\
+			var msg, en = "' + priv.eventName + '", evt = document.createEvent("KeyboardEvent"); \
+			try { msg = JSON.stringify(message); } catch (e) { msg = JSON.stringify(message + "");} \
+			if (evt.initKeyboardEvent) evt.initKeyboardEvent(en, false, true, null, msg); \
+			else { evt.initEvent(en, false, true); evt.char = msg; }\
+			window.dispatchEvent(evt);';
 		var wrap = function(err, result) {
 			var message = {stamp: STAMP};
 			message.args = Array.prototype.slice.call(arguments, 1);
@@ -935,7 +935,7 @@ function prepareRun(script, ticket, args, priv) {
 			DISPATCHER
 		}.toString()
 		.replace(/TICKET/g, JSON.stringify(ticket))
-		.replace('DISPATCHER', dispatcher)
+		.replace('DISPATCHER', asyncDispatcher)
 		.replace('STAMP', '"' + priv.stamp + '"');
 		args.push(wrap);
 		obj.script = '(' + script + ')(' + args.join(', ') + ');';
