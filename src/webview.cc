@@ -223,6 +223,7 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 
 	Nan::SetPrototypeMethod(tpl, "load", WebView::Load);
 	Nan::SetPrototypeMethod(tpl, "run", WebView::Run);
+	Nan::SetPrototypeMethod(tpl, "runSync", WebView::RunSync);
 	Nan::SetPrototypeMethod(tpl, "png", WebView::Png);
 	Nan::SetPrototypeMethod(tpl, "pdf", WebView::Print);
 	Nan::SetPrototypeMethod(tpl, "stop", WebView::Stop);
@@ -670,7 +671,7 @@ NAN_METHOD(WebView::Run) {
 
 	ViewClosure* vc = new ViewClosure(self, new Nan::Utf8String(info[1]));
 
-	if (self->window != NULL) {
+	if (self->view != NULL) {
 		webkit_web_view_run_javascript(
 			self->view,
 			**script,
@@ -680,7 +681,70 @@ NAN_METHOD(WebView::Run) {
 		);
 	}
 	delete script;
-	return;
+}
+
+void WebView::RunSyncFinished(GObject* object, GAsyncResult* result, gpointer data) {
+	GError* error = NULL;
+	ViewClosure* vc = (ViewClosure*)data;
+	WebView* self = (WebView*)(vc->view);
+	WebKitJavascriptResult* js_result = webkit_web_view_run_javascript_finish(WEBKIT_WEB_VIEW(object), result, &error);
+
+	if (js_result == NULL) { // if NULL, error is defined
+		Nan::Utf8String* nStr = (Nan::Utf8String*)(vc->closure);
+		Local<Value> argv[] = {
+			Nan::Error(error->message),
+			Nan::New<String>(**nStr).ToLocalChecked()
+		};
+		self->eventsCallback->Call(2, argv);
+		g_error_free(error);
+		delete vc;
+		return;
+	}
+
+	JSGlobalContextRef context = webkit_javascript_result_get_global_context(js_result);
+	JSValueRef value = webkit_javascript_result_get_value(js_result);
+	gchar* str_value = NULL;
+	if (JSValueIsString(context, value)) {
+		JSStringRef js_str_value = JSValueToStringCopy(context, value, NULL);
+		gsize str_length = JSStringGetMaximumUTF8CStringSize(js_str_value);
+		str_value = (gchar*)g_malloc(str_length);
+		JSStringGetUTF8CString(js_str_value, str_value, str_length);
+		JSStringRelease(js_str_value);
+	} else {
+		g_warning ("Error running javascript: unexpected return value");
+	}
+	Nan::Utf8String* nStr = (Nan::Utf8String*)(vc->closure);
+	Local<Value> argv[] = {
+		Nan::Null(),
+		Nan::New<String>(str_value).ToLocalChecked()
+	};
+	self->eventsCallback->Call(2, argv);
+	if (str_value != NULL) g_free(str_value);
+	webkit_javascript_result_unref(js_result);
+
+	delete vc;
+}
+
+NAN_METHOD(WebView::RunSync) {
+	Nan::HandleScope scope;
+	WebView* self = ObjectWrap::Unwrap<WebView>(info.This());
+	if (!info[0]->IsString()) {
+		Nan::ThrowError("runSync(script, ticket) missing script argument");
+		return;
+	}
+	g_print("run sync\n");
+	Nan::Utf8String* script = new Nan::Utf8String(info[0]);
+	ViewClosure* vc = new ViewClosure(self, new Nan::Utf8String(info[1]));
+	if (self->view != NULL) {
+		webkit_web_view_run_javascript(
+			self->view,
+			**script,
+			NULL,
+			WebView::RunSyncFinished,
+			vc
+		);
+	}
+	delete script;
 }
 
 cairo_status_t WebView::PngWrite(void* closure, const unsigned char* data, unsigned int length) {

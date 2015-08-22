@@ -836,7 +836,7 @@ function run(script, ticket, args, cb) {
 			return cb(new Error("webview not available yet"));
 		}
 		if (obj.sync) {
-			this.webview.run(obj.script, obj.ticket);
+			this.webview.runSync(obj.script, obj.ticket);
 		} else {
 			this.webview.run(obj.script, obj.ticket);
 			if (!obj.ticket) setImmediate(cb);
@@ -896,6 +896,10 @@ function prepareRun(script, ticket, args, priv) {
 	if (!async) {
 		if (isfunction) script = '(' + script + ')(' + args.join(', ') + ')';
 		else script = '(function() { return ' + script + '; })()';
+		dispatcher = '\
+			var msg, en = "' + priv.eventName + '"; \
+			try { msg = JSON.stringify(message); } catch (e) { msg = JSON.stringify(message + "");} \
+			return msg;';
 		var wrap = function() {
 			var message = {stamp: STAMP};
 			if (TICKET) message.ticket = TICKET;

@@ -55,6 +55,7 @@ public:
 	static void PngFinished(GObject*, GAsyncResult*, gpointer);
 	static cairo_status_t PngWrite(void*, const unsigned char*, unsigned int);
 	static void RunFinished(GObject*, GAsyncResult*, gpointer);
+	static void RunSyncFinished(GObject*, GAsyncResult*, gpointer);
 	static void PrintFinished(WebKitPrintOperation*, gpointer);
 	static void PrintFailed(WebKitPrintOperation*, gpointer, gpointer);
 
@@ -115,6 +116,7 @@ private:
 	static NAN_METHOD(New);
 	static NAN_METHOD(Load);
 	static NAN_METHOD(Run);
+	static NAN_METHOD(RunSync);
 	static NAN_METHOD(Png);
 	static NAN_METHOD(Print);
 	static NAN_METHOD(Stop);
