@@ -713,7 +713,6 @@ void WebView::RunSyncFinished(GObject* object, GAsyncResult* result, gpointer da
 	} else {
 		g_warning ("Error running javascript: unexpected return value");
 	}
-	Nan::Utf8String* nStr = (Nan::Utf8String*)(vc->closure);
 	Local<Value> argv[] = {
 		Nan::Null(),
 		Nan::New<String>(str_value).ToLocalChecked()
