@@ -10,6 +10,8 @@ static GDBusConnection* connection;
 
 static WebKitWebExtension* extension_access;
 static gchar* eventName = NULL;
+static guint idLogHandler;
+
 static void dispatch_ignore_event(WebKitWebPage* page, gchar* eventName, const gchar* uri) {
 	gchar* ignoreName = g_strconcat("r", eventName, NULL);
 	WebKitDOMDocument* document = webkit_web_page_get_dom_document(page);
@@ -121,9 +123,23 @@ static void window_object_cleared_callback(WebKitScriptWorld* world, WebKitWebPa
 	webkit_dom_event_target_add_event_listener(WEBKIT_DOM_EVENT_TARGET(window), eventName, G_CALLBACK(event_listener), false, NULL);
 }
 
+static void ttyLog(const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data) {
+	FILE* ftty = fopen("/dev/tty", "a");
+	if (ftty == NULL) {
+		return;
+	}
+	fprintf(ftty, "%s\n", message);
+	fclose(ftty);
+}
+
 extern "C" {
 	G_MODULE_EXPORT void webkit_web_extension_initialize_with_user_data(WebKitWebExtension* extension, const GVariant* constData) {
-
+		idLogHandler = g_log_set_handler(
+			NULL,
+			G_LOG_LEVEL_MASK,
+			ttyLog,
+			NULL
+		);
 		extension_access = extension;
 		gchar* address = NULL;
 		g_variant_get((GVariant*)constData, "(ss)", &address, &eventName);
@@ -150,6 +166,8 @@ Webkit_Web_extension_shutdown (void) {
 
 	g_signal_handlers_disconnect_by_data(webkit_script_world_get_default(), eventName);
 	g_signal_handlers_disconnect_by_data(extension_access, eventName);
+
+	g_log_remove_handler(NULL, idLogHandler);
 
 	eventName = NULL;
 	extension_access = NULL;
