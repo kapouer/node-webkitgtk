@@ -106,13 +106,9 @@ static void web_page_created_callback(WebKitWebExtension* extension, WebKitWebPa
 static gboolean event_listener(WebKitDOMDOMWindow* view, WebKitDOMEvent* event, gpointer data) {
 	char* message = webkit_dom_keyboard_event_get_key_identifier((WebKitDOMKeyboardEvent*)event);
 	GError* error = NULL;
-	g_dbus_connection_call_sync(connection, NULL, DBUS_OBJECT_WKGTK, DBUS_INTERFACE_WKGTK,
-		"NotifyEvent", g_variant_new("(s)", message), G_VARIANT_TYPE("()"), G_DBUS_CALL_FLAGS_NONE, -1, NULL,
-		&error);
-	if (error != NULL) {
-		g_printerr("Failed to finish dbus call: %s\n", error->message);
-		g_error_free(error);
-	}
+	g_dbus_connection_call(connection, NULL, DBUS_OBJECT_WKGTK, DBUS_INTERFACE_WKGTK,
+		"NotifyEvent", g_variant_new("(s)", message), G_VARIANT_TYPE("()"), G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL,
+		NULL);
 	g_free(message);
 	return TRUE;
 }
