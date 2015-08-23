@@ -163,6 +163,7 @@ function closedListener(what) {
 		case "window":
 			delete this.webview;
 			destroy.call(this, priv.destroyCb);
+			priv.tickets = cleanTickets(priv.tickets);
 			this.priv = initialPriv();
 		break;
 	}
@@ -777,7 +778,7 @@ WebKit.prototype.unload = function(cb) {
 				this.readyState = null;
 				this.status = null;
 				priv.state = INITIALIZED;
-				priv.tickets = {};
+				priv.tickets = cleanTickets(priv.tickets);
 				emitLifeEvent.call(this, 'unload');
 				this.removeAllListeners();
 				this.promises = {};
@@ -787,6 +788,18 @@ WebKit.prototype.unload = function(cb) {
 	}
 	return this;
 };
+
+function cleanTickets(tickets) {
+	for (var key in tickets) {
+		var obj = tickets[key];
+		if (!obj) continue;
+		if (obj.timeout) {
+			clearTimeout(obj.timeout);
+			delete obj.timeout;
+		}
+	}
+	return {};
+}
 
 function destroy(cb) {
 	if (this.webview) {
