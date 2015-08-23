@@ -56,6 +56,8 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 	GVariant* tuple[1];
 	tuple[0] = variantIn;
 
+//	guint64 startms = g_get_real_time();
+
 	GVariant* results = g_dbus_connection_call_sync(connection, NULL, DBUS_OBJECT_WKGTK, DBUS_INTERFACE_WKGTK, "HandleRequest", g_variant_new_tuple(tuple, 1), G_VARIANT_TYPE_TUPLE, G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
 	g_variant_dict_clear(&dictIn);
@@ -93,6 +95,8 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 	results = g_variant_dict_end(&dictOut);
 	update_soup_headers_with_dict(headers, results);
 	g_variant_unref(results);
+
+//	g_message("elapsed %lu", g_get_real_time() - startms);
 
 	return ret;
 }
