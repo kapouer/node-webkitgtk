@@ -39,9 +39,7 @@ WebKit.load = function(uri, opts, cb) {
 		cb = opts;
 		opts = null;
 	}
-	var display = opts && opts.display || {};
-	display.cacheDir = opts && opts.cacheDir || undefined;
-	var inst = WebKit(display, function(err, w) {
+	var inst = WebKit(opts, function(err, w) {
 		if (err) return cb(err, w);
 		w.load(uri, opts, cb);
 	});
@@ -70,6 +68,8 @@ WebKit.prototype.init = function(opts, cb) {
 	var priv = this.priv;
 	if (priv.state >= INITIALIZING) return cb(new Error("init must not be called twice"), this);
 	priv.state = INITIALIZING;
+
+	priv.runTimeout = opts.runTimeout || 5000;
 
 	if (opts.offscreen == null) opts.offscreen = true;
 	if (opts.debug) {
@@ -253,9 +253,14 @@ function eventsDispatcher(err, json) {
 			this.emit.apply(this, args);
 		}
 	} else if (obj.ticket) {
-		var cb = priv.tickets[obj.ticket];
-		if (cb) {
+		var cbObj = priv.tickets[obj.ticket];
+		if (cbObj) {
 			delete priv.tickets[obj.ticket];
+			if (cbObj.timeout) {
+				clearTimeout(cbObj.timeout);
+				delete cbObj.timeout;
+			}
+			if (!cbObj.cb) return; // already called by timeout
 			if (obj.error && !util.isError(obj.error)) {
 				var typeErr = obj.error.type || 'Error';
 				var customErr = new global[typeErr]();
@@ -264,7 +269,7 @@ function eventsDispatcher(err, json) {
 			}
 			args.unshift(obj.error);
 			try {
-				cb.apply(this, args);
+				cbObj.cb.apply(this, args);
 			} catch(e) {
 				setImmediate(function(ex) {throw ex;}.bind(null, e));
 			}
@@ -817,7 +822,7 @@ WebKit.prototype.runev = function(script, cb) {
 
 function runcb(script, args, cb) {
 	var ticket = (++this.priv.ticket).toString();
-	this.priv.tickets[ticket] = cb;
+	this.priv.tickets[ticket] = {cb: cb};
 	run.call(this, script, ticket, args, cb);
 }
 
@@ -830,6 +835,7 @@ function run(script, ticket, args, cb) {
 		return cb(e);
 	}
 	// run on next loop so one can setup event listeners before
+	var priv = this.priv;
 	setImmediate(function() {
 		if (!this.webview) return cb(new Error("WebKit uninitialized"));
 		if (!this.webview.run) {
@@ -839,7 +845,24 @@ function run(script, ticket, args, cb) {
 			this.webview.runSync(obj.script, obj.ticket);
 		} else {
 			this.webview.run(obj.script, obj.ticket);
-			if (!obj.ticket) setImmediate(cb);
+			if (!obj.ticket) {
+				// the script is an event emitter, so we do not expect a reply
+				setImmediate(cb);
+			} else {
+				// the script is expected to call back, but it might not so
+				// let's time out this
+				if (priv.runTimeout) priv.tickets[obj.ticket].timeout = setTimeout(function() {
+					var cbObj = priv.tickets[obj.ticket];
+					if (!cbObj) return; // view unloaded before
+					var cb = cbObj.cb;
+					if (!cb) {
+						// this should never happen
+						console.error('FIXME - timeout after the script has already been run');
+					}
+					delete cbObj.cb;
+					cb(new Error("script timed out\n" + obj.inscript));
+				}, priv.runTimeout);
+			}
 		}
 	}.bind(this));
 }
@@ -923,6 +946,7 @@ function prepareRun(script, ticket, args, priv) {
 			if (evt.initKeyboardEvent) evt.initKeyboardEvent(en, false, true, null, msg); \
 			else { evt.initEvent(en, false, true); evt.char = msg; }\
 			window.dispatchEvent(evt);';
+		obj.inscript = script.substring(0, 255); // useful for debugging timeouts
 		var wrap = function(err, result) {
 			var message = {stamp: STAMP};
 			message.args = Array.prototype.slice.call(arguments, 1);

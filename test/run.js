@@ -126,4 +126,18 @@ describe("run method", function suite() {
 			});
 		});
 	});
+	it("should run async and time out", function(done) {
+		WebKit.load("http://localhost", {runTimeout: 500, content: "<html></html>"}).once('ready', function() {
+			this.run(function(done) {
+				setTimeout(function() {
+					done();
+				}, 700);
+			}, function(err) {
+				expect(err).to.be.ok();
+				expect(err instanceof Error).to.be(true);
+				done();
+			});
+		});
+	});
+
 });
