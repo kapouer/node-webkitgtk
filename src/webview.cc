@@ -731,7 +731,6 @@ NAN_METHOD(WebView::RunSync) {
 		Nan::ThrowError("runSync(script, ticket) missing script argument");
 		return;
 	}
-	g_print("run sync\n");
 	Nan::Utf8String* script = new Nan::Utf8String(info[0]);
 	ViewClosure* vc = new ViewClosure(self, new Nan::Utf8String(info[1]));
 	if (self->view != NULL) {
