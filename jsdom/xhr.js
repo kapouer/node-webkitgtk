@@ -3,7 +3,7 @@ var jsdom = require('jsdom').jsdom;
 module.exports = function handleXhr(window) {
 	var webview = this;
 	var priv = this.priv;
-	var uticket = priv.uticket;
+	var stamp = priv.stamp;
 	var wxhr = window.XMLHttpRequest;
 	window.XMLHttpRequest = function() {
 		var xhr = wxhr();
@@ -31,7 +31,7 @@ module.exports = function handleXhr(window) {
 			if (this.responseType == 'document' && contentType.indexOf('text/html') >= 0) {
 				this.responseXML = jsdom(this.responseText, webview.priv.jsdom);
 			}
-			priv.cfg.responseListener(uticket, {
+			priv.cfg.responseListener(stamp, {
 				uri: privUrl,
 				status: this.status,
 				headers: headers,

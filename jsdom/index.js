@@ -79,8 +79,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			try {
 				ret = window.run(script);
 			} catch(ex) {
-				window.webkit.messageHandlers.events.postMessage(JSON.stringify({ticket: ticket, error: ex.toString()}));
-				return;
+				ret = JSON.stringify({ticket: ticket, error: ex.toString()});
 			}
 			window.webkit.messageHandlers.events.postMessage(ret);
 		};
@@ -104,10 +103,6 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 				}
 			}
 		};
-
-		window.addEventListener(priv.eventName, function(e) {
-			priv.cfg.eventsListener(null, e.char);
-		}.bind(this), false);
 
 		if (opts.script) window.run(opts.script);
 		var runlist = this.webview._runlist;
@@ -194,16 +189,16 @@ function resourceLoader(resource, cb) {
 	var uri = resource.url && resource.url.href;
 	debug("resource loader", uri);
 	var priv = this.priv;
+	var stamp = priv.stamp;
 	var reqObj = {uri: uri, Accept: "*/*"};
 	priv.cfg.requestListener(reqObj);
 	if (reqObj.ignore) emitIgnore.call(this, reqObj);
 	if (reqObj.cancel) {
-		priv.cfg.responseListener(uticket, {uri: uri, length: 0, headers: {}, status: 0});
+		priv.cfg.responseListener(stamp, {uri: uri, length: 0, headers: {}, status: 0});
 		var err = new Error("Ressource canceled");
 		err.statusCode = 0;
 		return cb(err);
 	}
-	var uticket = priv.uticket;
 	// actual get
 	delete reqObj.uri;
 	delete reqObj.cancel;
@@ -220,7 +215,7 @@ function resourceLoader(resource, cb) {
 		var status = res && res.statusCode || 0;
 		if (!err && status != 200) err = new HTTPError(status);
 		var headers = res && res.headers || {};
-		priv.cfg.responseListener(uticket, {
+		priv.cfg.responseListener(stamp, {
 			uri: uri,
 			headers: headers,
 			length: body ? body.length : 0,
@@ -233,7 +228,7 @@ function resourceLoader(resource, cb) {
 		cb(err, body);
 	}.bind(this))
 	.on('data', function(chunk) {
-		priv.cfg.receiveDataListener(uticket, uri, chunk ? chunk.length : 0);
+		priv.cfg.receiveDataListener(stamp, uri, chunk ? chunk.length : 0);
 	}.bind(this));
 }
 
