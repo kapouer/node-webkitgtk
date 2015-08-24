@@ -953,9 +953,6 @@ function prepareRun(script, ticket, args, priv) {
 		.replace('STAMP', '"' + priv.stamp + '"');
 		obj.script = '(' + wrap + ')()';
 	} else {
-		// KeyboardEvent is the only event that can carry an arbitrary string
-		// If it isn't supported any more, send an empty event and make the webextension fetch
-		// the data (stored in a global window variable).
 		var asyncDispatcher = '\
 			var msg, en = "' + priv.eventName + '"; \
 			try { msg = JSON.stringify(message); } catch (e) { msg = JSON.stringify(message + "");} \
