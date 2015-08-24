@@ -1469,26 +1469,20 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 				if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall
 					&& frames.len == 0 && requests.len <= requests.stall) {
 					lastEvent += 1;
-					emitNext("idle", from, url, info);
+					emit("idle", from, url, info);
 				}
 			} else if (lastEvent == EV.idle) {
-				emitNext("busy", from, url);
+				emit("busy", from, url);
 			} else if (lastEvent == EV.init && hasReady) {
 				lastEvent += 1;
-				emitNext("ready", from, url, info);
+				emit("ready", from, url, info);
 			} else if (lastEvent == EV.ready && hasLoaded) {
 				lastEvent += 1;
-				emitNext("load", from, url, info);
+				emit("load", from, url, info);
 			} else {
 				return;
 			}
 		}
-	}
-
-	function emitNext(ev, from, url, info) {
-		w.setTimeout.call(window, function() {
-			emit(ev, from, url, info);
-		}, 0);
 	}
 }
 
