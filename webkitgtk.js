@@ -632,6 +632,7 @@ function load(uri, opts, cb) {
 	priv.lastEvent = null;
 	priv.allow = opts.allow || "all";
 	priv.stall = opts.stall || 1000;
+	priv.tickets = cleanTickets(priv.tickets);
 
 	if (priv.stallInterval) {
 		clearInterval(priv.stallInterval);
@@ -756,6 +757,7 @@ WebKit.prototype.unload = function(cb) {
 	this.removeAllListeners('unload');
 	this.removeAllListeners('busy');
 	this.promises = {};
+	cleanTickets(priv.tickets);
 
 	if (priv.state == LOADING) {
 		this.stop(function(err, wasLoading) {
@@ -849,6 +851,7 @@ function run(script, ticket, args, cb) {
 	}
 	// run on next loop so one can setup event listeners before
 	var priv = this.priv;
+
 	setImmediate(function() {
 		if (!this.webview) return cb(new Error("WebKit uninitialized"));
 		if (!this.webview.run) {
@@ -858,26 +861,27 @@ function run(script, ticket, args, cb) {
 			this.webview.runSync(obj.script, obj.ticket);
 		} else {
 			this.webview.run(obj.script, obj.ticket);
-			if (!obj.ticket) {
-				// the script is an event emitter, so we do not expect a reply
-				setImmediate(cb);
-			} else {
-				// the script is expected to call back, but it might not so
-				// let's time out this
-				if (priv.runTimeout) priv.tickets[obj.ticket].timeout = setTimeout(function() {
-					var cbObj = priv.tickets[obj.ticket];
-					if (!cbObj) return; // view unloaded before
-					var cb = cbObj.cb;
-					if (!cb) {
-						// this should never happen
-						console.error('FIXME - timeout after the script has already been run');
-					}
-					delete cbObj.cb;
-					cb(new Error("script timed out\n" + obj.inscript));
-				}, priv.runTimeout);
-			}
 		}
 	}.bind(this));
+
+	if (!obj.ticket) {
+		// the script is an event emitter, so we do not expect a reply
+		setImmediate(cb);
+	} else if (priv.runTimeout && !obj.sync) {
+		priv.tickets[obj.ticket].stamp = priv.stamp;
+		priv.tickets[obj.ticket].timeout = setTimeout(function() {
+			var cbObj = priv.tickets[obj.ticket];
+			if (!cbObj) return; // view unloaded before
+			var cb = cbObj.cb;
+			if (!cb) {
+				// this should never happen
+				console.error('FIXME - timeout after the script has already been run');
+			}
+			delete cbObj.cb;
+			if (cbObj.stamp != this.priv.stamp) return;
+			cb.call(this, new Error("script timed out\n" + obj.inscript));
+		}.bind(this), priv.runTimeout);
+	}
 }
 
 function prepareRun(script, ticket, args, priv) {

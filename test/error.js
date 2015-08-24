@@ -5,17 +5,17 @@ var fs = require('fs');
 describe("error reporting", function suite() {
 	it("should catch async script errors", function(done) {
 		this.timeout(1000);
-		var w = WebKit.load("", function(err) {
+		var w = WebKit.load("http://localhost", {content: '<html></html>'}, function(err) {
 			w.run(function(done) {
 				setTimeout(function() {
 					var r = 2 + h;
 					done(); // won't actually be called
 				}, 100);
 			}, function(err) {
-				expect(err).to.not.be.ok();
+				expect(err).to.be.ok(); // timeout
 			});
 			w.on('error', function(msg, uri, line, col, err) {
-				expect(msg).to.be('Script error.');
+				expect(msg).to.be('ReferenceError: Can\'t find variable: h');
 				done();
 			});
 		});
@@ -34,14 +34,14 @@ describe("error reporting", function suite() {
 	it("should log uncaught Error instances with actual exception stack", function(done) {
 		this.timeout(1000);
 		WebKit(function(err, w) {
-			w.load("", function(err) {
+			w.load("http://localhost", {content: '<html></html>'}, function(err) {
 				w.run(function(done) {
 					setTimeout(function myfunc() {
 						throw new Error("i am here");
 						done(); // won't actually be called
 					}, 100);
 				}, function(err) {
-					expect(err).to.not.be.ok();
+					expect(err).to.be.ok(); // timeout
 				});
 			});
 			w.on('error', function(msg, uri, line, col, err) {
