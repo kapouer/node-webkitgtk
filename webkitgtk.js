@@ -755,6 +755,8 @@ WebKit.prototype.unload = function(cb) {
 	this.removeAllListeners('idle');
 	this.removeAllListeners('unload');
 	this.removeAllListeners('busy');
+	this.removeAllListeners('request');
+	this.removeAllListeners('response');
 	this.promises = {};
 	cleanTickets(priv.tickets);
 
