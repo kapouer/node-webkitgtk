@@ -957,11 +957,9 @@ function prepareRun(script, ticket, args, priv) {
 		// If it isn't supported any more, send an empty event and make the webextension fetch
 		// the data (stored in a global window variable).
 		var asyncDispatcher = '\
-			var msg, en = "' + priv.eventName + '", evt = document.createEvent("KeyboardEvent"); \
+			var msg, en = "' + priv.eventName + '"; \
 			try { msg = JSON.stringify(message); } catch (e) { msg = JSON.stringify(message + "");} \
-			if (evt.initKeyboardEvent) evt.initKeyboardEvent(en, false, true, null, msg); \
-			else { evt.initEvent(en, false, true); evt.char = msg; }\
-			window.dispatchEvent(evt);';
+			window.webkit.messageHandlers.events.postMessage(msg);';
 		obj.inscript = script.substring(0, 255); // useful for debugging timeouts
 		var wrap = function(err, result) {
 			var message = {stamp: STAMP};

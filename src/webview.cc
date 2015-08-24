@@ -80,7 +80,12 @@ WebView::WebView(Handle<Object> opts) {
 	const gchar* wePath = getStr(opts, "webextension");
 	if (wePath != NULL) {
 		webkit_web_context_set_web_extensions_directory(context, wePath);
-		this->contextSignalId = g_signal_connect(context, "initialize-web-extensions", G_CALLBACK(WebView::InitExtensions), this);
+		this->contextSignalId = g_signal_connect(
+			context,
+			"initialize-web-extensions",
+			G_CALLBACK(WebView::InitExtensions),
+			this
+		);
 	}
 
 	view = WEBKIT_WEB_VIEW(webkit_web_view_new_with_user_content_manager(webkit_user_content_manager_new()));
@@ -190,7 +195,32 @@ void WebView::unloaded() {
 	if (contman != NULL) {
 		webkit_user_content_manager_remove_all_scripts(contman);
 		webkit_user_content_manager_remove_all_style_sheets(contman);
+		webkit_user_content_manager_unregister_script_message_handler(contman, "events");
+		g_signal_handlers_disconnect_by_data(contman, view);
 	}
+}
+
+void WebView::handle_script_message(WebKitUserContentManager* contman, WebKitJavascriptResult* js_result, gpointer data) {
+	WebView* self = (WebView*)data;
+	JSGlobalContextRef context = webkit_javascript_result_get_global_context(js_result);
+	JSValueRef value = webkit_javascript_result_get_value(js_result);
+	gchar* str_value = NULL;
+	if (JSValueIsString(context, value)) {
+		JSStringRef js_str_value = JSValueToStringCopy(context, value, NULL);
+		gsize str_length = JSStringGetMaximumUTF8CStringSize(js_str_value);
+		str_value = (gchar*)g_malloc(str_length);
+		JSStringGetUTF8CString(js_str_value, str_value, str_length);
+		JSStringRelease(js_str_value);
+		Local<Value> argv[] = {
+			Nan::Null(),
+			Nan::New<String>(str_value).ToLocalChecked()
+		};
+		self->eventsCallback->Call(2, argv);
+	} else {
+		g_warning("Error in script message handler: unexpected js_result value");
+	}
+	if (str_value != NULL) g_free(str_value);
+	webkit_javascript_result_unref(js_result);
 }
 
 void timeout_cb(uv_timer_t *handle, int status) {
@@ -207,9 +237,6 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 	"		<method name='HandleRequest'>"
 	"			<arg type='a{sv}' name='dict' direction='in'/>"
 	"			<arg type='a{sv}' name='dict' direction='out'/>"
-	"		</method>"
-	"		<method name='NotifyEvent'>"
-	"			<arg type='s' name='message' direction='in'/>"
 	"		</method>"
 	"	</interface>"
 	"</node>";
@@ -577,11 +604,18 @@ NAN_METHOD(WebView::Load) {
 
 	if (self->state == DOCUMENT_LOADED) webkit_web_view_stop_loading(self->view);
 
+	self->unloaded();
+
 	self->loadCallback = loadCb;
 
 	WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
-
-	self->unloaded();
+	g_signal_connect(
+		contman,
+		"script-message-received::events",
+		G_CALLBACK(WebView::handle_script_message),
+		self
+	);
+	webkit_user_content_manager_register_script_message_handler(contman, "events");
 
 	ViewClosure* vc = new ViewClosure(self, info[1]->IsString() ? **(new Nan::Utf8String(info[1])) : NULL);
 
@@ -711,7 +745,7 @@ void WebView::RunSyncFinished(GObject* object, GAsyncResult* result, gpointer da
 		JSStringGetUTF8CString(js_str_value, str_value, str_length);
 		JSStringRelease(js_str_value);
 	} else {
-		g_warning ("Error running javascript: unexpected return value");
+		g_warning("Error running javascript: unexpected return value");
 	}
 	Local<Value> argv[] = {
 		Nan::Null(),
@@ -994,15 +1028,6 @@ gpointer data) {
 		GVariant* tuple[1];
 		tuple[0] = g_variant_dict_end(prox->dict);
 		g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(tuple, 1));
-	} else if (g_strcmp0(method_name, "NotifyEvent") == 0) {
-		g_dbus_method_invocation_return_value(invocation, NULL);
-		const gchar* message;
-		g_variant_get(parameters, "(&s)", &message);
-		Local<Value> argv[] = {
-			Nan::Null(),
-			Nan::New(message).ToLocalChecked()
-		};
-		self->eventsCallback->Call(2, argv);
 	}
 }
 

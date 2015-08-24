@@ -62,6 +62,7 @@ public:
 	static void handle_method_call(GDBusConnection*, const gchar*, const gchar*,
 		const gchar*, const gchar*, GVariant*, GDBusMethodInvocation*, gpointer);
 	static gboolean on_new_connection(GDBusServer*, GDBusConnection*, gpointer);
+	static void handle_script_message(WebKitUserContentManager*, WebKitJavascriptResult*, gpointer);
 
 	void destroy();
 	void unloaded();

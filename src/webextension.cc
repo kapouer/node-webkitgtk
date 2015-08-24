@@ -107,21 +107,6 @@ static void web_page_created_callback(WebKitWebExtension* extension, WebKitWebPa
 	g_signal_connect(web_page, "send-request", G_CALLBACK(web_page_send_request), data);
 }
 
-static gboolean event_listener(WebKitDOMDOMWindow* view, WebKitDOMEvent* event, gpointer data) {
-	char* message = webkit_dom_keyboard_event_get_key_identifier((WebKitDOMKeyboardEvent*)event);
-	g_dbus_connection_call(connection, NULL, DBUS_OBJECT_WKGTK, DBUS_INTERFACE_WKGTK,
-		"NotifyEvent", g_variant_new("(s)", message), G_VARIANT_TYPE("()"), G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL,
-		NULL);
-	g_free(message);
-	return TRUE;
-}
-
-static void window_object_cleared_callback(WebKitScriptWorld* world, WebKitWebPage* page, WebKitFrame* frame, gchar* eventName) {
-	WebKitDOMDocument* document = webkit_web_page_get_dom_document(page);
-	WebKitDOMDOMWindow* window = webkit_dom_document_get_default_view(document);
-	webkit_dom_event_target_add_event_listener(WEBKIT_DOM_EVENT_TARGET(window), eventName, G_CALLBACK(event_listener), false, NULL);
-}
-
 static void ttyLog(const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data) {
 	FILE* ftty = fopen("/dev/tty", "a");
 	if (ftty == NULL) {
@@ -143,8 +128,6 @@ extern "C" {
 		gchar* address = NULL;
 		g_variant_get((GVariant*)constData, "(ss)", &address, &eventName);
 
-		g_signal_connect(webkit_script_world_get_default(), "window-object-cleared", G_CALLBACK(window_object_cleared_callback), eventName);
-
 		g_signal_connect(extension, "page-created", G_CALLBACK(web_page_created_callback), eventName);
 
 		GError* error = NULL;
@@ -163,7 +146,6 @@ Webkit_Web_extension_shutdown (void) {
 	g_object_unref(extension_access);
 	g_object_unref(connection);
 
-	g_signal_handlers_disconnect_by_data(webkit_script_world_get_default(), eventName);
 	g_signal_handlers_disconnect_by_data(extension_access, eventName);
 
 	g_log_remove_handler(NULL, idLogHandler);
