@@ -956,7 +956,8 @@ function prepareRun(script, ticket, args, priv) {
 		var asyncDispatcher = '\
 			var msg, en = "' + priv.eventName + '"; \
 			try { msg = JSON.stringify(message); } catch (e) { msg = JSON.stringify(message + "");} \
-			window.webkit.messageHandlers.events.postMessage(msg);';
+			var ww = window.webkit; \
+			if (ww && ww.messageHandlers && ww.messageHandlers.events) ww.messageHandlers.events.postMessage(msg);';
 		obj.inscript = script.substring(0, 255); // useful for debugging timeouts
 		var wrap = function(err, result) {
 			var message = {stamp: STAMP};
