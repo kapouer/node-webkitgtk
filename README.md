@@ -222,6 +222,11 @@ load(uri, opts, cb) options
   charset.  
   Useful to fix Script errors when serving utf-8 encoded javascript files.
 
+- runTimeout  
+  number, default 10000  
+  Async run() calls will timeout and call back after `runTimeout` ms.  
+  Sync run() calls, or runev() calls, are not affected.
+
 
 init(opts, cb) options
 ----------------------

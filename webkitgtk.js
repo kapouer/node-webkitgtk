@@ -69,8 +69,6 @@ WebKit.prototype.init = function(opts, cb) {
 	if (priv.state >= INITIALIZING) return cb(new Error("init must not be called twice"), this);
 	priv.state = INITIALIZING;
 
-	priv.runTimeout = opts.runTimeout || 10000;
-
 	if (opts.offscreen == null) opts.offscreen = true;
 	if (opts.debug) {
 		priv.debug = true;
@@ -632,6 +630,7 @@ function load(uri, opts, cb) {
 	priv.lastEvent = null;
 	priv.allow = opts.allow || "all";
 	priv.stall = opts.stall || 1000;
+	priv.runTimeout = opts.runTimeout || 10000;
 	priv.tickets = cleanTickets(priv.tickets);
 
 	if (priv.stallInterval) {
