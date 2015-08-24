@@ -19,7 +19,7 @@ describe("run method", function suite() {
 				expect(hello).to.be("hello");
 				expect(countCalls++).to.be(count);
 				if (count == 2) done();
-			}).on('unload', function() {});
+			});
 		});
 	});
 	it("should pass fail when missing custom arguments mismatch script signature", function(done) {

@@ -67,6 +67,6 @@ describe("unload method", function suite() {
 					setTimeout(done, 1000);
 				});
 			}.bind(this), 3000);
-		}).once('unload', function() {});
+		});
 	});
 });

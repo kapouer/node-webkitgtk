@@ -181,7 +181,7 @@ describe("request listener", function suite() {
 							done();
 						}, 100);
 					});
-				}).once('unload', function() {});
+				});
 			});
 		});
 	});

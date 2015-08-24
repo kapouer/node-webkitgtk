@@ -18,7 +18,6 @@ describe("error reporting", function suite() {
 				expect(msg).to.be('Script error.');
 				done();
 			});
-			w.on('unload', function() {});
 		});
 	});
 	it("should catch sync script errors", function(done) {
@@ -51,7 +50,6 @@ describe("error reporting", function suite() {
 				expect(err.stack).to.be.ok();
 				done();
 			});
-			w.on('unload', function() {});
 		});
 	});
 });
