@@ -339,7 +339,9 @@ function requestDispatcher(binding) {
 
 	debug('request', uri.substring(0, 255));
 
-	var mainUri = this.uri || "";
+	var mainUri = this.uri || "about:blank";
+
+	if (mainUri == "about:blank") return;
 
 	var info = priv.uris[uri];
 
@@ -416,6 +418,8 @@ function requestDispatcher(binding) {
 function responseDispatcher(curstamp, binding) {
 	var priv = this.priv;
 	if (!priv.uris) return;
+	var mainUri = this.uri || "about:blank";
+	if (mainUri == "about:blank") return;
 	var res = new Response(this, binding);
 	var uri = res.uri;
 	if (!uri) return;
@@ -754,8 +758,6 @@ WebKit.prototype.unload = function(cb) {
 	this.removeAllListeners('idle');
 	this.removeAllListeners('unload');
 	this.removeAllListeners('busy');
-	this.removeAllListeners('request');
-	this.removeAllListeners('response');
 	this.promises = {};
 	cleanTickets(priv.tickets);
 
