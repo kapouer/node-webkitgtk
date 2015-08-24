@@ -148,3 +148,8 @@ No API change but partial fallback to jsdom is available when bindings are not b
 No more complex gtk loop management. The gtk loop is run for all modules in the default uv loop.
 Main change: it's not possible to "pause" a view (it wasn't really possible anyway),
 and it's no longer necessary to listen "unload" event to keep events running.
+
+2.4.0
+-----
+
+All async run() calls have a default runTimeout, settable between loads.

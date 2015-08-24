@@ -225,7 +225,8 @@ load(uri, opts, cb) options
 - runTimeout  
   number, default 10000  
   Async run() calls will timeout and call back after `runTimeout` ms.  
-  Sync run() calls, or runev() calls, are not affected.
+  Sync run() calls, or runev() calls, are not affected.  
+  Can be disabled by setting this param to 0.
 
 
 init(opts, cb) options
