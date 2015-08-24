@@ -167,11 +167,11 @@ function closedListener(what) {
 	}
 }
 
-function receiveDataDispatcher(curuticket, uri, length) {
+function receiveDataDispatcher(curstamp, uri, length) {
 	var priv = this.priv;
 	if (!uri) return;
-	if (curuticket != priv.uticket) {
-		debug("ignore data from other uticket", curuticket, priv.uticket, uri);
+	if (curstamp != priv.stamp) {
+		debug("stamp mismatch - ignore data dispatch", curstamp, priv.stamp, uri);
 		return;
 	}
 	var info = priv.uris && priv.uris[uri];
@@ -413,15 +413,15 @@ function requestDispatcher(binding) {
 	}
 }
 
-function responseDispatcher(curuticket, binding) {
+function responseDispatcher(curstamp, binding) {
 	var priv = this.priv;
 	if (!priv.uris) return;
 	var res = new Response(this, binding);
 	var uri = res.uri;
 	if (!uri) return;
 
-	if (curuticket != priv.uticket) {
-		debug("ignore response from other uticket", uri, curuticket, priv.uticket, this.uri);
+	if (curstamp != priv.stamp) {
+		debug("stamp mismatch - ignore response", uri, curstamp, priv.stamp, this.uri);
 		return;
 	}
 
@@ -532,7 +532,6 @@ function errorLoad(state) {
 
 WebKit.prototype.rawload = function(uri, opts, cb) {
 	var priv = this.priv;
-	priv.uticket = uran();
 	var cookies = opts.cookies;
 	if (cookies) {
 		debug('load cookies');
@@ -541,7 +540,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 		});
 		script.push('');
-		this.webview.load(uri, priv.uticket, {
+		this.webview.load(uri, priv.stamp, {
 			script: script.join(';\n'),
 			content: "<html></html>",
 			waitFinish: true
@@ -554,7 +553,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	}
 	function next(err) {
 		if (err) return cb(err);
-		this.webview.load(uri, this.priv.uticket, opts, cb);
+		this.webview.load(uri, this.priv.stamp, opts, cb);
 	}
 };
 
@@ -632,6 +631,7 @@ function load(uri, opts, cb) {
 	priv.stall = opts.stall || 1000;
 	priv.runTimeout = opts.runTimeout || 10000;
 	priv.tickets = cleanTickets(priv.tickets);
+	priv.stamp = uran();
 
 	if (priv.stallInterval) {
 		clearInterval(priv.stallInterval);
@@ -648,7 +648,7 @@ function load(uri, opts, cb) {
 			if (info.remote && info.count && (now - info.mtime > priv.stall)) {
 				info.mtime = Infinity;
 				if (!info.ignore) debugStall("%s ms - %s", priv.stall, uri);
-				responseDispatcher.call(this, priv.uticket, {uri: uri, status: 0});
+				responseDispatcher.call(this, priv.stamp, {uri: uri, status: 0});
 			}
 		}
 	}.bind(this), 100); // let dom client cancel stalled xhr first
@@ -661,7 +661,7 @@ function load(uri, opts, cb) {
 
 	priv.uris = {};
 	priv.pendingRequests = 0;
-	priv.stamp = uran();
+
 	if (priv.debug) priv.inspecting = true;
 
 	if (this.listeners('error').length == 0) {
@@ -691,7 +691,6 @@ function load(uri, opts, cb) {
 	}).join('\n');
 
 	debug('load', uri);
-	priv.uticket = uran();
 	priv.uris[uri] = {mtime: Date.now(), main: true};
 	this.rawload(uri, opts, function(err, status) {
 		debug('load done %s', uri);
