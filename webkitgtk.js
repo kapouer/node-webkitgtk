@@ -929,13 +929,11 @@ function prepareRun(script, ticket, args, priv) {
 	if (!async) {
 		if (isfunction) script = '(' + script + ')(' + args.join(', ') + ')';
 		else script = '(function() { return ' + script + '; })()';
-		var syncDispatcher = '\
-			var msg, en = "' + priv.eventName + '"; \
-			try { msg = JSON.stringify(message); } catch (e) { msg = JSON.stringify(message + "");} \
-			return msg;';
 		var wrap = function() {
-			var message = {stamp: STAMP};
-			if (TICKET) message.ticket = TICKET;
+			var ticket = TICKET;
+			var stamp = STAMP;
+			var message = {stamp: stamp};
+			if (ticket) message.ticket = ticket;
 			try {
 				message.args = [ SCRIPT ];
 			} catch(e) {
@@ -948,34 +946,47 @@ function prepareRun(script, ticket, args, priv) {
 					stack: e.stack
 				};
 			}
-			DISPATCHER
+			var msg;
+			try {
+				msg = JSON.stringify(message);
+			} catch (ex) {
+				delete message.args;
+				message.error = ex;
+				msg = JSON.stringify(message);
+			}
+			return msg;
 		}.toString()
-		.replace(/TICKET/g, JSON.stringify(ticket))
+		.replace('TICKET', JSON.stringify(ticket))
 		.replace('SCRIPT', script)
-		.replace('DISPATCHER', syncDispatcher)
-		.replace('STAMP', '"' + priv.stamp + '"');
+		.replace('STAMP', JSON.stringify(priv.stamp));
 		obj.script = '(' + wrap + ')()';
 	} else {
-		var asyncDispatcher = '\
-			var msg, en = "' + priv.eventName + '"; \
-			try { msg = JSON.stringify(message); } catch (e) { msg = JSON.stringify(message + "");} \
-			var ww = window.webkit; \
-			if (ww && ww.messageHandlers && ww.messageHandlers.events) ww.messageHandlers.events.postMessage(msg);';
 		obj.inscript = script.substring(0, 255); // useful for debugging timeouts
-		var wrap = function(err, result) {
-			var message = {stamp: STAMP};
-			message.args = Array.prototype.slice.call(arguments, 1);
-			if (!TICKET) {
+		var wrap = function(err) {
+			var ticket = TICKET;
+			var stamp = STAMP;
+			var message = {stamp: stamp};
+			if (!ticket) {
 				message.event = err;
 			} else {
-				message.ticket = TICKET;
+				message.ticket = ticket;
 				if (err) message.error = err;
 			}
-			DISPATCHER
+			message.args = Array.prototype.slice.call(arguments, 1);
+			var msg;
+			try {
+				msg = JSON.stringify(message);
+			} catch (ex) {
+				delete message.args;
+				message.error = ex;
+				msg = JSON.stringify(message);
+			}
+			var ww = window.webkit;
+			ww = ww && ww.messageHandlers && ww.messageHandlers.events;
+			if (ww && ww.postMessage) ww.postMessage(msg);
 		}.toString()
-		.replace(/TICKET/g, JSON.stringify(ticket))
-		.replace('DISPATCHER', asyncDispatcher)
-		.replace('STAMP', '"' + priv.stamp + '"');
+		.replace('TICKET', JSON.stringify(ticket))
+		.replace('STAMP', JSON.stringify(priv.stamp));
 		args.push(wrap);
 		obj.script = '(' + script + ')(' + args.join(', ') + ');';
 	}
