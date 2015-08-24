@@ -74,15 +74,16 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		};
 		if (err) return cb(err);
 		window.uri = uri;
-		var runlist = this.webview._runlist;
-		this.webview = window;
-		runlist.forEach(function(script) {
+		window.runSync = function(script, ticket) {
+			var ret;
 			try {
-				window.run(script);
-			} catch(e) {
-
+				ret = window.run(script);
+			} catch(ex) {
+				window.webkit.messageHandlers.events.postMessage(JSON.stringify({ticket: ticket, error: ex.toString()}));
+				return;
 			}
-		});
+			window.webkit.messageHandlers.events.postMessage(ret);
+		};
 
 		if (cookies) {
 			debug('load cookies');
@@ -94,11 +95,30 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		require('./classlist')(window);
 		require('./xhr').call(this, window);
 
+		window.webkit = {
+			messageHandlers: {
+				events: {
+					postMessage: function(value) {
+						priv.cfg.eventsListener(null, value);
+					}.bind(this)
+				}
+			}
+		};
+
 		window.addEventListener(priv.eventName, function(e) {
 			priv.cfg.eventsListener(null, e.char);
 		}.bind(this), false);
 
 		if (opts.script) window.run(opts.script);
+		var runlist = this.webview._runlist;
+		this.webview = window;
+		runlist.forEach(function(arr) {
+			try {
+				window.run(script);
+			} catch(e) {
+						}
+		});
+
 		this.status = 200;
 		cb(null, 200);
 	}.bind(this);
@@ -106,7 +126,10 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	this.webview = {
 		uri: uri,
 		_runlist: [],
-		run: function(script) {
+		run: function(script, ticket) {
+			this._runlist.push(script);
+		},
+		runSync: function(script, ticket) {
 			this._runlist.push(script);
 		}
 	};
