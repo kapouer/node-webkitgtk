@@ -69,7 +69,7 @@ WebKit.prototype.init = function(opts, cb) {
 	if (priv.state >= INITIALIZING) return cb(new Error("init must not be called twice"), this);
 	priv.state = INITIALIZING;
 
-	priv.runTimeout = opts.runTimeout || 5000;
+	priv.runTimeout = opts.runTimeout || 10000;
 
 	if (opts.offscreen == null) opts.offscreen = true;
 	if (opts.debug) {
