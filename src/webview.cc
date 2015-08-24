@@ -37,7 +37,8 @@ WebView::WebView(Handle<Object> opts) {
 	Nan::AdjustExternalMemory(400000);
 
 	state = 0;
-	signalResourceResponse = 0;
+	idResourceResponse = 0;
+	idMessageHandler = 0;
 
 	guid = g_dbus_generate_guid();
 
@@ -187,40 +188,20 @@ WebView::~WebView() {
 
 void WebView::unloaded() {
 	if (view == NULL) return;
-	if (signalResourceResponse > 0) {
-		g_signal_handler_disconnect(view, signalResourceResponse);
-		signalResourceResponse = 0;
+	if (idResourceResponse > 0) {
+		g_signal_handler_disconnect(view, idResourceResponse);
+		idResourceResponse = 0;
 	}
 	WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(view);
+	if (idMessageHandler > 0) {
+		g_signal_handler_disconnect(contman, idMessageHandler);
+		idMessageHandler = 0;
+	}
 	if (contman != NULL) {
 		webkit_user_content_manager_remove_all_scripts(contman);
 		webkit_user_content_manager_remove_all_style_sheets(contman);
 		webkit_user_content_manager_unregister_script_message_handler(contman, "events");
-		g_signal_handlers_disconnect_by_data(contman, view);
 	}
-}
-
-void WebView::handle_script_message(WebKitUserContentManager* contman, WebKitJavascriptResult* js_result, gpointer data) {
-	WebView* self = (WebView*)data;
-	JSGlobalContextRef context = webkit_javascript_result_get_global_context(js_result);
-	JSValueRef value = webkit_javascript_result_get_value(js_result);
-	gchar* str_value = NULL;
-	if (JSValueIsString(context, value)) {
-		JSStringRef js_str_value = JSValueToStringCopy(context, value, NULL);
-		gsize str_length = JSStringGetMaximumUTF8CStringSize(js_str_value);
-		str_value = (gchar*)g_malloc(str_length);
-		JSStringGetUTF8CString(js_str_value, str_value, str_length);
-		JSStringRelease(js_str_value);
-		Local<Value> argv[] = {
-			Nan::Null(),
-			Nan::New<String>(str_value).ToLocalChecked()
-		};
-		self->eventsCallback->Call(2, argv);
-	} else {
-		g_warning("Error in script message handler: unexpected js_result value");
-	}
-	if (str_value != NULL) g_free(str_value);
-	webkit_javascript_result_unref(js_result);
 }
 
 void timeout_cb(uv_timer_t *handle, int status) {
@@ -350,6 +331,32 @@ gboolean WebView::DecidePolicy(WebKitWebView* web_view, WebKitPolicyDecision* de
 		// g_print("policy response decision for\n%s\n", uri);
 	}
 	return FALSE;
+}
+
+void WebView::handleScriptMessage(WebKitUserContentManager* contman, WebKitJavascriptResult* js_result, gpointer data) {
+	if (data == NULL) return;
+	ViewClosure* vc = (ViewClosure*)data;
+	if (vc->closure == NULL) return;
+	WebView* self = (WebView*)(vc->view);
+	JSGlobalContextRef context = webkit_javascript_result_get_global_context(js_result);
+	JSValueRef value = webkit_javascript_result_get_value(js_result);
+	gchar* str_value = NULL;
+	if (JSValueIsString(context, value)) {
+		JSStringRef js_str_value = JSValueToStringCopy(context, value, NULL);
+		gsize str_length = JSStringGetMaximumUTF8CStringSize(js_str_value);
+		str_value = (gchar*)g_malloc(str_length);
+		JSStringGetUTF8CString(js_str_value, str_value, str_length);
+		JSStringRelease(js_str_value);
+		Local<Value> argv[] = {
+			Nan::Null(),
+			Nan::New<String>(str_value).ToLocalChecked()
+		};
+		self->eventsCallback->Call(2, argv);
+	} else {
+		g_warning("Error in script message handler: unexpected js_result value");
+	}
+	if (str_value != NULL) g_free(str_value);
+	webkit_javascript_result_unref(js_result);
 }
 
 void WebView::ResourceLoad(WebKitWebView* web_view, WebKitWebResource* resource, WebKitURIRequest* request, gpointer data) {
@@ -609,17 +616,19 @@ NAN_METHOD(WebView::Load) {
 	self->loadCallback = loadCb;
 
 	WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
-	g_signal_connect(
-		contman,
-		"script-message-received::events",
-		G_CALLBACK(WebView::handle_script_message),
-		self
-	);
-	webkit_user_content_manager_register_script_message_handler(contman, "events");
 
 	ViewClosure* vc = new ViewClosure(self, info[1]->IsString() ? **(new Nan::Utf8String(info[1])) : NULL);
 
-	self->signalResourceResponse = g_signal_connect(
+	webkit_user_content_manager_register_script_message_handler(contman, "events");
+
+	self->idMessageHandler = g_signal_connect(
+		contman,
+		"script-message-received::events",
+		G_CALLBACK(WebView::handleScriptMessage),
+		vc
+	);
+
+	self->idResourceResponse = g_signal_connect(
 		self->view,
 		"resource-load-started",
 		G_CALLBACK(WebView::ResourceLoad),
@@ -721,7 +730,10 @@ void WebView::RunSyncFinished(GObject* object, GAsyncResult* result, gpointer da
 	GError* error = NULL;
 	ViewClosure* vc = (ViewClosure*)data;
 	WebView* self = (WebView*)(vc->view);
-	WebKitJavascriptResult* js_result = webkit_web_view_run_javascript_finish(WEBKIT_WEB_VIEW(object), result, &error);
+	if (WEBKIT_IS_WEB_VIEW(object) == FALSE) return;
+	WebKitWebView* pView = WEBKIT_WEB_VIEW(object);
+	if (pView != self->view) return;
+	WebKitJavascriptResult* js_result = webkit_web_view_run_javascript_finish(pView, result, &error);
 
 	if (js_result == NULL) { // if NULL, error is defined
 		Nan::Utf8String* nStr = (Nan::Utf8String*)(vc->closure);
@@ -744,17 +756,16 @@ void WebView::RunSyncFinished(GObject* object, GAsyncResult* result, gpointer da
 		str_value = (gchar*)g_malloc(str_length);
 		JSStringGetUTF8CString(js_str_value, str_value, str_length);
 		JSStringRelease(js_str_value);
+		Local<Value> argv[] = {
+			Nan::Null(),
+			Nan::New<String>(str_value).ToLocalChecked()
+		};
+		self->eventsCallback->Call(2, argv);
 	} else {
 		g_warning("Error running javascript: unexpected return value");
 	}
-	Local<Value> argv[] = {
-		Nan::Null(),
-		Nan::New<String>(str_value).ToLocalChecked()
-	};
-	self->eventsCallback->Call(2, argv);
 	if (str_value != NULL) g_free(str_value);
 	webkit_javascript_result_unref(js_result);
-
 	delete vc;
 }
 

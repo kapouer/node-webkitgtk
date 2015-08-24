@@ -21,6 +21,14 @@ var RegEvents = /^(ready|load|idle|unload)$/;
 
 var availableDisplays = {};
 
+var hasRunEvent = '(' + function(name, event) {
+	try {
+		var func = window && window['hasRunEvent_' + name];
+		if (func) func(event);
+	} catch (ex) {
+	}
+}.toString() + ')("%name", "%event")';
+
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
 		var inst = new WebKit();
@@ -127,11 +135,15 @@ function initialPriv() {
 }
 
 function done(ev, cb) {
-	var emitted = this.priv.emittedEvents;
-	if (emitted[ev]) return cb();
+	var priv = this.priv;
+	var emitted = priv.emittedEvents;
+	if (emitted[ev] || priv.state == LOADING || ev != 'ready' && this.readyState == null) return cb();
 	emitted[ev] = true;
 	debug("let tracker process event after", ev);
-	this.run(hasRunEvent, this.priv.eventName, ev, cb);
+	if (this.readyState != "unloading") {
+		this.webview.runSync(hasRunEvent.replace('%name', priv.eventName).replace('%event', ev));
+	}
+	cb();
 }
 
 function emitLifeEvent(event) {
@@ -140,16 +152,6 @@ function emitLifeEvent(event) {
 	priv.lastEvent = event;
 	debug('emit event', event);
 	this.emit(event);
-}
-
-function hasRunEvent(name, event, done) {
-	try {
-		var func = window['hasRunEvent_' + name];
-		if (func) func(event);
-	} catch (e) {
-		return done(e);
-	}
-	done();
 }
 
 function closedListener(what) {
@@ -584,9 +586,14 @@ function initPromise(ev) {
 	this.promises[ev] = Q.all(list);
 
 	this.once(ev, function() {
+		var stamp = this.priv.stamp;
 		this.promises[ev].fail(function(err) {
 			if (err) console.error(err);
 		}).fin(function() {
+			if (stamp != this.priv.stamp) {
+				// typically when a queued listener calls unload/load right away
+				return;
+			}
 			done.call(this, ev, function(err) {
 				if (err) console.error(err);
 			});
@@ -746,6 +753,7 @@ WebKit.prototype.stop = function(cb) {
 
 WebKit.prototype.unload = function(cb) {
 	var priv = this.priv;
+	this.readyState = "unloading";
 	if (priv.stallInterval) {
 		clearInterval(priv.stallInterval);
 		delete priv.stallInterval;
@@ -759,6 +767,9 @@ WebKit.prototype.unload = function(cb) {
 	this.removeAllListeners('unload');
 	this.removeAllListeners('busy');
 	this.promises = {};
+
+	priv.idling = false;
+
 	cleanTickets(priv.tickets);
 
 	if (priv.state == LOADING) {
@@ -844,16 +855,19 @@ function runcb(script, args, cb) {
 }
 
 function run(script, ticket, args, cb) {
+	var priv = this.priv;
 	cb = cb || noop;
+	if (priv.state == LOADING) {
+		return cb(new Error("running a script during loading is not a good idea\n" + script));
+	}
 	var obj;
 	try {
 		obj = prepareRun(script, ticket, args, this.priv);
 	} catch(e) {
 		return cb(e);
 	}
-	// run on next loop so one can setup event listeners before
-	var priv = this.priv;
 
+	// run on next loop so one can setup event listeners before
 	setImmediate(function() {
 		if (!this.webview) return cb(new Error("WebKit uninitialized"));
 		if (!this.webview.run) {

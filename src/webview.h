@@ -62,7 +62,7 @@ public:
 	static void handle_method_call(GDBusConnection*, const gchar*, const gchar*,
 		const gchar*, const gchar*, GVariant*, GDBusMethodInvocation*, gpointer);
 	static gboolean on_new_connection(GDBusServer*, GDBusConnection*, gpointer);
-	static void handle_script_message(WebKitUserContentManager*, WebKitJavascriptResult*, gpointer);
+	static void handleScriptMessage(WebKitUserContentManager*, WebKitJavascriptResult*, gpointer);
 
 	void destroy();
 	void unloaded();
@@ -80,7 +80,8 @@ private:
 
 	gchar* uri = NULL;
 	void updateUri(const gchar*);
-	guint signalResourceResponse;
+	gulong idResourceResponse;
+	gulong idMessageHandler;
 
 	int state;
 	int authRetryCount;
