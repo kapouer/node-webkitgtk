@@ -764,7 +764,7 @@ void WebView::RunSyncFinished(GObject* object, GAsyncResult* result, gpointer da
 		};
 		self->eventsCallback->Call(2, argv);
 	} else {
-		g_warning("Error running javascript: unexpected return value");
+		// this can actually happen when invoking runSync directly
 	}
 	if (str_value != NULL) g_free(str_value);
 	webkit_javascript_result_unref(js_result);
