@@ -686,18 +686,19 @@ function load(uri, opts, cb) {
 			}
 		});
 	}
+	var scripts = [];
 	if (Buffer.isBuffer(opts.content)) opts.content = opts.content.toString();
 	if (Buffer.isBuffer(opts.style)) opts.style = opts.style.toString();
-	if (Buffer.isBuffer(opts.script)) opts.script = opts.script.toString();
-	var scripts = [];
+
 	if (!priv.jsdom) scripts.push(errorEmitter);
 	if (opts.console && !priv.jsdom) scripts.push(consoleEmitter);
 	scripts.push({
 		fn: stateTracker,
 		args: [opts.preload && !priv.jsdom, opts.charset || "utf-8", priv.eventName, priv.stall, 200, 200]
 	});
-	if (!opts.script) opts.script = "";
-	opts.script += '\n' + scripts.map(function(fn) {
+	if (opts.script) scripts.push(Buffer.isBuffer(opts.script) ? opts.script.toString() : opts.script);
+
+	opts.script = '\n' + scripts.map(function(fn) {
 		return prepareRun(fn.fn || fn, null, fn.args || null, priv).script;
 	}).join('\n');
 
