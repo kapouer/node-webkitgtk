@@ -41,13 +41,11 @@
           'cflags_cc' : [
               '<!@(pkg-config glib-2.0 --cflags)',
               '<!@(pkg-config webkit2gtk-4.0 --cflags)',
-              '<!@(pkg-config dbus-glib-1 --cflags)',
               '-I/usr/include/libsoup-2.4/libsoup'
           ],
           'libraries':[
               '<!@(pkg-config glib-2.0 --libs)',
               '<!@(pkg-config webkit2gtk-4.0 --libs)',
-              '<!@(pkg-config dbus-glib-1 --libs)',
               '-ldl'
           ]
         }]

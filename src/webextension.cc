@@ -1,12 +1,8 @@
-#include <dbus/dbus-glib.h>
 #include <webkit2/webkit-web-extension.h>
 #include <JavaScriptCore/JSContextRef.h>
 #include <JavaScriptCore/JSStringRef.h>
 #include <string.h>
-#include "dbus.h"
 #include "utils.h"
-
-static GDBusConnection* connection;
 
 static WebKitWebExtension* extension_access;
 static gchar* eventName = NULL;
@@ -42,59 +38,54 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 	const char* uri = webkit_uri_request_get_uri(request);
 	SoupMessageHeaders* headers = webkit_uri_request_get_http_headers(request);
 
-	GVariantDict dictIn;
-	GVariant* variantIn = soup_headers_to_gvariant_dict(headers);
-	g_variant_dict_init(&dictIn, variantIn);
-	g_variant_dict_insert(&dictIn, "uri", "s", uri);
+//	GVariantDict dictIn;
+//	GVariant* variantIn = soup_headers_to_gvariant_dict(headers);
+//	g_variant_dict_init(&dictIn, variantIn);
+//	g_variant_dict_insert(&dictIn, "uri", "s", uri);
 
-	if (redirected_response != NULL) {
-		g_variant_dict_insert(&dictIn, "origuri", "s", webkit_uri_response_get_uri(redirected_response));
-	}
+//	if (redirected_response != NULL) {
+//		g_variant_dict_insert(&dictIn, "origuri", "s", webkit_uri_response_get_uri(redirected_response));
+//	}
 
-	variantIn = g_variant_dict_end(&dictIn);
+//	variantIn = g_variant_dict_end(&dictIn);
 
-	GVariant* tuple[1];
-	tuple[0] = variantIn;
+//	GVariant* tuple[1];
+//	tuple[0] = variantIn;
 
-//	guint64 startms = g_get_real_time();
+////	guint64 startms = g_get_real_time();
 
-	GVariant* results = g_dbus_connection_call_sync(connection, NULL, DBUS_OBJECT_WKGTK, DBUS_INTERFACE_WKGTK, "HandleRequest", g_variant_new_tuple(tuple, 1), G_VARIANT_TYPE_TUPLE, G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+//	// TODO send event to javascript world
 
-	g_variant_dict_clear(&dictIn);
+//	g_variant_dict_clear(&dictIn);
 
-	if (results == NULL) {
-		g_printerr("ERR g_dbus_connection_call_sync %s\n", error->message);
-		g_error_free(error);
-		return FALSE;
-	}
+//f
+//	GVariantDict dictOut;
+//	g_variant_dict_init(&dictOut, g_variant_get_child_value(results, 0));
 
-	GVariantDict dictOut;
-	g_variant_dict_init(&dictOut, g_variant_get_child_value(results, 0));
-
-	const gchar* newuri = NULL;
-	const gchar* cancel = NULL;
-	const gchar* ignore = NULL;
+//	const gchar* newuri = NULL;
+//	const gchar* cancel = NULL;
+//	const gchar* ignore = NULL;
 
 	gboolean ret = FALSE;
-	if (g_variant_dict_lookup(&dictOut, "cancel", "s", &cancel)
-	&& cancel != NULL && !g_strcmp0(cancel, "1")) {
-		// returning TRUE blocks requests - it's better to set an empty uri - it sets status to 0;
-		webkit_uri_request_set_uri(request, "");
-	} else {
-		if (g_variant_dict_lookup(&dictOut, "uri", "s", &newuri) && newuri != NULL) {
-			webkit_uri_request_set_uri(request, newuri);
-		}
-		if (g_variant_dict_lookup(&dictOut, "ignore", "s", &ignore)
-		&& ignore != NULL && !g_strcmp0(ignore, "1")) {
-			dispatch_ignore_event(page, eventName, uri);
-		}
-	}
+//	if (g_variant_dict_lookup(&dictOut, "cancel", "s", &cancel)
+//	&& cancel != NULL && !g_strcmp0(cancel, "1")) {
+//		// returning TRUE blocks requests - it's better to set an empty uri - it sets status to 0;
+//		webkit_uri_request_set_uri(request, "");
+//	} else {
+//		if (g_variant_dict_lookup(&dictOut, "uri", "s", &newuri) && newuri != NULL) {
+//			webkit_uri_request_set_uri(request, newuri);
+//		}
+//		if (g_variant_dict_lookup(&dictOut, "ignore", "s", &ignore)
+//		&& ignore != NULL && !g_strcmp0(ignore, "1")) {
+//			dispatch_ignore_event(page, eventName, uri);
+//		}
+//	}
 
-	g_variant_dict_remove(&dictOut, "uri");
+//	g_variant_dict_remove(&dictOut, "uri");
 
-	results = g_variant_dict_end(&dictOut);
-	update_soup_headers_with_dict(headers, results);
-	g_variant_unref(results);
+//	results = g_variant_dict_end(&dictOut);
+//	update_soup_headers_with_dict(headers, results);
+//	g_variant_unref(results);
 
 //	g_message("elapsed %lu", g_get_real_time() - startms);
 
@@ -129,13 +120,6 @@ extern "C" {
 		g_variant_get((GVariant*)constData, "(ss)", &address, &eventName);
 
 		g_signal_connect(extension, "page-created", G_CALLBACK(web_page_created_callback), eventName);
-
-		GError* error = NULL;
-		connection = g_dbus_connection_new_for_address_sync(address, G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT, NULL, NULL, &error);
-		if (connection == NULL) {
-			g_printerr("Failed to open connection to bus: %s\n", error->message);
-			g_error_free(error);
-		}
 	}
 }
 
@@ -144,7 +128,6 @@ extern "C" {
 static void __attribute__((destructor))
 Webkit_Web_extension_shutdown (void) {
 	g_object_unref(extension_access);
-	g_object_unref(connection);
 
 	g_signal_handlers_disconnect_by_data(extension_access, eventName);
 
@@ -152,5 +135,4 @@ Webkit_Web_extension_shutdown (void) {
 
 	eventName = NULL;
 	extension_access = NULL;
-	connection = NULL;
 }

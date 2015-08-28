@@ -7,19 +7,12 @@
 #include "webresponse.h"
 #include "webrequest.h"
 #include "webauthrequest.h"
-#include "dbus.h"
 
 
 using namespace v8;
 
 Nan::Persistent<Function> WebView::constructor;
 
-static const GDBusInterfaceVTable interface_vtable = {
-	WebView::handle_method_call,
-	NULL,
-	NULL,
-	NULL
-};
 static uv_timer_t timeout_handle;
 
 WebView::WebView(Handle<Object> opts) {
@@ -41,23 +34,7 @@ WebView::WebView(Handle<Object> opts) {
 	idResourceResponse = 0;
 	idMessageHandler = 0;
 
-	guid = g_dbus_generate_guid();
-
-	instances.insert(ObjMapPair(guid, this));
-
-	GDBusServerFlags server_flags = G_DBUS_SERVER_FLAGS_NONE;
-	GError* error = NULL;
-	gchar* address = g_strconcat("unix:tmpdir=", g_get_tmp_dir(), "/node-webkitgtk", NULL);
-	this->server = g_dbus_server_new_sync(address, server_flags, guid, NULL, NULL, &error);
-	g_dbus_server_start(this->server);
-
-	if (server == NULL) {
-		g_printerr("Error creating server at address %s: %s\n", address, error->message);
-		g_error_free(error);
-		Nan::ThrowError("WebKitGtk could not create dbus server");
-		return;
-	}
-	g_signal_connect(this->server, "new-connection", G_CALLBACK(on_new_connection), this);
+	instances.insert(ObjMapPair(this->eventName, this));
 
 	WebKitWebContext* context = webkit_web_context_get_default();
 	const gchar* cacheDir = getStr(opts, "cacheDir");
@@ -176,10 +153,8 @@ void WebView::destroy() {
 	if (authCallback != NULL) delete authCallback;
 	if (closeCallback != NULL) delete closeCallback;
 
-	g_dbus_server_stop(server);
-	g_object_unref(server);
-	instances.erase(guid);
-	g_free(guid);
+	instances.erase(eventName);
+	delete eventName;
 }
 
 WebView::~WebView() {
@@ -213,18 +188,6 @@ void timeout_cb(uv_timer_t *handle, int status) {
 
 void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 	node::AtExit(Exit);
-	const gchar* introspection_xml =
-	"<node>"
-	"	<interface name='org.nodejs.WebKitGtk.WebView'>"
-	"		<method name='HandleRequest'>"
-	"			<arg type='a{sv}' name='dict' direction='in'/>"
-	"			<arg type='a{sv}' name='dict' direction='out'/>"
-	"		</method>"
-	"	</interface>"
-	"</node>";
-
-	introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
-	g_assert(introspection_data != NULL);
 
 	Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(WebView::New);
 	tpl->SetClassName(Nan::New("WebView").ToLocalChecked());
@@ -300,7 +263,7 @@ void WebView::InitExtensions(WebKitWebContext* context, gpointer data) {
 		g_signal_handler_disconnect(context, self->contextSignalId);
 		self->contextSignalId = 0;
 	}
-	GVariant* userData = g_variant_new("(ss)", g_dbus_server_get_client_address(self->server), self->eventName);
+	GVariant* userData = g_variant_new("(s)", self->eventName);
 	webkit_web_context_set_web_extensions_initialization_user_data(context, userData);
 }
 
@@ -1022,42 +985,6 @@ NAN_METHOD(WebView::Inspect) {
 		webkit_web_inspector_show(self->inspector);
 	}
 	return;
-}
-
-gboolean WebView::on_new_connection(GDBusServer* server, GDBusConnection* connection, gpointer data) {
-	g_object_ref(connection);
-	GError* error = NULL;
-	guint registration_id = g_dbus_connection_register_object(connection, DBUS_OBJECT_WKGTK,
-		introspection_data->interfaces[0], &interface_vtable, data, NULL, &error);
-	g_assert(registration_id > 0);
-	return TRUE;
-}
-
-void WebView::handle_method_call(
-GDBusConnection* connection,
-const gchar* sender,
-const gchar* object_path,
-const gchar* interface_name,
-const gchar* method_name,
-GVariant* parameters,
-GDBusMethodInvocation* invocation,
-gpointer data) {
-	WebView* self = (WebView*)data;
-	if (g_strcmp0(method_name, "HandleRequest") == 0) {
-		GVariant* variant = g_variant_get_child_value(parameters, 0);
-		GVariantDict dict;
-		g_variant_dict_init(&dict, variant);
-		Local<Object> obj = Nan::New<FunctionTemplate>(GVariantProxy::constructor)->GetFunction()->NewInstance();
-		GVariantProxy* prox = node::ObjectWrap::Unwrap<GVariantProxy>(obj);
-		prox->init(variant);
-		Local<Value> argv[] = {
-			obj
-		};
-		self->requestCallback->Call(1, argv);
-		GVariant* tuple[1];
-		tuple[0] = g_variant_dict_end(prox->dict);
-		g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(tuple, 1));
-	}
 }
 
 void WebView::Exit(void*) {

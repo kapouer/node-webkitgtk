@@ -7,8 +7,6 @@
 #include <gtk/gtkunixprint.h>
 #include <map>
 
-static const GDBusNodeInfo* introspection_data;
-
 class ViewClosure {
 public:
 	void* view;
@@ -59,9 +57,6 @@ public:
 	static void PrintFinished(WebKitPrintOperation*, gpointer);
 	static void PrintFailed(WebKitPrintOperation*, gpointer, gpointer);
 
-	static void handle_method_call(GDBusConnection*, const gchar*, const gchar*,
-		const gchar*, const gchar*, GVariant*, GDBusMethodInvocation*, gpointer);
-	static gboolean on_new_connection(GDBusServer*, GDBusConnection*, gpointer);
 	static void handleScriptMessage(WebKitUserContentManager*, WebKitJavascriptResult*, gpointer);
 
 	void destroy();
@@ -74,8 +69,6 @@ private:
 	WebView(v8::Handle<v8::Object>);
 	~WebView();
 
-	gchar* guid;
-	GDBusServer* server;
 	guint contextSignalId;
 
 	gchar* uri = NULL;
