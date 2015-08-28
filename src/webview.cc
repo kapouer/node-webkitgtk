@@ -246,6 +246,7 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 	module->Set(Nan::New("exports").ToLocalChecked(), tpl->GetFunction());
 	GVariantProxy::Init(exports);
 	WebResponse::Init(exports);
+	WebRequest::Init(exports);
 	WebAuthRequest::Init(exports);
 
 	gtk_init(0, NULL);
