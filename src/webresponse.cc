@@ -101,11 +101,14 @@ NAN_GETTER(WebResponse::get_prop) {
 		}
 		info.GetReturnValue().Set(Nan::New<Integer>(status));
 	} else if (propstr == "headers") {
-		if (self->response == NULL) info.GetReturnValue().Set(Nan::Null());
-		Local<Object> obj = Nan::New<FunctionTemplate>(GVariantProxy::constructor)->GetFunction()->NewInstance();
-		GVariantProxy* prox = node::ObjectWrap::Unwrap<GVariantProxy>(obj);
-		prox->init(soup_headers_to_gvariant_dict(webkit_uri_response_get_http_headers(self->response)));
-		info.GetReturnValue().Set(obj);
+		if (self->response == NULL) {
+			info.GetReturnValue().Set(Nan::Null());
+		} else {
+			Local<Object> obj = Nan::New<FunctionTemplate>(GVariantProxy::constructor)->GetFunction()->NewInstance();
+			GVariantProxy* prox = node::ObjectWrap::Unwrap<GVariantProxy>(obj);
+			prox->init(soup_headers_to_gvariant_dict(webkit_uri_response_get_http_headers(self->response)));
+			info.GetReturnValue().Set(obj);
+		}
 	} else if (propstr == "length") {
 		if (self->response != NULL) {
 			info.GetReturnValue().Set(Nan::New<Integer>((int)webkit_uri_response_get_content_length(self->response)));
@@ -113,12 +116,14 @@ NAN_GETTER(WebResponse::get_prop) {
 			info.GetReturnValue().Set(Nan::New<Integer>(0));
 		}
 	} else if (propstr == "filename") {
-		if (self->response == NULL) info.GetReturnValue().Set(Nan::Null());
-		const char* filename = webkit_uri_response_get_suggested_filename(self->response);
-		if (filename == NULL) info.GetReturnValue().Set(Nan::Null());
-		else info.GetReturnValue().Set(Nan::New<String>(filename).ToLocalChecked());
+		if (self->response == NULL) {
+			info.GetReturnValue().Set(Nan::Null());
+		} else {
+			const char* filename = webkit_uri_response_get_suggested_filename(self->response);
+			if (filename == NULL) info.GetReturnValue().Set(Nan::Null());
+			else info.GetReturnValue().Set(Nan::New<String>(filename).ToLocalChecked());
+		}
 	}
-	return;
 }
 
 // NAN_SETTER(WebResponse::set_prop) {
