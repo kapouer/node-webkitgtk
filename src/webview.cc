@@ -5,6 +5,7 @@
 #include "webview.h"
 #include "gvariantproxy.h"
 #include "webresponse.h"
+#include "webrequest.h"
 #include "webauthrequest.h"
 #include "dbus.h"
 
@@ -360,6 +361,20 @@ void WebView::handleScriptMessage(WebKitUserContentManager* contman, WebKitJavas
 }
 
 void WebView::ResourceLoad(WebKitWebView* web_view, WebKitWebResource* resource, WebKitURIRequest* request, gpointer data) {
+	// emit request signal here, very much like response event
+	if (data == NULL) return;
+	ViewClosure* vc = (ViewClosure*)data;
+	if (vc->closure == NULL) return;
+	WebView* self = (WebView*)(vc->view);
+	Local<Object> obj = Nan::New<FunctionTemplate>(WebRequest::constructor)->GetFunction()->NewInstance();
+	WebRequest* selfRequest = node::ObjectWrap::Unwrap<WebRequest>(obj);
+	selfRequest->init(request);
+	int argc = 2;
+	Local<Value> argv[] = {
+		Nan::New<String>((char*)vc->closure).ToLocalChecked(),
+		obj
+	};
+	self->requestCallback->Call(argc, argv);
 	g_signal_connect(resource, "finished", G_CALLBACK(WebView::ResourceResponse), data);
 	g_signal_connect(resource, "received-data", G_CALLBACK(WebView::ResourceReceiveData), data);
 }

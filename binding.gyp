@@ -8,6 +8,7 @@
             'src/utils.cc',
             'src/gvariantproxy.cc',
             'src/webauthrequest.cc',
+            'src/webrequest.cc',
             'src/webresponse.cc',
             'src/webview.cc'
           ],
