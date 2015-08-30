@@ -116,8 +116,7 @@ extern "C" {
 			NULL
 		);
 		extension_access = extension;
-		gchar* address = NULL;
-		g_variant_get((GVariant*)constData, "(ss)", &address, &eventName);
+		g_variant_get((GVariant*)constData, "(s)", &eventName);
 
 		g_signal_connect(extension, "page-created", G_CALLBACK(web_page_created_callback), eventName);
 	}
