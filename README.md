@@ -27,6 +27,23 @@ in turn invoke the callback parameter it receives.
 The `.run()` method now behaves like `.runev()` regarding params passing.
 
 
+Version 3 warning
+-----------------
+
+It is no longer possible to cancel requests or change the request uri
+in the `request` event.
+
+It is possible to do it using `filter` and `filterArgs` options of the `load`
+method.
+
+There are two advantages of doing so:
+  - no longer directly need dbus, cleaner code
+  - about 5ms by request was spent waiting for dbus calls
+
+But it's no longer easy to map request uri to other uris using internal data,
+especially if that internal data is mutable (for immutable data, filterArgs
+can help).
+
 
 usage
 -----
@@ -159,6 +176,17 @@ load(uri, opts, cb) options
   allow requests only matching option (except the document request),
   bypassing 'request' event.  
   This does not allow requests that are rejected by cross-origin policy.
+
+- filter  
+  function(uri), returns a boolean, is run in browser  
+  called for each request, even the initial document request  
+  returning false cancels the request (with response status code 0),
+  returning a string replaces the uri by another one,
+  anything else leave the request unmodified.
+
+- filterArgs  
+  an array of JSON-stringifiable arguments to append to the filter function
+  arguments.
 
 - private  
   boolean, default false  
@@ -345,10 +373,10 @@ These events can happen at any moment:
   listener(message, url, line, column)
 
 * request  
-  listener(req) where req.uri, req.cancel, req.ignore, req.headers are read/write.  
-  req.cancel, boolean, stops the request.  
-  req.ignore, boolean, does not count the request when waiting idle event.  
-  The request is not yet sent, so all values can be modified.
+  listener(req) where req.uri, req.headers are read only.  
+  req.ignore (boolean) is still read/write, and tell not to count the
+  request when waiting idle event.  
+  The request has already been sent when that event is emitted.
 
 * response  
   listener(res)  
@@ -361,13 +389,14 @@ These events can happen at any moment:
   request.use(username, password) authenticates asynchronously,  
   request.ignore() ignores request asynchronously.
 
-* console  
+* console  (deprecated)
   listener(level, ...) where level is 'log', 'error', 'warn' or 'info'.  
   Remaining arguments are the arguments of the corresponding calls to
   console[level] inside the page.  
   Logging everything that comes out of web pages can be annoying, so this is
   disabled by default.  
-  Use `console` load option to enable.
+  This event is deprecated - use `console` load option to enable/disable
+  console output instead.
 
 
 methods
@@ -501,7 +530,6 @@ locations.
 ```
 webkit2gtk-3.0 (2.4.x), for node-webkitgtk 1.2.x
 webkit2gtk-4.0 (2.6.x to 2.8.x), for node-webkitgtk >= 1.3.0
-dbus-glib-1
 glib-2.0
 gtk+-3.0
 libsoup2.4
@@ -516,7 +544,6 @@ nodejs
 npm
 libwebkit2gtk-3.0-dev (2.4.x), for node-webkitgtk 1.2.x
 libwebkit2gtk-4.0-dev (2.6.x to 2.8.x), for node-webkitgtk >= 1.3.0
-libdbus-glib-1-dev
 ```
 
 On fedora/21:
@@ -525,7 +552,6 @@ On fedora/21:
 nodejs
 npm
 webkitgtk4-devel
-dbus-glib-devel
 ```
 
 On ubuntu/14:
