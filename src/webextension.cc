@@ -1,101 +1,99 @@
 #include <webkit2/webkit-web-extension.h>
-#include <JavaScriptCore/JSContextRef.h>
-#include <JavaScriptCore/JSStringRef.h>
+#include <JavaScriptCore/JavaScript.h>
 #include <string.h>
+#include <soup.h>
 #include "utils.h"
 
-static WebKitWebExtension* extension_access;
-static gchar* eventName = NULL;
-static guint idLogHandler;
+static WebKitWebExtension* extension;
 
-static void dispatch_ignore_event(WebKitWebPage* page, gchar* eventName, const gchar* uri) {
-	gchar* ignoreName = g_strconcat("r", eventName, NULL);
-	WebKitDOMDocument* document = webkit_web_page_get_dom_document(page);
-	WebKitDOMDOMWindow* window = webkit_dom_document_get_default_view(document);
-	GError* error = NULL;
-	WebKitDOMEvent* event = webkit_dom_document_create_event(document, "KeyboardEvent", &error);
-	if (error != NULL) {
-		g_printerr("Cannot create event in dispatch_ignore_event: %s\n", error->message);
-		g_error_free(error);
-		return;
-	}
-	webkit_dom_keyboard_event_init_keyboard_event(
-		(WebKitDOMKeyboardEvent*)event,	ignoreName,	FALSE, TRUE,
-		window, uri, 0, FALSE, FALSE, FALSE, FALSE, FALSE
-	);
-	webkit_dom_event_target_dispatch_event(WEBKIT_DOM_EVENT_TARGET(window), event, &error);
-	g_object_unref(window);
-	g_object_unref(event);
-	if (error != NULL) {
-		g_printerr("Cannot dispatch event in dispatch_ignore_event: %s\n", error->message);
-		g_error_free(error);
-	}
-}
+static guint idLogHandler = 0;
+static guint idSendRequestHandler = 0;
+static guint idPageCreatedHandler = 0;
+
 
 static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* request, WebKitURIResponse* redirected_response, gpointer data) {
-	GError* error = NULL;
 	gchar* eventName = (gchar*)data;
 	const char* uri = webkit_uri_request_get_uri(request);
-	SoupMessageHeaders* headers = webkit_uri_request_get_http_headers(request);
+	JSValueRef result;
+	gboolean hasHandler = FALSE;
+	JSGlobalContextRef jsContext = webkit_frame_get_javascript_context_for_script_world(
+		webkit_web_page_get_main_frame(page),
+		webkit_script_world_get_default()
+	);
 
-//	GVariantDict dictIn;
-//	GVariant* variantIn = soup_headers_to_gvariant_dict(headers);
-//	g_variant_dict_init(&dictIn, variantIn);
-//	g_variant_dict_insert(&dictIn, "uri", "s", uri);
+	const char* funcStr = g_strconcat("window.request_", eventName, NULL);
 
-//	if (redirected_response != NULL) {
-//		g_variant_dict_insert(&dictIn, "origuri", "s", webkit_uri_response_get_uri(redirected_response));
-//	}
+	JSStringRef funcScript = JSStringCreateWithUTF8CString(g_strconcat("!!", funcStr, NULL));
+	result = JSEvaluateScript(
+		jsContext,
+		funcScript,
+		NULL, // JSObjectRef thisObject
+		NULL, // JSStringRef sourceURL
+		0, // int startingLineNumber
+		NULL  // JSValueRef* exception
+	);
+	if (JSValueIsBoolean(jsContext, result)) {
+		hasHandler = JSValueToBoolean(jsContext, result);
+	} else {
+		g_warning("Error while checking if request function handler exist");
+	}
 
-//	variantIn = g_variant_dict_end(&dictIn);
+	if (hasHandler == FALSE) {
+		g_message("No request handler available to check %s", uri);
+		return FALSE;
+	}
+	g_message("filtering %s", uri);
+	const char* scriptStr = g_strconcat(funcStr, "(\"", uri, "\")", NULL);
+	JSStringRef script = JSStringCreateWithUTF8CString(scriptStr);
 
-//	GVariant* tuple[1];
-//	tuple[0] = variantIn;
+//	g_message("script %s", scriptStr);
 
-////	guint64 startms = g_get_real_time();
+	result = JSEvaluateScript(
+		jsContext,
+		script,
+		NULL, // JSObjectRef thisObject
+		NULL, // JSStringRef sourceURL
+		0, // int startingLineNumber
+		NULL  // JSValueRef* exception
+	);
 
-//	// TODO send event to javascript world
+	if (JSValueIsBoolean(jsContext, result)) {
+		if (JSValueToBoolean(jsContext, result)) {
+			// go through
+			g_message("ext accept %s", uri);
+		} else {
+			g_message("ext reject %s", uri);
+			webkit_uri_request_set_uri(request, g_strconcat("", uri, NULL));
+		}
+	} else if (JSValueIsString(jsContext, result)) {
+		JSStringRef js_str_value = JSValueToStringCopy(jsContext, result, NULL);
+		gsize str_length = JSStringGetMaximumUTF8CStringSize(js_str_value);
+		gchar* str_value = (gchar*)g_malloc(str_length);
+		JSStringGetUTF8CString(js_str_value, str_value, str_length);
+		JSStringRelease(js_str_value);
+		g_message("ext rewrite %s to %s", uri, str_value);
+		webkit_uri_request_set_uri(request, str_value);
+		g_free(str_value);
+	} else {
+		// no return value - meaning ignore the request
+		g_message("ext ignore %s", uri);
+		soup_message_headers_replace(
+			webkit_uri_request_get_http_headers(request),
+			"X-Ignore",
+			"1"
+		);
+	}
 
-//	g_variant_dict_clear(&dictIn);
-
-//f
-//	GVariantDict dictOut;
-//	g_variant_dict_init(&dictOut, g_variant_get_child_value(results, 0));
-
-//	const gchar* newuri = NULL;
-//	const gchar* cancel = NULL;
-//	const gchar* ignore = NULL;
-
-	gboolean ret = FALSE;
-//	if (g_variant_dict_lookup(&dictOut, "cancel", "s", &cancel)
-//	&& cancel != NULL && !g_strcmp0(cancel, "1")) {
-//		// returning TRUE blocks requests - it's better to set an empty uri - it sets status to 0;
-//		webkit_uri_request_set_uri(request, "");
-//	} else {
-//		if (g_variant_dict_lookup(&dictOut, "uri", "s", &newuri) && newuri != NULL) {
-//			webkit_uri_request_set_uri(request, newuri);
-//		}
-//		if (g_variant_dict_lookup(&dictOut, "ignore", "s", &ignore)
-//		&& ignore != NULL && !g_strcmp0(ignore, "1")) {
-//			dispatch_ignore_event(page, eventName, uri);
-//		}
-//	}
-
-//	g_variant_dict_remove(&dictOut, "uri");
-
-//	results = g_variant_dict_end(&dictOut);
-//	update_soup_headers_with_dict(headers, results);
-//	g_variant_unref(results);
-
-//	g_message("elapsed %lu", g_get_real_time() - startms);
-
-	return ret;
+	return FALSE;
 }
 
 
-static void web_page_created_callback(WebKitWebExtension* extension, WebKitWebPage* web_page, gpointer data) {
-	g_signal_handlers_disconnect_by_data(web_page, data);
-	g_signal_connect(web_page, "send-request", G_CALLBACK(web_page_send_request), data);
+static void web_page_created_callback(WebKitWebExtension* ext, WebKitWebPage* web_page, gpointer data) {
+	if (idSendRequestHandler > 0) {
+		g_signal_handler_disconnect(web_page, idSendRequestHandler);
+		idSendRequestHandler = 0;
+	}
+	idSendRequestHandler = g_signal_connect(web_page, "send-request", G_CALLBACK(web_page_send_request), data);
 }
 
 static void ttyLog(const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data) {
@@ -108,17 +106,17 @@ static void ttyLog(const gchar *log_domain, GLogLevelFlags log_level, const gcha
 }
 
 extern "C" {
-	G_MODULE_EXPORT void webkit_web_extension_initialize_with_user_data(WebKitWebExtension* extension, const GVariant* constData) {
+	G_MODULE_EXPORT void webkit_web_extension_initialize_with_user_data(WebKitWebExtension* ext, const GVariant* constData) {
+		extension = ext;
 		idLogHandler = g_log_set_handler(
 			NULL,
 			G_LOG_LEVEL_MASK,
 			ttyLog,
 			NULL
 		);
-		extension_access = extension;
+		gchar* eventName;
 		g_variant_get((GVariant*)constData, "(s)", &eventName);
-
-		g_signal_connect(extension, "page-created", G_CALLBACK(web_page_created_callback), eventName);
+		idPageCreatedHandler = g_signal_connect(extension, "page-created", G_CALLBACK(web_page_created_callback), eventName);
 	}
 }
 
@@ -126,12 +124,12 @@ extern "C" {
 
 static void __attribute__((destructor))
 Webkit_Web_extension_shutdown (void) {
-	g_object_unref(extension_access);
-
-	g_signal_handlers_disconnect_by_data(extension_access, eventName);
-
 	g_log_remove_handler(NULL, idLogHandler);
 
-	eventName = NULL;
-	extension_access = NULL;
+	if (idPageCreatedHandler > 0) {
+		g_signal_handler_disconnect(extension, idPageCreatedHandler);
+		idPageCreatedHandler = 0;
+	}
+	g_object_unref(extension);
+	extension = NULL;
 }
