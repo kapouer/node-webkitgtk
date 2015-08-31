@@ -42,11 +42,9 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 		g_message("No request handler available to check %s", uri);
 		return FALSE;
 	}
-	g_message("filtering %s", uri);
+
 	const char* scriptStr = g_strconcat(funcStr, "(\"", uri, "\")", NULL);
 	JSStringRef script = JSStringCreateWithUTF8CString(scriptStr);
-
-//	g_message("script %s", scriptStr);
 
 	result = JSEvaluateScript(
 		jsContext,
@@ -60,9 +58,9 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 	if (JSValueIsBoolean(jsContext, result)) {
 		if (JSValueToBoolean(jsContext, result)) {
 			// go through
-			g_message("ext accept %s", uri);
+			g_message("accept %s", uri);
 		} else {
-			g_message("ext reject %s", uri);
+			g_message("reject %s", uri);
 			webkit_uri_request_set_uri(request, g_strconcat("#", uri, NULL));
 		}
 	} else if (JSValueIsString(jsContext, result)) {
@@ -71,12 +69,12 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 		gchar* str_value = (gchar*)g_malloc(str_length);
 		JSStringGetUTF8CString(js_str_value, str_value, str_length);
 		JSStringRelease(js_str_value);
-		g_message("ext rewrite %s to %s", uri, str_value);
+		g_message("rewrite %s to %s", uri, str_value);
 		webkit_uri_request_set_uri(request, str_value);
 		g_free(str_value);
 	} else {
 		// no return value - meaning ignore the request
-		g_message("ext ignore %s", uri);
+		g_message("ignore %s", uri);
 		soup_message_headers_replace(
 			webkit_uri_request_get_http_headers(request),
 			"X-Ignore",
@@ -110,7 +108,8 @@ extern "C" {
 		extension = ext;
 		idLogHandler = g_log_set_handler(
 			NULL,
-			G_LOG_LEVEL_MASK,
+			G_LOG_LEVEL_WARNING, // production setting
+			// G_LOG_LEVEL_MASK, // debug setting
 			ttyLog,
 			NULL
 		);
