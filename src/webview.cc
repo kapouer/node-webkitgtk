@@ -154,7 +154,6 @@ void WebView::destroy() {
 	if (closeCallback != NULL) delete closeCallback;
 
 	instances.erase(eventName);
-	delete eventName;
 }
 
 WebView::~WebView() {
