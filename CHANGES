@@ -153,3 +153,13 @@ and it's no longer necessary to listen "unload" event to keep events running.
 -----
 
 All async run() calls have a default runTimeout, settable between loads.
+
+3.0.0
+-----
+
+The req object received in the request event is now read-only.
+
+One must now use the load method options `filter` which can be given
+additional arguments with `filterArgs`.
+This is a major change and also a performance improvement.
+

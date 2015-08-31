@@ -30,11 +30,14 @@ The `.run()` method now behaves like `.runev()` regarding params passing.
 Version 3 warning
 -----------------
 
-It is no longer possible to cancel requests or change the request uri
-in the `request` event.
+It is no longer possible to cancel requests, change the request uri, or ignore
+a request for idle counting, in the `request` event.
 
 It is possible to do it using `filter` and `filterArgs` options of the `load`
 method.
+
+Is is not (yet) possible to read or write request headers in that filter function.
+That were mostly useless anyway.
 
 There are two advantages of doing so:
   - no longer directly need dbus, cleaner code
@@ -178,11 +181,12 @@ load(uri, opts, cb) options
   This does not allow requests that are rejected by cross-origin policy.
 
 - filter  
-  function(uri), returns a boolean, is run in browser  
+  function(uri), returns a boolean, or null, or a string, and is run in browser  
   called for each request, even the initial document request  
-  returning false cancels the request (with response status code 0),
-  returning a string replaces the uri by another one,
-  anything else leave the request unmodified.
+  return false to cancel the request (with response status code 0)  
+  return true to accept the request without modification  
+  return a string to replace the uri by another one  
+  return null or undefined to ignore the request (not count it for idle event).
 
 - filterArgs  
   an array of JSON-stringifiable arguments to append to the filter function
@@ -374,8 +378,6 @@ These events can happen at any moment:
 
 * request  
   listener(req) where req.uri, req.headers are read only.  
-  req.ignore (boolean) is still read/write, and tell not to count the
-  request when waiting idle event.  
   The request has already been sent when that event is emitted.
 
 * response  
@@ -386,10 +388,12 @@ These events can happen at any moment:
 * authenticate  
   listener(request) where request.host, request.port, request.realm are
   read-only.  
-  request.use(username, password) authenticates asynchronously,  
-  request.ignore() ignores request asynchronously.
+  request.use(username, password) authenticates  
+  request.ignore() ignores authentication  
+  Both methods can be called later (asynchronously), but at least one of them
+  is supposed to be called if the signal is handled.
 
-* console  (deprecated)
+* console (deprecated)
   listener(level, ...) where level is 'log', 'error', 'warn' or 'info'.  
   Remaining arguments are the arguments of the corresponding calls to
   console[level] inside the page.  
