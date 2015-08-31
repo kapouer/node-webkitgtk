@@ -63,7 +63,7 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 			g_message("ext accept %s", uri);
 		} else {
 			g_message("ext reject %s", uri);
-			webkit_uri_request_set_uri(request, g_strconcat("", uri, NULL));
+			webkit_uri_request_set_uri(request, g_strconcat("#", uri, NULL));
 		}
 	} else if (JSValueIsString(jsContext, result)) {
 		JSStringRef js_str_value = JSValueToStringCopy(jsContext, result, NULL);
