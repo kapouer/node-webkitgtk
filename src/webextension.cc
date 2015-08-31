@@ -122,7 +122,8 @@ extern "C" {
 
 
 static void __attribute__((destructor))
-Webkit_Web_extension_shutdown (void) {
+webkit_web_extension_destroy (void) {
+	g_message("extension destroyed");
 	g_log_remove_handler(NULL, idLogHandler);
 
 	if (idPageCreatedHandler > 0) {
