@@ -1008,6 +1008,7 @@ WebKit.prototype.png = function(obj, cb) {
 	var wstream;
 	if (typeof obj == "string") {
 		wstream = fs.createWriteStream(obj);
+		wstream.on('error', cb);
 	} else if (obj instanceof stream.Writable || obj instanceof stream.Duplex) {
 		wstream = obj;
 	} else {
@@ -1023,14 +1024,13 @@ function png(wstream, cb) {
 	this.webview.png(function(err, buf) {
 		if (err) {
 			wstream.emit('error', err);
-			cb(err);
 		} else if (buf == null) {
-			wstream.end();
 			if (wstream instanceof stream.Readable) {
 				cb();
 			} else {
 				wstream.once('finish', cb);
 			}
+			wstream.end();
 		} else {
 			wstream.write(buf);
 		}

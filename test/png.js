@@ -43,11 +43,12 @@ describe("png method", function suite() {
 		});
 	});
 
-	it("should not crash when calling png twice in a row", function(done) {
+	it("should not crash when calling png right now and twice in a row", function(done) {
 		var w = new WebKit();
 		w.init(function() {
-			w.load('https://www.debian.org', function() {
+			w.load('https://www.debian.org').once('load', function() {
 				var count = 0;
+				// this won't even generate a png since no surface is yet acquired
 				w.png(__dirname + '/shots/testr1.png', function(err) {
 					expect(err).to.not.be.ok();
 					expect(count).to.be(1);
@@ -63,6 +64,19 @@ describe("png method", function suite() {
 				}
 				expect(ex).to.be.ok();
 				count++;
+			});
+		});
+	});
+
+	it("should error out when called before document and is loaded", function(done) {
+		var w = new WebKit();
+		w.init(function() {
+			w.load('https://www.debian.org', function() {
+				// this won't even generate a png since no surface is yet acquired
+				w.png(__dirname + '/shots/testr1err.png', function(err) {
+					expect(err).to.be.ok();
+					done();
+				});
 			});
 		});
 	});

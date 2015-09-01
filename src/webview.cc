@@ -792,6 +792,8 @@ void WebView::PngFinished(GObject* object, GAsyncResult* result, gpointer data) 
 	cairo_status_t status = CAIRO_STATUS_SUCCESS;
 	if (error == NULL) {
 		status = cairo_surface_write_to_png_stream(surface, WebView::PngWrite, data);
+	} else {
+		status = CAIRO_STATUS_INVALID_STATUS;
 	}
 	Local<Value> argv[] = {};
 	if (status == CAIRO_STATUS_SUCCESS) {
