@@ -4,6 +4,7 @@ var stream = require('stream');
 var fs = require('fs');
 var path = require('path');
 var url = require('url');
+var toSource = require('tosource');
 var Q = require('q');
 var debug = require('debug')('webkitgtk');
 
@@ -903,14 +904,9 @@ function run(script, ticket, args, cb) {
 
 function prepareRun(script, ticket, args, priv) {
 	args = args || [];
-	args = args.map(function(val) {
-		if (val === undefined) return 'undefined';
-		var str = JSON.stringify(val);
-		if (str === undefined) {
-			throw new Error("impossible to pass argument to script " + val);
-		}
-		return str;
-	});
+	var argc = args.length;
+	args = args.map(function(arg) {return toSource(arg);});
+
 	var arity = 0;
 	var isfunction = false;
 	if (Buffer.isBuffer(script)) script = script.toString();
@@ -925,9 +921,9 @@ function prepareRun(script, ticket, args, priv) {
 		}
 	}
 	var async;
-	if (arity == args.length) {
+	if (arity == argc) {
 		async = false;
-	} else if (arity == args.length + 1) {
+	} else if (arity == argc + 1) {
 		async = true;
 	} else {
 		throw new Error(".run(script, ...) where script will miss arguments");
