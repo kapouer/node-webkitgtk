@@ -823,20 +823,17 @@ WebKit.prototype.unload = function(cb) {
 		priv.state = INITIALIZED;
 		delete priv.stamp;
 		debug('unload');
-		this.load('', {content:'<html></html>'}, function(err) {
+		this.rawload('about:blank', {content:'<html></html>'}, function(err) {
 			if (err) console.error(err);
-			debug('unload listen ready');
-			this.once('ready', function() {
-				debug('unload done');
-				this.readyState = null;
-				this.status = null;
-				priv.state = INITIALIZED;
-				priv.tickets = cleanTickets(priv.tickets);
-				emitLifeEvent.call(this, 'unload');
-				this.removeAllListeners();
-				this.promises = null;
-				setImmediate(cb);
-			}.bind(this));
+			debug('unload done');
+			this.readyState = null;
+			this.status = null;
+			priv.state = INITIALIZED;
+			priv.tickets = cleanTickets(priv.tickets);
+			emitLifeEvent.call(this, 'unload');
+			this.removeAllListeners();
+			this.promises = null;
+			setImmediate(cb);
 		}.bind(this));
 	}
 	return this;

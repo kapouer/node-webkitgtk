@@ -3,15 +3,12 @@ var expect = require('expect.js');
 var fs = require('fs');
 
 describe("unload method", function suite() {
-	it("should be set to an empty document with an empty url", function(done) {
+	it("should be set to an empty url", function(done) {
 		WebKit(function(err, w) {
-			w.unload(function() {
-				w.run("document.documentElement.outerHTML;", function(err, html) {
-					expect(err).to.not.be.ok();
-					expect(html).to.be('<html><head></head><body></body></html>');
-					expect(this.uri).to.be("");
-					done();
-				});
+			w.unload(function(err) {
+				expect(err).to.not.be.ok();
+				expect(w.uri).to.be("");
+				done();
 			});
 		});
 	});
