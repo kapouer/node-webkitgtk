@@ -519,11 +519,9 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		var script = cookies.map(function(cookie) {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 		});
-		script.push('');
 		this.webview.load(uri, priv.stamp, {
-			script: script.join(';\n'),
-			content: "<html></html>",
-			waitFinish: true
+			content: "<html><head><script type='text/javascript'>%SCRIPT</script></head><body></body></html>"
+				.replace('%SCRIPT', script.join(';\n'))
 		}, function(err) {
 			debug('load cookies done', err);
 			next.call(this, err);
