@@ -10,6 +10,7 @@ describe("cookies option", function suite() {
 	var countTwo = 0;
 	var cookiestrTwo = "mycookie=myvalue2";
 	var hadXhr = false;
+	var hadScript = false;
 
 	before(function(done) {
 		server = require('http').createServer(function(req, res) {
@@ -33,6 +34,9 @@ describe("cookies option", function suite() {
 				if (countTwo == 1) expect(req.headers.cookie).to.be(cookiestrTwo);
 				countTwo++;
 				res.write('<html><body><img src="myimg.png"/></body></html>');
+			} else if (req.url == "/test/content/script.js") {
+				hadScript = true;
+				res.write('document.body.innerHTML = "some thing";');
 			} else {
 				res.writeHeader(404);
 			}
@@ -79,6 +83,26 @@ describe("cookies option", function suite() {
 			expect(hadXhr).to.be(true);
 			done();
 		});
+	});
+
+	it("should support without glitch preload content then load content with cookie", function(done) {
+		var content = '<html><script type="text/javascript" src="/test/content/script.js"></script><head></head><body></body></html>';
+		var w = new WebKit();
+		w.init(function() {
+			w.preload("http://localhost:" + port + "/test/content", {content: content, allow: "none"}).once('idle', function() {
+				this.unload(next);
+			});
+		});
+
+		function next() {
+			w.load("http://localhost:" + port + "/test/content", {
+				content: content,
+				cookies:cookiestrOne + ";Path=/test/content"
+			}).once('idle', function() {
+				expect(hadScript).to.be(true);
+				done();
+			});
+		}
 	});
 });
 
