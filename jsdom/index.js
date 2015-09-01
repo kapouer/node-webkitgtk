@@ -179,7 +179,7 @@ HTTPError.prototype.constructor = HTTPError;
 
 function emitIgnore(reqObj) {
 	var evt = this.webview.document.createEvent("KeyboardEvent");
-	evt.initEvent('r' + this.priv.eventName, false, true);
+	evt.initEvent('r' + this.priv.cstamp, false, true);
 	evt.keyIdentifier = reqObj.uri;
 	this.webview.dispatchEvent(evt);
 }
