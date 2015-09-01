@@ -59,7 +59,7 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 	}
 
 	if (hasHandler == FALSE) {
-		g_message("No filter handler available to check %s", uri);
+		g_message("No filter handler %s available to check %s", funcStr, uri);
 		return FALSE;
 	}
 
