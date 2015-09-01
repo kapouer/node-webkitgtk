@@ -37,7 +37,6 @@ function WebKit(opts, cb) {
 		return inst;
 	}
 	this.priv = initialPriv();
-	initWhen.call(this);
 	if (arguments.length) throw new Error("Use WebKit(opts, cb) as short-hand for (new Webkit()).init(opts, cb)");
 }
 
@@ -52,7 +51,6 @@ WebKit.load = function(uri, opts, cb) {
 		if (err) return cb(err, w);
 		w.load(uri, opts, cb);
 	});
-	initWhen.call(inst);
 	return inst;
 };
 
@@ -591,12 +589,17 @@ function initWhen() {
 
 WebKit.prototype.when = function(ev, fn) {
 	var self = this;
+	if (!this.promises) initWhen.call(this);
 	this.promises[ev] = this.promises[ev].then(function() {
 		var deferred = Q.defer();
 		fn.call(self, deferred.makeNodeResolver());
 		return deferred.promise;
 	});
 	return this;
+};
+
+WebKit.prototype.prepare = function() {
+	this.promises = null;
 };
 
 function load(uri, opts, cb) {
@@ -801,7 +804,7 @@ WebKit.prototype.unload = function(cb) {
 	this.removeAllListeners('idle');
 	this.removeAllListeners('unload');
 	this.removeAllListeners('busy');
-	this.promises = {};
+	this.promises = null;
 
 	priv.idling = false;
 
@@ -831,7 +834,7 @@ WebKit.prototype.unload = function(cb) {
 				priv.tickets = cleanTickets(priv.tickets);
 				emitLifeEvent.call(this, 'unload');
 				this.removeAllListeners();
-				this.promises = {};
+				this.promises = null;
 				setImmediate(cb);
 			}.bind(this));
 		}.bind(this));
