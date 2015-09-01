@@ -57,7 +57,7 @@ public:
 	static void PrintFinished(WebKitPrintOperation*, gpointer);
 	static void PrintFailed(WebKitPrintOperation*, gpointer, gpointer);
 
-	static void handleScriptMessage(WebKitUserContentManager*, WebKitJavascriptResult*, gpointer);
+	static void handleEventMessage(WebKitUserContentManager*, WebKitJavascriptResult*, gpointer);
 
 	void destroy();
 	void unloaded();
@@ -74,7 +74,7 @@ private:
 	gchar* uri = NULL;
 	void updateUri(const gchar*);
 	gulong idResourceResponse;
-	gulong idMessageHandler;
+	gulong idEventsHandler;
 
 	int state;
 	int authRetryCount;
@@ -91,7 +91,7 @@ private:
 	WebKitWebInspector* inspector = NULL;
 
 	Nan::Callback* eventsCallback = NULL;
-	char* eventName = NULL;
+	char* cstamp = NULL;
 
 	Nan::Callback* pngCallback = NULL;
 	Nan::Utf8String* pngFilename = NULL;

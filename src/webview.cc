@@ -16,8 +16,7 @@ Nan::Persistent<Function> WebView::constructor;
 static uv_timer_t timeout_handle;
 
 WebView::WebView(Handle<Object> opts) {
-	this->eventName = getStr(opts, "eventName");
-	this->requestCallback = getCb(opts, "requestListener");
+	this->cstamp = getStr(opts, "cstamp");
 	this->receiveDataCallback = getCb(opts, "receiveDataListener");
 	this->responseCallback = getCb(opts, "responseListener");
 	this->eventsCallback = getCb(opts, "eventsListener");
@@ -32,9 +31,9 @@ WebView::WebView(Handle<Object> opts) {
 
 	state = 0;
 	idResourceResponse = 0;
-	idMessageHandler = 0;
+	idEventsHandler = 0;
 
-	instances.insert(ObjMapPair(this->eventName, this));
+	instances.insert(ObjMapPair(this->cstamp, this));
 
 	WebKitWebContext* context = webkit_web_context_get_default();
 	const gchar* cacheDir = getStr(opts, "cacheDir");
@@ -153,7 +152,7 @@ void WebView::destroy() {
 	if (authCallback != NULL) delete authCallback;
 	if (closeCallback != NULL) delete closeCallback;
 
-	instances.erase(eventName);
+	instances.erase(cstamp);
 }
 
 WebView::~WebView() {
@@ -168,9 +167,9 @@ void WebView::unloaded() {
 		idResourceResponse = 0;
 	}
 	WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(view);
-	if (idMessageHandler > 0) {
-		g_signal_handler_disconnect(contman, idMessageHandler);
-		idMessageHandler = 0;
+	if (idEventsHandler > 0) {
+		g_signal_handler_disconnect(contman, idEventsHandler);
+		idEventsHandler = 0;
 	}
 	if (contman != NULL) {
 		webkit_user_content_manager_remove_all_scripts(contman);
@@ -262,7 +261,7 @@ void WebView::InitExtensions(WebKitWebContext* context, gpointer data) {
 		g_signal_handler_disconnect(context, self->contextSignalId);
 		self->contextSignalId = 0;
 	}
-	GVariant* userData = g_variant_new("(s)", self->eventName);
+	GVariant* userData = g_variant_new("(s)", self->cstamp);
 	webkit_web_context_set_web_extensions_initialization_user_data(context, userData);
 }
 
@@ -297,7 +296,7 @@ gboolean WebView::DecidePolicy(WebKitWebView* web_view, WebKitPolicyDecision* de
 	return FALSE;
 }
 
-void WebView::handleScriptMessage(WebKitUserContentManager* contman, WebKitJavascriptResult* js_result, gpointer data) {
+void WebView::handleEventMessage(WebKitUserContentManager* contman, WebKitJavascriptResult* js_result, gpointer data) {
 	if (data == NULL) return;
 	ViewClosure* vc = (ViewClosure*)data;
 	if (vc->closure == NULL) return;
@@ -324,20 +323,6 @@ void WebView::handleScriptMessage(WebKitUserContentManager* contman, WebKitJavas
 }
 
 void WebView::ResourceLoad(WebKitWebView* web_view, WebKitWebResource* resource, WebKitURIRequest* request, gpointer data) {
-	// emit request signal here, very much like response event
-	if (data == NULL) return;
-	ViewClosure* vc = (ViewClosure*)data;
-	if (vc->closure == NULL) return;
-	WebView* self = (WebView*)(vc->view);
-	Local<Object> obj = Nan::New<FunctionTemplate>(WebRequest::constructor)->GetFunction()->NewInstance();
-	WebRequest* selfRequest = node::ObjectWrap::Unwrap<WebRequest>(obj);
-	selfRequest->init(request);
-	int argc = 2;
-	Local<Value> argv[] = {
-		Nan::New<String>((char*)vc->closure).ToLocalChecked(),
-		obj
-	};
-	self->requestCallback->Call(argc, argv);
 	g_signal_connect(resource, "finished", G_CALLBACK(WebView::ResourceResponse), data);
 	g_signal_connect(resource, "received-data", G_CALLBACK(WebView::ResourceReceiveData), data);
 }
@@ -601,10 +586,10 @@ NAN_METHOD(WebView::Load) {
 
 	webkit_user_content_manager_register_script_message_handler(contman, "events");
 
-	self->idMessageHandler = g_signal_connect(
+	self->idEventsHandler = g_signal_connect(
 		contman,
 		"script-message-received::events",
-		G_CALLBACK(WebView::handleScriptMessage),
+		G_CALLBACK(WebView::handleEventMessage),
 		vc
 	);
 

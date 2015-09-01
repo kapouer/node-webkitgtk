@@ -86,8 +86,7 @@ WebKit.prototype.init = function(opts, cb) {
 	}
 	debug('init');
 	this.binding(opts, {
-		eventName: priv.eventName,
-		requestListener: requestDispatcher.bind(this),
+		cstamp: priv.cstamp,
 		receiveDataListener: receiveDataDispatcher.bind(this),
 		responseListener: responseDispatcher.bind(this),
 		eventsListener: eventsDispatcher.bind(this),
@@ -126,7 +125,7 @@ function initialPriv() {
 		pendingRequests: 0,
 		ticket: 0,
 		tickets: {},
-		eventName: "webkitgtk" + uran(),
+		cstamp: uran(),
 		idling: false,
 		previousEvents: {},
 		lastEvent: null,
@@ -142,7 +141,7 @@ function done(ev, cb) {
 	emitted[ev] = true;
 	debug("let tracker process event after", ev);
 	if (this.readyState != "unloading") {
-		this.webview.runSync(hasRunEvent.replace('%name', priv.eventName).replace('%event', ev));
+		this.webview.runSync(hasRunEvent.replace('%name', priv.cstamp).replace('%event', ev));
 	}
 	cb();
 }
@@ -251,6 +250,8 @@ function eventsDispatcher(err, json) {
 		} else if (obj.event == "busy") {
 			// not a life event
 			this.emit(obj.event);
+		} else if (obj.event == "request") {
+			requestDispatcher.call(this, from);
 		} else {
 			this.emit.apply(this, args);
 		}
@@ -305,13 +306,6 @@ Object.defineProperty(WebKit.prototype, "uri", {
 	}
 });
 
-function Response(view, binding) {
-	this.binding = binding;
-	this.view = view;
-}
-"uri status mime headers length filename stall".split(' ').forEach(
-	defineCachedGet.bind(null, Response.prototype, "binding")
-);
 function defineCachedGet(proto, prop, name) {
 	var hname = '_' + name;
 	Object.defineProperty(proto, name, {
@@ -322,80 +316,45 @@ function defineCachedGet(proto, prop, name) {
 	});
 }
 
+function Response(view, binding) {
+	this.binding = binding;
+	this.view = view;
+}
+
 Response.prototype.data = function(cb) {
 	if (!cb) throw new Error("Missing callback");
 	this.binding.data(cb);
 	return this;
 };
 
-function Request(uri, binding) {
-	this.headers = binding;
-	this.uri = uri;
-	this.cancel = false;
-}
+"uri status mime headers length filename stall".split(' ').forEach(
+	defineCachedGet.bind(null, Response.prototype, "binding")
+);
 
-function requestDispatcher(binding) {
+function requestDispatcher(req) {
 	var priv = this.priv;
 	if (!priv.uris) return;
-	var uri = binding.uri;
-	if (!uri) return; // ignore empty uri
+	var mainUri = this.uri || "about:blank";
+	if (mainUri == "about:blank") return;
+	var uri = req.uri;
+	if (!uri) return;
 
 	debug('request', uri.substring(0, 255));
 
-	var mainUri = this.uri || "about:blank";
-
-	if (mainUri == "about:blank") return;
-
 	var info = priv.uris[uri];
 
-	var origuri = binding.origuri;
-	if (origuri != null) {
-		var originfo = priv.uris[origuri];
-		if (originfo) {
-			info = priv.uris[uri] = priv.uris[origuri];
+	var from = req.from;
+	if (from != null) {
+		var rinfo = priv.uris[from];
+		if (rinfo) {
+			info = priv.uris[uri] = priv.uris[from];
 		}
-		if (mainUri && origuri == mainUri) {
+		if (mainUri && from == mainUri) {
 			mainUri = this.uri = uri;
 		}
 	}
 
-	var cancel = false;
-	var allow = priv.allow;
-	if (allow == "none") {
-		if (uri != mainUri) cancel = true;
-	} else if (allow == "same-origin") {
-		if (url.parse(uri).host != url.parse(mainUri).host) cancel = true;
-	} else if (allow instanceof RegExp) {
-		if (uri != mainUri && !allow.test(uri)) cancel = true;
-	} else if (typeof allow == "string" && allow != "all") {
-		debugError("Unknown allow value", allow);
-	}
-	if (cancel) {
-		debug("cancelled before dispatch", uri);
-		binding.cancel = "1";
-		return;
-	}
-	var req = new Request(uri, binding);
-
 	this.emit('request', req);
-
-	if (req.uri == null) { // compat with older versions
-		req.cancel = true;
-	} else if (uri != req.uri) {
-		uri = req.uri;
-		binding.uri = uri;
-	}
-
-	if (req.ignore) {
-		debug("ignore request");
-		binding.ignore = "1";
-	}
-
-	if (req.cancel) {
-		debug("cancelled after dispatch");
-		binding.cancel = "1";
-		return;
-	}
 
 	if (!info) {
 		info = priv.uris[uri] = {
@@ -426,6 +385,15 @@ function responseDispatcher(curstamp, binding) {
 	var res = new Response(this, binding);
 	var uri = res.uri;
 	if (!uri) return;
+	var status = res.status;
+	if (uri[0] == '#') {
+		// came from webextension, this uri is cancelled
+		uri = res._uri = uri.substring(1);
+		if (status != 0) {
+			console.error("Cancelled response but non-zero status", uri, status);
+		}
+	}
+	if (!uri) return;
 
 	if (curstamp != priv.stamp) {
 		debug("stamp mismatch - ignore response", uri, curstamp, priv.stamp, this.uri);
@@ -437,13 +405,20 @@ function responseDispatcher(curstamp, binding) {
 	var info = priv.uris[uri];
 
 	if (!info) {
-		if (res.status == 0) {
+		if (status == 0) {
 			debug('ignored response', uri);
+			return;
+		} else if (uri != mainUri) {
+			console.warn(this.uri, "had an untracked response", uri, status);
+			return;
 		} else {
-			console.warn(this.uri, "had an untracked response", uri, res.status);
+			info = priv.uris[uri] = {
+				main: true,
+				count: 1
+			};
 		}
-		return;
 	}
+
 
 	var stalled = false;
 	var decrease = 0;
@@ -465,7 +440,7 @@ function responseDispatcher(curstamp, binding) {
 		debug('counted as ending pending', priv.pendingRequests, uri, info);
 		if (priv.pendingRequests < 0) console.warn("counting more responses than requests with", uri, this.uri);
 	}
-	if (!stalled) this.emit('response', res);
+	if (!stalled && status > 0) this.emit('response', res);
 	checkIdle.call(this);
 }
 
@@ -688,6 +663,11 @@ function load(uri, opts, cb) {
 		});
 	}
 	var scripts = [];
+	var filters = opts.filters || [];
+	if (opts.filter) filters.push(opts.filter);
+	if (opts.allow) filters.push([allowFilter, opts.allow]);
+	scripts.push(prepareFilters(priv.cstamp, filters));
+
 	if (Buffer.isBuffer(opts.content)) opts.content = opts.content.toString();
 	if (Buffer.isBuffer(opts.style)) opts.style = opts.style.toString();
 
@@ -695,7 +675,7 @@ function load(uri, opts, cb) {
 	if (opts.console && !priv.jsdom) scripts.push(consoleEmitter);
 	scripts.push({
 		fn: stateTracker,
-		args: [opts.preload && !priv.jsdom, opts.charset || "utf-8", priv.eventName, priv.stall, 200, 200]
+		args: [opts.preload && !priv.jsdom, opts.charset || "utf-8", priv.cstamp, priv.stall, 200, 200]
 	});
 	if (opts.script) scripts.push(Buffer.isBuffer(opts.script) ? opts.script.toString() : opts.script);
 
@@ -705,6 +685,7 @@ function load(uri, opts, cb) {
 
 	debug('load', uri);
 	priv.uris[uri] = {mtime: Date.now(), main: true};
+
 	this.rawload(uri, opts, function(err, status) {
 		debug('load done %s', uri);
 		priv.state = INITIALIZED;
@@ -719,6 +700,58 @@ function load(uri, opts, cb) {
 			this.webview.inspect();
 		}
 	}.bind(this));
+}
+
+function allowFilter(allow) {
+	if (allow == null) return;
+	if (allow == "none") {
+		this.cancel = true;
+	} else if (allow == "same-origin") {
+		if ((new URL(this.uri)).host != document.location.host) this.cancel = true;
+	} else if (allow instanceof RegExp) {
+		if (!allow.test(this.uri)) this.cancel = true;
+	}
+}
+
+function prepareFilters(cstamp, filters) {
+	return {
+		fn: function(cstamp, filters, emit) {
+			window["request_" + cstamp] = function(uri, from) {
+				var msg = {
+					uri: uri,
+					cancel: false,
+					ignore: false,
+					headers: {} // none for now
+				};
+				if (from) msg.from = from;
+
+				filters.forEach(function(filter) {
+					if (!Array.isArray(filter)) filter = [filter];
+					var func = filter[0];
+					try {
+						func.apply(msg, filter.slice(1));
+					} catch(ex) {
+						console.error("An error happened while filtering url with", func, ex);
+					}
+				});
+				if (!msg.cancel) {
+					delete msg.cancel;
+				}
+				if (!msg.ignore) {
+					delete msg.ignore;
+				} else {
+					var ignFunc = window['ignore_' + cstamp];
+					if (ignFunc) ignFunc(uri);
+				}
+				emit("request", msg);
+				if (msg.cancel) return false;
+				if (msg.uri != uri) return msg.uri;
+				if (msg.ignore) return;
+				return true;
+			};
+		},
+		args: [cstamp, filters]
+	};
 }
 
 WebKit.prototype.preload = function(uri, opts, cb) {
@@ -992,9 +1025,9 @@ function prepareRun(script, ticket, args, priv) {
 				message.error = ex;
 				msg = JSON.stringify(message);
 			}
-			var ww = window.webkit;
+			var ww = window && window.webkit;
 			ww = ww && ww.messageHandlers && ww.messageHandlers.events;
-			if (ww && ww.postMessage) ww.postMessage(msg);
+			if (ww && ww.postMessage) try { ww.postMessage(msg); } catch(ex) {}
 		}.toString()
 		.replace('TICKET', JSON.stringify(ticket))
 		.replace('STAMP', JSON.stringify(priv.stamp));
@@ -1158,7 +1191,7 @@ function consoleEmitter(emit) {
 	});
 }
 
-function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout, stallInterval, emit) {
+function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, stallInterval, emit) {
 	var EV = {
 		init: 0,
 		ready: 1,
@@ -1188,7 +1221,7 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 	'requestAnimationFrame', 'cancelAnimationFrame'].forEach(function(meth) {
 		w[meth] = window[meth];
 	});
-	window['hasRunEvent_' + eventName] = function(event) {
+	window['hasRunEvent_' + cstamp] = function(event) {
 		if (EV[event] > lastRunEvent) {
 			lastRunEvent = EV[event];
 			check('lastrun' + event);
@@ -1197,7 +1230,7 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 
 	document.charset = charset;
 
-	window.addEventListener('r' + eventName, ignoreListener, false);
+	window['ignore_' + cstamp] = ignoreListener;
 
 	if (document.readyState != 'loading') readyListener();
 	else document.addEventListener('DOMContentLoaded', readyListener, false);
@@ -1279,8 +1312,7 @@ function stateTracker(preload, charset, eventName, staleXhrTimeout, stallTimeout
 		return (new URL(url, document.location)).href;
 	}
 
-	function ignoreListener(e) {
-		var uri = e && e.keyIdentifier;
+	function ignoreListener(uri) {
 		if (!uri) return;
 		if (!requests[uri]) requests[uri] = {count: 0};
 		requests[uri].stall = true;

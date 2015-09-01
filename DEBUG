@@ -1,8 +1,3 @@
-# dbus
-
-dbus-send --session --print-reply --type=method_call --dest='org.nodejs.WebKitGtk' '/org/nodejs/WebKitGtk' org.nodejs.WebKitGtk.HandleRequest string:"http://www.test.com/test.js"
-
-
 # gdb
 
 node-gyp rebuild --debug
@@ -22,4 +17,9 @@ will break on failed assertions
 # js logs
 
 DEBUG=webkitgtk node test.js
+
+
+# webkit extension logs
+
+DEBUG=webkitgtk:extension node test.js
 

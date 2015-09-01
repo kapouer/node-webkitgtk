@@ -19,34 +19,6 @@ describe("load method", function suite() {
 		});
 	});
 
-	it("should load html content and filter some requests", function(done) {
-		this.timeout(1000);
-		var haspng = false;
-		var hasjs = false;
-
-		WebKit.load("http://localhost", {
-			content: '<script src="http://localhost/test.js"></script><img src="http://localhost/test.png" />'
-		}, function(err) {
-			expect(err).to.be(null);
-		})
-		.on('request', function(req) {
-			req.cancel = /\.png$/.test(req.uri) || req.headers.Accept == "*/*";
-		})
-		.on('response', function(res) {
-			if (/\.png$/.test(res.uri)) {
-				haspng = true;
-			}
-			if (/\.js$/.test(res.uri)) {
-				hasjs = true;
-			}
-		})
-		.once('idle', function() {
-			expect(haspng).to.not.be.ok();
-			expect(hasjs).to.not.be.ok();
-			done();
-		});
-	});
-
 	it("should callback with error when url cannot be resolved", function(done) {
 		this.timeout(10000);
 		WebKit.load("http://atipepipapa-sdqdqsd.com", function(err) {
@@ -72,21 +44,6 @@ describe("load method", function suite() {
 					done();
 				});
 			});
-		});
-	});
-
-	it("should filter requests by regexp and let the main request go", function(done) {
-		this.timeout(5000);
-		var onlyjs = /\.js/;
-		var hadmain = false;
-		WebKit.load('http://github.com', {allow: onlyjs})
-		.on('response', function(res) {
-			if (res.uri == this.uri) hadmain = true;
-		})
-		.once('idle', function(err) {
-			expect(err).to.not.be.ok();
-			expect(hadmain).to.be(true);
-			done();
 		});
 	});
 
@@ -168,31 +125,6 @@ describe("load method", function suite() {
 					server.close();
 					done();
 				}, 1000);
-			});
-		});
-	});
-
-	it("should set request headers", function(done) {
-		var server = require('http').createServer(function(req, res) {
-			expect(req.headers.custom).to.be("tada");
-			expect(req.headers.accept).to.be("text/tomo");
-			if (req.headers.cookie != undefined) {
-				console.warn("container doesn't process Cookie header");
-			}
-			res.statusCode = 200;
-			res.end("<html><body>test</body></html>");
-		}).listen(function() {
-			WebKit.load("http://localhost:" + server.address().port)
-			.on('request', function(req) {
-				req.headers.custom = "tada";
-				req.headers.Accept = "text/tomo";
-				req.headers.Cookie = 'abc="xyzzy!"; Expires=Tue, 18 Oct 2511 07:05:03 GMT; Path=/;';
-			})
-			.once('ready', function(err) {
-				setTimeout(function() {
-					server.close();
-					done();
-				}, 100);
 			});
 		});
 	});

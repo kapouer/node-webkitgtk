@@ -176,21 +176,26 @@ load(uri, opts, cb) options
 
 - allow  
   "all" or "same-origin" or "none" or a RegExp, default "all"  
-  allow requests only matching option (except the document request),
-  bypassing 'request' event.  
-  This does not allow requests that are rejected by cross-origin policy.
+  A short-hand filter that is run after all other filters.  
+
+- filters  
+  An array of request filters that are run in browser, synchronously.  
+  All filters are called one after another, and each filter can read-write the
+  following properties on `this`:  
+   uri (string)  
+   cancel (boolean)  
+   ignore (boolean)  
+  and has read-only access to  
+   headers (object)  
+   from (string, in case the uri was redirected from another uri)  
+  In particular, a filter can revert the action of a previous filter.  
+  The initial document loading request is not filtered.  
+  A single filter is either a `function() {}`,
+  or an array `[function(arg0, ...) {}, arg0, ...]`, allowing passing
+  immutable stringyfiable arguments to the filter function.
 
 - filter  
-  function(uri), returns a boolean, or null, or a string, and is run in browser  
-  called for each request, even the initial document request  
-  return false to cancel the request (with response status code 0)  
-  return true to accept the request without modification  
-  return a string to replace the uri by another one  
-  return null or undefined to ignore the request (not count it for idle event).
-
-- filterArgs  
-  an array of JSON-stringifiable arguments to append to the filter function
-  arguments.
+  Convenient option to append one filter to the list in opts.filters.
 
 - private  
   boolean, default false  
