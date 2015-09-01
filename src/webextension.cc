@@ -23,6 +23,10 @@ static gchar* JSValueToStr(JSGlobalContextRef context, JSValueRef val) {
 static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* request, WebKitURIResponse* redirected_response, gpointer data) {
 	gchar* cstamp = (gchar*)data;
 	const char* uri = webkit_uri_request_get_uri(request);
+
+	// always allow blank and never report it
+	if (uri == NULL || g_strcmp0(uri, "") == 0 || g_strcmp0(uri, "about:blank") == 0) return FALSE;
+
 	JSValueRef result;
 	JSValueRef exception;
 	gboolean hasHandler = FALSE;
