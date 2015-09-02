@@ -105,20 +105,21 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		};
 
 		if (opts.script) window.run(opts.script);
-		var runlist = this.webview._runlist;
+		var runlist = this._webview._runlist;
+		delete this._webview;
 		this.webview = window;
-		runlist.forEach(function(arr) {
+		if (runlist) runlist.forEach(function(arr) {
 			try {
 				window.run(script);
 			} catch(e) {
-						}
+			}
 		});
 
 		this.status = 200;
 		cb(null, 200);
 	}.bind(this);
 
-	this.webview = {
+	this._webview = this.webview = {
 		uri: uri,
 		_runlist: [],
 		run: function(script, ticket) {
@@ -135,7 +136,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 
 	setImmediate(function() {
 		if (opts.content != null) {
-			jsdom(opts.content, jsdomOpts);
+			this.webview = jsdom(opts.content, jsdomOpts).parentWindow;
 		} else {
 			// trick to have a main uri before loading main doc
 			this.webview.loading = true;
@@ -150,7 +151,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 					if (typeof status == "string") status = 0;
 				}
 				if (err || status != 200) return cb(err, status);
-				jsdom(body, jsdomOpts);
+				this.webview = jsdom(body, jsdomOpts).parentWindow;
 			}.bind(this));
 			this.webview.stop = function stop(cb) {
 				if (this.webview.loading) {
@@ -177,35 +178,31 @@ function HTTPError(code) {
 HTTPError.prototype = Object.create(Error.prototype);
 HTTPError.prototype.constructor = HTTPError;
 
-function emitIgnore(reqObj) {
-	var evt = this.webview.document.createEvent("KeyboardEvent");
-	evt.initEvent('r' + this.priv.cstamp, false, true);
-	evt.keyIdentifier = reqObj.uri;
-	this.webview.dispatchEvent(evt);
-}
-
 function resourceLoader(resource, cb) {
 	// Checking if the ressource should be loaded
 	var uri = resource.url && resource.url.href;
 	debug("resource loader", uri);
 	var priv = this.priv;
 	var stamp = priv.stamp;
-	var reqObj = {uri: uri, Accept: "*/*"};
-	priv.cfg.requestListener(reqObj);
-	if (reqObj.ignore) emitIgnore.call(this, reqObj);
-	if (reqObj.cancel) {
-		priv.cfg.responseListener(stamp, {uri: uri, length: 0, headers: {}, status: 0});
+	var reqHeaders = {Accept: "*/*"};
+	var funcFilterStr = 'window.request_' + priv.cstamp;
+	var result = true;
+	if (this.webview.run('!!(' + funcFilterStr + ')')) {
+		result = this.webview.run(funcFilterStr + '("' + uri + '", null)');
+	}
+	if (result === false) {
 		var err = new Error("Ressource canceled");
 		err.statusCode = 0;
-		return cb(err);
+		cb(err);
+		priv.cfg.responseListener(stamp, {uri: uri, length: 0, headers: {}, status: 0});
+		return;
+	} else if (typeof result == "string") {
+		uri = result;
 	}
 	// actual get
-	delete reqObj.uri;
-	delete reqObj.cancel;
-	delete reqObj.ignore;
 	var reqOpts = {
 		url: uri,
-		headers: reqObj,
+		headers: reqHeaders,
 		jar: request().jar()
 	};
 	if (resource.cookie) {

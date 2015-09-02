@@ -4,15 +4,16 @@ module.exports = function handleXhr(window) {
 	var webview = this;
 	var priv = this.priv;
 	var stamp = priv.stamp;
+	var cstamp = priv.cstamp;
 	var wxhr = window.XMLHttpRequest;
 	window.XMLHttpRequest = function() {
-		var xhr = wxhr();
+		var xhr = new wxhr();
 		var xhrSend = xhr.send;
 		var xhrOpen = xhr.open;
 		var xhrDispatch = xhr.dispatchEvent;
 		var xhrSetRequestHeader = xhr.setRequestHeader;
 		var privUrl;
-		var reqObj = {
+		var reqHeaders = {
 			Accept: "*/*"
 		};
 		function listenXhr(e) {
@@ -38,15 +39,15 @@ module.exports = function handleXhr(window) {
 				mime: contentType
 			});
 		}
-			xhr.open = function(method, url) {
-			if (method.toLowerCase() == "get") privUrl = (new window.URL(url)).href;
+		xhr.open = function(method, url) {
+			privUrl = (new window.URL(url)).href;
 			return xhrOpen.apply(this, Array.prototype.slice.call(arguments, 0));
-		};
+		}.bind(xhr);
 		xhr.setRequestHeader = function(name, val) {
 			var ret = xhrSetRequestHeader.call(xhr, name, val);
-			reqObj[name] = val;
+			reqHeaders[name] = val;
 			return ret;
-		};
+		}.bind(xhr);
 		xhr.send = function(data) {
 			// while xhr is typically not reused, it can happen, so support it
 			var ret, err;
@@ -55,21 +56,29 @@ module.exports = function handleXhr(window) {
 			} catch(e) {
 				err = e;
 			}
-			reqObj.uri = privUrl;
-			priv.cfg.requestListener(reqObj);
-			if (reqObj.ignore) emitIgnore.call(webview, reqObj);
-			if (reqObj.cancel) this.abort();
+			var funcFilter = window['request_' + cstamp];
+			var result = true;
+			if (funcFilter) {
+				// TODO second argument in case of redirection
+				result = funcFilter(privUrl, null, reqHeaders);
+			}
+			if (result === false) {
+				this.abort();
+			} else if (typeof result == "string") {
+				throw new Error("Unimplemented xhr request url rewriting");
+			}
+
 			if (this.readyState == 4 || err) {
 				// free it now
 				listenXhr.call(this, err);
 			} // else the call was asynchronous and no error was thrown
 			if (err) throw err; // rethrow
 			return ret;
-		};
+		}.bind(xhr);
 		xhr.dispatchEvent = function() {
 			listenXhr.call(this);
 			xhrDispatch.apply(this, Array.prototype.slice.call(arguments));
-		};
+		}.bind(xhr);
 		return xhr;
 	};
 };
