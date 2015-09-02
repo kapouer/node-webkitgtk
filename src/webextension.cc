@@ -11,6 +11,17 @@ static guint idSendRequestHandler = 0;
 static guint idPageCreatedHandler = 0;
 static gboolean DEBUG = FALSE;
 
+#if (!GLIB_CHECK_VERSION (2, 44, 0))
+gboolean g_strv_contains (const gchar* const* strv, const gchar* str) {
+	g_return_val_if_fail(strv != NULL, FALSE);
+	g_return_val_if_fail(str != NULL, FALSE);
+	for (; *strv != NULL; strv++) {
+		if (g_str_equal (str, *strv)) return TRUE;
+	}
+	return FALSE;
+}
+#endif
+
 static gchar* JSValueToStr(JSGlobalContextRef context, JSValueRef val) {
 	JSStringRef js_str_value = JSValueToStringCopy(context, val, NULL);
 	gsize str_length = JSStringGetMaximumUTF8CStringSize(js_str_value);
