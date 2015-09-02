@@ -717,12 +717,12 @@ function allowFilter(allow) {
 function prepareFilters(cstamp, filters) {
 	return {
 		fn: function(cstamp, filters, emit) {
-			window["request_" + cstamp] = function(uri, from) {
+			window["request_" + cstamp] = function(uri, from, headers) {
 				var msg = {
 					uri: uri,
 					cancel: false,
 					ignore: false,
-					headers: {} // none for now
+					headers: headers || {} // none for now
 				};
 				if (from) msg.from = from;
 
