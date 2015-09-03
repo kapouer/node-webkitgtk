@@ -11,7 +11,18 @@ on webkitgtk's jsdom mode - developers can work on other platforms where
 jsdom builds fine.
 
 *this module uses only system-installed, shared libraries*  
-it doesn't embed static libraries at all.
+it doesn't embed static libraries, meaning it plugs very nicely into
+system-installed libraries.
+
+
+New in version 3
+----------------
+
+* Only one event loop for all WebViews, so CPU load stay low.
+* Faster loading
+* Much less memory leaks
+* Instances can be destroyed, so it's easy to hook into a generic pool
+* Easier to debug, supports logging from the webextension
 
 
 Version 2 warning
@@ -33,8 +44,7 @@ Version 3 warning
 It is no longer possible to cancel requests, change the request uri, or ignore
 a request for idle counting, in the `request` event.
 
-It is possible to do it using `filter` and `filterArgs` options of the `load`
-method.
+It is possible to do it using `filters` option of the `load` method.
 
 Is is not (yet) possible to read or write request headers in that filter function.
 That were mostly useless anyway.
@@ -43,9 +53,8 @@ There are two advantages of doing so:
   - no longer directly need dbus, cleaner code
   - about 5ms by request was spent waiting for dbus calls
 
-But it's no longer easy to map request uri to other uris using internal data,
-especially if that internal data is mutable (for immutable data, filterArgs
-can help).
+But it's no longer easy to map request uri to other uris using application
+variables. Although it is easy to pass constants to filters.
 
 
 usage
