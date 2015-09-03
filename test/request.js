@@ -7,14 +7,19 @@ describe("request listener", function suite() {
 		this.timeout(1000);
 		var haspng = false;
 		var hasjs = false;
-			WebKit.load("http://localhost", {
-			content: '<script src="http://localhost/test.js"></script><img src="http://localhost/test.png" />',
-			filter: function() {
+		var hasSlash = false;
+		WebKit.load("http://localhost", {
+			content: '<script src="http://localhost/test.js"></script><img src="http://localhost/test.png" /><img src="http://localhost/slash/test.jpg" />',
+			filter: [function(re) {
 				if (/\.png$/.test(this.uri)) this.cancel = true;
-			}
+				if (re.test(this.uri)) this.cancel = true;
+			}, new RegExp('/slash/.*')]
 		}, function(err) {
 			expect(err).to.be(null);
 		}).on('response', function(res) {
+			if (/\/slash\/.*/.test(res.uri)) {
+				hasSlash = true;
+			}
 			if (/\.png$/.test(res.uri)) {
 				haspng = true;
 			}
@@ -24,6 +29,7 @@ describe("request listener", function suite() {
 		})
 		.once('idle', function() {
 			expect(haspng).to.not.be.ok();
+			expect(hasSlash).to.not.be.ok();
 			expect(hasjs).to.be.ok();
 			done();
 		});
