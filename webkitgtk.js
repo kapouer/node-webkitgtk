@@ -125,9 +125,6 @@ function initialPriv() {
 		tickets: {},
 		cstamp: uran(),
 		idling: false,
-		previousEvents: {},
-		lastEvent: null,
-		nextEvents: {},
 		emittedEvents: {}
 	};
 }
@@ -145,9 +142,6 @@ function done(ev, cb) {
 }
 
 function emitLifeEvent(event) {
-	var priv = this.priv;
-	if (priv.lastEvent) priv.previousEvents[priv.lastEvent] = true;
-	priv.lastEvent = event;
 	debug('emit event', event);
 	this.emit(event);
 }
@@ -612,9 +606,7 @@ function load(uri, opts, cb) {
 	initWhen.call(this);
 
 	priv.state = LOADING;
-	priv.previousEvents = {};
 	priv.emittedEvents = {};
-	priv.lastEvent = null;
 	priv.allow = opts.allow || "all";
 	priv.stall = opts.stall || 1000;
 	priv.runTimeout = opts.runTimeout || 10000;
