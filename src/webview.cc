@@ -178,7 +178,7 @@ void WebView::unloaded() {
 	}
 }
 
-void timeout_cb(uv_timer_t *handle, int status) {
+void timeout_cb(uv_timer_t* handle) {
 	while (gtk_events_pending()) {
 		gtk_main_iteration_do(true);
 	}
@@ -217,6 +217,7 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 
 void WebView::InspectorClosed(WebKitWebInspector* inspector, gpointer data) {
 	WebView* self = (WebView*)data;
+	Nan::HandleScope scope;
 	Local<Value> argv[] = { Nan::New<String>("inspector").ToLocalChecked() };
 	self->closeCallback->Call(1, argv);
 }
@@ -228,6 +229,7 @@ void WebView::WindowClosed(GtkWidget* window, gpointer data) {
 	}
 	WebView* self = (WebView*)data;
 	self->window = NULL;
+	Nan::HandleScope scope;
 	Local<Value> argv[] = { Nan::New<String>("window").ToLocalChecked() };
 	self->closeCallback->Call(1, argv);
 }
@@ -242,7 +244,7 @@ gboolean WebView::Authenticate(WebKitWebView* view, WebKitAuthenticationRequest*
 		// webkit_authentication_request_authenticate(request, savedCred);
 		// return TRUE;
 	// }
-
+	Nan::HandleScope scope;
 	Local<Object> obj = Nan::New<FunctionTemplate>(WebAuthRequest::constructor)->GetFunction()->NewInstance();
 	WebAuthRequest* selfAuthRequest = node::ObjectWrap::Unwrap<WebAuthRequest>(obj);
 	selfAuthRequest->init(request);
@@ -266,6 +268,7 @@ void WebView::InitExtensions(WebKitWebContext* context, gpointer data) {
 }
 
 gboolean WebView::DecidePolicy(WebKitWebView* web_view, WebKitPolicyDecision* decision, WebKitPolicyDecisionType type, gpointer data) {
+	Nan::HandleScope scope;
 	WebView* self = (WebView*)data;
 	if (type == WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION) {
 		WebKitNavigationPolicyDecision* navDecision = WEBKIT_NAVIGATION_POLICY_DECISION(decision);
@@ -304,6 +307,7 @@ void WebView::handleEventMessage(WebKitUserContentManager* contman, WebKitJavasc
 	JSGlobalContextRef context = webkit_javascript_result_get_global_context(js_result);
 	JSValueRef value = webkit_javascript_result_get_value(js_result);
 	gchar* str_value = NULL;
+	Nan::HandleScope scope;
 	if (JSValueIsString(context, value)) {
 		JSStringRef js_str_value = JSValueToStringCopy(context, value, NULL);
 		gsize str_length = JSStringGetMaximumUTF8CStringSize(js_str_value);
@@ -334,6 +338,7 @@ void WebView::ResourceReceiveData(WebKitWebResource* resource, guint64 length, g
 	WebView* self = (WebView*)(vc->view);
 	const gchar* uri = webkit_web_resource_get_uri(resource);
 	int argc = 3;
+	Nan::HandleScope scope;
 	Local<Value> argv[] = {
 		Nan::New<String>((char*)vc->closure).ToLocalChecked(),
 		Nan::New<String>(uri).ToLocalChecked(),
@@ -348,6 +353,7 @@ void WebView::ResourceResponse(WebKitWebResource* resource, gpointer data) {
 	if (vc->closure == NULL) return;
 	WebView* self = (WebView*)(vc->view);
 	WebKitURIResponse* response = webkit_web_resource_get_response(resource);
+	Nan::HandleScope scope;
 	Local<Object> obj = Nan::New<FunctionTemplate>(WebResponse::constructor)->GetFunction()->NewInstance();
 	WebResponse* selfResponse = node::ObjectWrap::Unwrap<WebResponse>(obj);
 	selfResponse->init(resource, response);
@@ -384,6 +390,7 @@ void WebView::updateUri(const gchar* uri) {
 
 void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpointer data) {
 	WebView* self = (WebView*)data;
+	Nan::HandleScope scope;
 	Nan::Callback* cb;
 	const gchar* uri = webkit_web_view_get_uri(web_view);
 //	g_print("change %d %d %s %s\n", load_event, self->state, self->uri, uri);
@@ -449,6 +456,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 
 gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gchar* failing_uri, GError* error, gpointer data) {
 	WebView* self = (WebView*)data;
+	Nan::HandleScope scope;
 	Nan::Callback* cb;
 //  g_print("fail %d %d %s %s\n", load_event, self->state, self->uri, failing_uri);
 	if (self->state >= DOCUMENT_LOADING && g_strcmp0(failing_uri, self->uri) == 0) {
@@ -654,6 +662,7 @@ void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) 
 	WebView* self = (WebView*)(vc->view);
 	WebKitJavascriptResult* js_result = webkit_web_view_run_javascript_finish(WEBKIT_WEB_VIEW(object), result, &error);
 	if (js_result == NULL) { // if NULL, error is defined
+		Nan::HandleScope scope;
 		Nan::Utf8String* nStr = (Nan::Utf8String*)(vc->closure);
 		Local<Value> argv[] = {
 			Nan::Error(error->message),
@@ -698,6 +707,7 @@ void WebView::RunSyncFinished(GObject* object, GAsyncResult* result, gpointer da
 	if (WEBKIT_IS_WEB_VIEW(object) == FALSE) return;
 	WebKitWebView* pView = WEBKIT_WEB_VIEW(object);
 	if (pView != self->view) return;
+	Nan::HandleScope scope;
 	WebKitJavascriptResult* js_result = webkit_web_view_run_javascript_finish(pView, result, &error);
 
 	if (js_result == NULL) { // if NULL, error is defined
@@ -757,7 +767,7 @@ NAN_METHOD(WebView::RunSync) {
 
 cairo_status_t WebView::PngWrite(void* closure, const unsigned char* data, unsigned int length) {
 	WebView* self = (WebView*)closure;
-
+	Nan::HandleScope scope;
 	Nan::MaybeLocal<v8::Object> buff = Nan::CopyBuffer(
 		reinterpret_cast<char*>(const_cast<unsigned char*>(data)),
 		length
@@ -780,6 +790,7 @@ void WebView::PngFinished(GObject* object, GAsyncResult* result, gpointer data) 
 	} else {
 		status = CAIRO_STATUS_INVALID_STATUS;
 	}
+	Nan::HandleScope scope;
 	Local<Value> argv[] = {};
 	if (status == CAIRO_STATUS_SUCCESS) {
 		argv[0] = Nan::Null();
@@ -820,6 +831,7 @@ NAN_METHOD(WebView::Png) {
 void WebView::PrintFinished(WebKitPrintOperation* op, gpointer data) {
 	WebView* self = (WebView*)data;
 	if (self->printUri == NULL) return;
+	Nan::HandleScope scope;
 	Local<Value> argv[] = {};
 	self->printCallback->Call(0, argv);
 	delete self->printCallback;
@@ -829,6 +841,7 @@ void WebView::PrintFinished(WebKitPrintOperation* op, gpointer data) {
 }
 void WebView::PrintFailed(WebKitPrintOperation* op, gpointer error, gpointer data) {
 	WebView* self = (WebView*)data;
+	Nan::HandleScope scope;
 	Local<Value> argv[] = {
 		Nan::Error(((GError*)error)->message)
 	};

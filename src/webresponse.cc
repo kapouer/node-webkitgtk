@@ -66,6 +66,7 @@ void WebResponse::DataFinished(GObject* object, GAsyncResult* result, gpointer d
 	GError* error = NULL;
 	gsize length;
 	guchar* buf = webkit_web_resource_get_data_finish(self->resource, result, &length, &error);
+	Nan::HandleScope scope;
 	if (buf == NULL) { // if NULL, error is defined
 		Local<Value> argv[] = {
 			Nan::Error(error != NULL ? error->message : "Empty buffer")
