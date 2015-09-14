@@ -1,3 +1,5 @@
+[![NPM](https://nodei.co/npm/webkitgtk.png?downloads=true)](https://nodei.co/npm/webkitgtk/)
+
 node-webkitgtk
 ==============
 
