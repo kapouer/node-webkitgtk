@@ -10,6 +10,7 @@ var debug = require('debug')('webkitgtk');
 
 // available after init
 var debugStall;
+var debugWarn;
 var debugError;
 
 // internal state, does not match readyState
@@ -17,8 +18,6 @@ var CREATED = 0;
 var INITIALIZING = 1;
 var INITIALIZED = 2;
 var LOADING = 3;
-
-var RegEvents = /^(ready|load|idle|unload)$/;
 
 var availableDisplays = {};
 
@@ -97,7 +96,7 @@ WebKit.prototype.init = function(opts, cb) {
 		inspector: opts.inspector
 	}, function(err) {
 		priv.state = INITIALIZED;
-		cb(null, this);
+		cb(err, this);
 	}.bind(this));
 	return this;
 };
@@ -149,14 +148,14 @@ function emitLifeEvent(event) {
 function closedListener(what) {
 	var priv = this.priv;
 	switch (what) {
-		case "inspector":
-			priv.inspecting = false;
+	case "inspector":
+		priv.inspecting = false;
 		return;
-		case "window":
-			delete this.webview;
-			destroy.call(this, priv.destroyCb);
-			priv.tickets = cleanTickets(priv.tickets);
-			this.priv = initialPriv();
+	case "window":
+		delete this.webview;
+		destroy.call(this, priv.destroyCb);
+		priv.tickets = cleanTickets(priv.tickets);
+		this.priv = initialPriv();
 		break;
 	}
 }
@@ -223,7 +222,6 @@ function eventsDispatcher(err, json) {
 	if (obj.event) {
 		var from = args[0];
 		var url = args[1];
-		var info = args[2];
 		var debugArgs = ['event from dom', obj.event];
 		if (from) debugArgs.push('from', from);
 		if (url) debugArgs.push(url);
@@ -438,7 +436,7 @@ function responseDispatcher(curstamp, binding) {
 
 function isNetworkProtocol(uri) {
 	var p = uri.split(':', 1).pop();
-	if (p == 'http' || p == 'https') {
+	if (p == 'http' || p == 'https') {
 		return true;
 	} else {
 		debug("is not network protocol", p);
@@ -608,7 +606,7 @@ function load(uri, opts, cb) {
 	priv.state = LOADING;
 	priv.emittedEvents = {};
 	priv.allow = opts.allow || "all";
-	priv.stall = opts.stall || 1000;
+	priv.stall = opts.stall || 1000;
 	priv.runTimeout = opts.runTimeout || 10000;
 	priv.tickets = cleanTickets(priv.tickets);
 	priv.stamp = uran();
@@ -963,7 +961,7 @@ function prepareRun(script, ticket, args, priv) {
 	if (!async) {
 		if (isfunction) script = '(' + script + ')(' + args.join(', ') + ')';
 		else script = '(function() { return ' + script + '; })()';
-		var wrap = function() {
+		var wrapSync = function() {
 			var ticket = TICKET;
 			var stamp = STAMP;
 			var message = {stamp: stamp};
@@ -993,10 +991,10 @@ function prepareRun(script, ticket, args, priv) {
 		.replace('TICKET', JSON.stringify(ticket))
 		.replace('SCRIPT', script)
 		.replace('STAMP', JSON.stringify(priv.stamp));
-		obj.script = '(' + wrap + ')()';
+		obj.script = '(' + wrapSync + ')()';
 	} else {
 		obj.inscript = script.substring(0, 255); // useful for debugging timeouts
-		var wrap = function(err) {
+		var wrapAsync = function(err) {
 			var ticket = TICKET;
 			var stamp = STAMP;
 			var message = {stamp: stamp};
@@ -1021,7 +1019,7 @@ function prepareRun(script, ticket, args, priv) {
 		}.toString()
 		.replace('TICKET', JSON.stringify(ticket))
 		.replace('STAMP', JSON.stringify(priv.stamp));
-		args.push(wrap);
+		args.push(wrapAsync);
 		obj.script = '(' + script + ')(' + args.join(', ') + ');';
 	}
 	return obj;
@@ -1038,7 +1036,7 @@ WebKit.prototype.png = function(obj, cb) {
 		cb(new Error("png() first arg must be either a writableStream or a file path"));
 		return this;
 	}
-	cb = cb || noop;
+	cb = cb || noop;
 	png.call(this, wstream, cb);
 	return this;
 };
@@ -1229,7 +1227,6 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 	else window.addEventListener('load', loadListener, false);
 
 	function disableExternalResources() {
-		var count = 0;
 		function jumpAuto(node) {
 			var att = {
 				body: "onload",
@@ -1246,7 +1243,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 			}
 		}
 		observer = new MutationObserver(function(mutations) {
-			var node, val, list, att;
+			var node, list;
 			for (var m=0; m < mutations.length; m++) {
 				list = mutations[m].addedNodes;
 				if (!list) continue;
