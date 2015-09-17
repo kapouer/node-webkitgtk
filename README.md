@@ -17,6 +17,12 @@ it doesn't embed static libraries, meaning it plugs very nicely into
 system-installed libraries.
 
 
+Node.js compatibility
+---------------------
+
+Tested with Node.js version 0.10.29 or version 4.0.0.
+
+
 New in version 3
 ----------------
 
