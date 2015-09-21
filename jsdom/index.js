@@ -81,7 +81,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			} catch(ex) {
 				ret = JSON.stringify({ticket: ticket, error: ex.toString()});
 			}
-			window.webkit.messageHandlers.events.postMessage(ret);
+			if (ret !== undefined) window.webkit.messageHandlers.events.postMessage(ret);
 		};
 
 		if (cookies) {
