@@ -845,7 +845,7 @@ function destroy(cb) {
 		if (this.webview.destroy) this.webview.destroy();
 		else setImmediate(closedListener.bind(this, 'window'));
 	} else {
-		setImmediate(cb);
+		if (cb) setImmediate(cb);
 	}
 	if (this.priv.xvfb) {
 		this.priv.xvfb.kill();
