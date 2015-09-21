@@ -15,6 +15,16 @@ Nan::Persistent<Function> WebView::constructor;
 
 static uv_timer_t timeout_handle;
 
+#if UV_VERSION_MAJOR >= 1
+void timeout_cb(uv_timer_t* handle) {
+#else
+void timeout_cb(uv_timer_t* handle, int status) {
+#endif
+	while (gtk_events_pending()) {
+		gtk_main_iteration_do(true);
+	}
+}
+
 WebView::WebView(Handle<Object> opts) {
 	this->cstamp = getStr(opts, "cstamp");
 	this->receiveDataCallback = getCb(opts, "receiveDataListener");
@@ -33,6 +43,9 @@ WebView::WebView(Handle<Object> opts) {
 	idResourceResponse = 0;
 	idEventsHandler = 0;
 
+	if (instances.size() == 0) {
+		uv_timer_start(&timeout_handle, timeout_cb, 0, 5);
+	}
 	instances.insert(ObjMapPair(this->cstamp, this));
 
 	WebKitWebContext* context = webkit_web_context_get_default();
@@ -151,8 +164,10 @@ void WebView::destroy() {
 	if (eventsCallback != NULL) delete eventsCallback;
 	if (authCallback != NULL) delete authCallback;
 	if (closeCallback != NULL) delete closeCallback;
-
 	instances.erase(cstamp);
+	if (instances.size() == 0) {
+		uv_timer_stop(&timeout_handle);
+	}
 }
 
 WebView::~WebView() {
@@ -175,16 +190,6 @@ void WebView::unloaded() {
 		webkit_user_content_manager_remove_all_scripts(contman);
 		webkit_user_content_manager_remove_all_style_sheets(contman);
 		webkit_user_content_manager_unregister_script_message_handler(contman, "events");
-	}
-}
-
-#if UV_VERSION_MAJOR >= 1
-void timeout_cb(uv_timer_t* handle) {
-#else
-void timeout_cb(uv_timer_t* handle, int status) {
-#endif
-	while (gtk_events_pending()) {
-		gtk_main_iteration_do(true);
 	}
 }
 
@@ -216,7 +221,6 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 
 	gtk_init(0, NULL);
 	uv_timer_init(uv_default_loop(), &timeout_handle);
-	uv_timer_start(&timeout_handle, timeout_cb, 0, 5);
 }
 
 void WebView::InspectorClosed(WebKitWebInspector* inspector, gpointer data) {
@@ -991,7 +995,6 @@ NAN_METHOD(WebView::Inspect) {
 }
 
 void WebView::Exit(void*) {
-	uv_timer_stop(&timeout_handle);
 	Nan::HandleScope scope;
 	for (ObjMap::iterator it = instances.begin(); it != instances.end(); it++) {
 		if (it->second != NULL) it->second->destroy();
