@@ -541,8 +541,8 @@ NAN_METHOD(WebView::Load) {
 		// nothing to do
 	}
 	// default to decorated if not offscreen
-	if (NanBooleanOptionValue(opts, H("decorated"), !self->offscreen)) {
-		gtk_window_set_decorated(GTK_WINDOW(self->window), TRUE);
+	if (!self->offscreen) {
+		gtk_window_set_decorated(GTK_WINDOW(self->window), NanBooleanOptionValue(opts, H("decorated"), TRUE));
 	}
 
 	int w = NanUInt32OptionValue(opts, H("width"), 1024);
