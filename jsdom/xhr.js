@@ -40,7 +40,11 @@ module.exports = function handleXhr(window) {
 			});
 		}
 		xhr.open = function(method, url) {
-			privUrl = (new window.URL(url)).href;
+			try {
+				privUrl = (new window.URL(url, window.document.URL)).href;
+			} catch(e) {
+				console.error(e);
+			}
 			return xhrOpen.apply(this, Array.prototype.slice.call(arguments, 0));
 		}.bind(xhr);
 		xhr.setRequestHeader = function(name, val) {
