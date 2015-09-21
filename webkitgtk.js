@@ -209,9 +209,15 @@ function eventsDispatcher(err, json) {
 		// no stamp means nothing is expected
 		return;
 	}
-	var obj = JSON.parse(json);
+	var obj, parseError;
+	try {
+		obj = JSON.parse(json);
+	} catch(e) {
+		parseError = e;
+	}
+
 	if (!obj) {
-		debugError("received invalid event", json);
+		debugError("received invalid event", json, parseError);
 		return;
 	}
 	if (obj.stamp && obj.stamp != priv.stamp) {
