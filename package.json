@@ -18,8 +18,8 @@
     "q": "^1.4.1",
     "tosource": "^1.0.0"
   },
-  "engines" : {
-    "node" : ">=0.10.29"
+  "engines": {
+    "node": ">=0.10.29"
   },
   "optionalDependencies": {
     "headless": "^1.0.0",
