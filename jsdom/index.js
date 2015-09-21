@@ -104,7 +104,10 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			}
 		};
 
-		if (opts.script) window.run(opts.script);
+		if (opts.script) {
+			if (!window.run) window.run = runShim.bind(null,window);
+			window.run(opts.script);
+		}
 		var runlist = this._webview._runlist;
 		delete this._webview;
 		this.webview = window;
@@ -136,7 +139,8 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 
 	setImmediate(function() {
 		if (opts.content != null) {
-			this.webview = jsdom(opts.content, jsdomOpts).parentWindow;
+			var doc = jsdom(opts.content, jsdomOpts);
+			this.webview = doc.parentWindow || doc.defaultView;
 		} else {
 			// trick to have a main uri before loading main doc
 			this.webview.loading = true;
@@ -151,7 +155,8 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 					if (typeof status == "string") status = 0;
 				}
 				if (err || status != 200) return cb(err, status);
-				this.webview = jsdom(body, jsdomOpts).parentWindow;
+				var doc = jsdom(body, jsdomOpts);
+				this.webview = doc.parentWindow || doc.defaultView;
 			}.bind(this));
 			this.webview.stop = function stop(cb) {
 				if (this.webview.loading) {
@@ -169,6 +174,12 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 };
 
 };
+
+function runShim(window, script) {
+	var context = require('vm').createContext(window);
+	var vmscript = new (require('vm').Script)(script);
+	return vmscript.runInContext(context);
+}
 
 function HTTPError(code) {
 	Error.call(this, httpCodes[code]);
