@@ -672,7 +672,14 @@ function load(uri, opts, cb) {
 	if (opts.console && !priv.jsdom) scripts.push(consoleEmitter);
 	scripts.push({
 		fn: stateTracker,
-		args: [opts.preload && !priv.jsdom, opts.charset || "utf-8", priv.cstamp, priv.stall, 200, 200]
+		args: [
+			opts.preload && !priv.jsdom,
+			opts.charset || "utf-8",
+			priv.cstamp,
+			priv.stall,
+			opts.cutTimeout != null ? opts.cutTimeout : 200,
+			opts.cutInterval != null ? opts.cutInterval : 200,
+		]
 	});
 	if (opts.script) scripts.push(Buffer.isBuffer(opts.script) ? opts.script.toString() : opts.script);
 

@@ -267,6 +267,16 @@ load(uri, opts, cb) options
   requests not receiving data for `stall` milliseconds are not taken into
   account for deciding `idle` events.
 
+- cutInterval  
+  number, default 200  
+  wait all intervals less than cutInterval before allowing idle.  
+  Set to 0 to ignore all.
+
+- cutTimeout  
+  number, default 200  
+  wait all timeouts less than cutTimeout before allowing idle.  
+  Set to 0 to ignore all.
+
 - console  
   boolean, default false  
   Send `console` events (see below).  
