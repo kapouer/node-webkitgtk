@@ -676,8 +676,8 @@ function load(uri, opts, cb) {
 			opts.charset || "utf-8",
 			priv.cstamp,
 			priv.stall,
-			opts.cutTimeout != null ? opts.cutTimeout : 200,
-			opts.cutInterval != null ? opts.cutInterval : 200,
+			opts.stallTimeout != null ? opts.stallTimeout : 100,
+			opts.stallInterval != null ? opts.stallInterval : 1000
 		]
 	});
 	if (opts.script) scripts.push(Buffer.isBuffer(opts.script) ? opts.script.toString() : opts.script);
@@ -1316,6 +1316,13 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 		if (!requests[uri]) requests[uri] = {count: 0};
 		requests[uri].stall = true;
 	}
+
+	function checkTimeouts() {
+		delete timeouts.to;
+		timeouts.ignore = true;
+		if (lastEvent == EV.load) check('timeout');
+	}
+
 	function doneTimeout(id) {
 		var t;
 		var obj = id != null && timeouts[id];
@@ -1323,7 +1330,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 			if (obj.stall) timeouts.stall--;
 			delete timeouts[id];
 			timeouts.len--;
-			if (timeouts.len <= timeouts.stall) {
+			if (timeouts.len <= timeouts.stall && !timeouts.ignore) {
 				check('timeout');
 			}
 			t = obj.t;
@@ -1364,6 +1371,12 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 		return w.clearTimeout.call(window, t);
 	};
 
+	function checkIntervals() {
+		delete intervals.to;
+		intervals.ignore = true;
+		if (lastEvent == EV.load) check('interval');
+	}
+
 	window.setInterval = function(fn, interval) {
 		var args = Array.prototype.slice.call(arguments, 0);
 		var stall = false;
@@ -1384,7 +1397,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 			if (obj.stall) intervals.stall--;
 			delete intervals[id];
 			intervals.len--;
-			if (intervals.len <= intervals.stall) {
+			if (intervals.len <= intervals.stall && !intervals.ignore) {
 				check('interval');
 			}
 			t = obj.t;
@@ -1522,7 +1535,8 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 		};
 		if (lastEvent <= lastRunEvent) {
 			if (lastEvent == EV.load) {
-				if (timeouts.len <= timeouts.stall && intervals.len <= intervals.stall
+				if ((timeouts.ignore || timeouts.len <= timeouts.stall)
+					&& (intervals.ignore || intervals.len <= intervals.stall)
 					&& frames.len == 0 && requests.len <= requests.stall) {
 					lastEvent += 1;
 					emit("idle", from, url, info);
@@ -1535,6 +1549,8 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 			} else if (lastEvent == EV.ready && hasLoaded) {
 				lastEvent += 1;
 				emit("load", from, url, info);
+				intervals.to = w.setTimeout.call(window, checkIntervals, stallInterval);
+				timeouts.to = w.setTimeout.call(window, checkTimeouts, stallTimeout);
 			} else {
 				return;
 			}
