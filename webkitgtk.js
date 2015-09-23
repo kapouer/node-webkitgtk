@@ -792,9 +792,9 @@ WebKit.prototype.stop = function(cb) {
 WebKit.prototype.unload = function(cb) {
 	var priv = this.priv;
 	this.readyState = "unloading";
-	if (priv.stallInterval) {
-		clearInterval(priv.stallInterval);
-		delete priv.stallInterval;
+	if (priv.responseInterval) {
+		clearInterval(priv.responseInterval);
+		delete priv.responseInterval;
 	}
 	if (priv.uris) delete priv.uris;
 	cb = cb || noop;
