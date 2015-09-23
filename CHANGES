@@ -163,3 +163,15 @@ One must now use the load method options `filter` which can be given
 additional arguments with `filterArgs`.
 This is a major change and also a performance improvement.
 
+
+3.1.0
+-----
+
+Crucial change in the way intervals and timeouts account for idle event,
+with the introduction of two load parameters: stallTimeout, stallInterval.
+They ensure current timeouts or intervals will not prevent an idle
+after those respective durations, thus preventing a never-occuring idle
+event on some sites.
+
+This change breaks version 3.0.6 with its cutInterval, cutTimeout - they
+were a less efficient attempt at solving the same problem.
