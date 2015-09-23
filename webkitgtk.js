@@ -415,7 +415,6 @@ function responseDispatcher(curstamp, binding) {
 		}
 	}
 
-
 	var stalled = false;
 	var decrease = 0;
 	if (info.main || !info.remote || info.ignore) {
@@ -617,11 +616,11 @@ function load(uri, opts, cb) {
 	priv.tickets = cleanTickets(priv.tickets);
 	priv.stamp = uran();
 
-	if (priv.stallInterval) {
-		clearInterval(priv.stallInterval);
-		delete priv.stallInterval;
+	if (priv.responseInterval) {
+		clearInterval(priv.responseInterval);
+		delete priv.responseInterval;
 	}
-	priv.stallInterval = setInterval(function() {
+	priv.responseInterval = setInterval(function() {
 		var now = Date.now();
 		var info;
 		for (var uri in priv.uris) {
