@@ -315,6 +315,10 @@ init(opts, cb) options
   number, 32
   Framebuffer pixel depth
 
+- offscreen  
+  boolean, default true  
+  By default, nothing is shown on display. Set to false to display a window.
+
 - verbose  
   boolean, default false  
   log client errors and stalled requests, otherwise available as
