@@ -3,6 +3,21 @@ var expect = require('expect.js');
 var fs = require('fs');
 
 describe("wait for event", function suite() {
+	it("idle then wait again for idle should call immediately", function(done) {
+		WebKit.load("http://localhost", {content: '<p>test</p>'}).when('idle', function(wcb) {
+			setTimeout(function() {
+				var startTime = Date.now();
+				this.when('idle', function(wcb) {
+					var stopTime = Date.now();
+					expect(stopTime - startTime).to.be.lessThan(10);
+					wcb();
+					done();
+				});
+			}.bind(this), 50);
+			wcb();
+		});
+	});
+
 	it("load then call png", function(done) {
 		this.timeout(10000);
 		var filepath = __dirname + '/shots/testwait.png';
