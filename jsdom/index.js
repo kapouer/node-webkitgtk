@@ -105,7 +105,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		};
 
 		if (opts.script) {
-			if (!window.run) window.run = runShim.bind(null,window);
+			if (!window.run) window.run = runShim.bind(null, require('vm').createContext(window));
 			window.run(opts.script);
 		}
 		var runlist = this._webview._runlist;
@@ -175,8 +175,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 
 };
 
-function runShim(window, script) {
-	var context = require('vm').createContext(window);
+function runShim(context, script) {
 	var vmscript = new (require('vm').Script)(script);
 	return vmscript.runInContext(context);
 }
