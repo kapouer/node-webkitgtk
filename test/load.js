@@ -129,18 +129,6 @@ describe("load method", function suite() {
 		});
 	});
 
-	it("should receive console events", function(done) {
-		WebKit.load('http://localhost', {
-			content: '<html><body><script type="text/javascript">console.log(window.navigator, "two");</script></body></html>',
-			console: true
-		}).on('console', function(level, nav, two) {
-			expect(level).to.be('log');
-			expect(nav.appName).to.be('Netscape');
-			expect(two).to.be('two');
-			done();
-		});
-	});
-
 	it("should fail to load immediately", function(done) {
 		// for super weird reasons this test fails because of the particular
 		// way the url is crafted (length of each component is critical).
