@@ -1016,7 +1016,14 @@ function prepareRun(script, ticket, args, priv) {
 				message.ticket = ticket;
 				if (err) message.error = err;
 			}
-			message.args = Array.prototype.slice.call(arguments, 1);
+			message.args = Array.prototype.slice.call(arguments, 1).map(function(arg) {
+				try {
+					JSON.stringify(arg);
+				} catch(ex) {
+					return undefined;
+				}
+				return arg;
+			});
 			var msg;
 			try {
 				msg = JSON.stringify(message);
