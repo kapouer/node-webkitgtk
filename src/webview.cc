@@ -134,7 +134,6 @@ NAN_METHOD(WebView::Destroy) {
 	Nan::HandleScope scope;
 	WebView* self = ObjectWrap::Unwrap<WebView>(info.This());
 	self->destroy();
-	return;
 }
 
 void WebView::destroy() {
