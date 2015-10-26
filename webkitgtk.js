@@ -1017,6 +1017,11 @@ function prepareRun(script, ticket, args, priv) {
 				if (err) message.error = err;
 			}
 			message.args = Array.prototype.slice.call(arguments, 1).map(function(arg) {
+				if (arg instanceof window.Node) {
+					var cont = arg.ownerDocument.createElement('div');
+					cont.appendChild(arg.cloneNode(true));
+					return cont.innerHTML;
+				}
 				try {
 					JSON.stringify(arg);
 				} catch(ex) {
