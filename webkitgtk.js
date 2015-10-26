@@ -20,6 +20,7 @@ var INITIALIZED = 2;
 var LOADING = 3;
 
 var availableDisplays = {};
+var instances = 0;
 
 var hasRunEvent = '(' + function(name, event) {
 	try {
@@ -111,6 +112,7 @@ WebKit.prototype.binding = function(opts, cfg, cb) {
 		var Bindings = require(__dirname + '/lib/webkitgtk.node');
 		cfg.webextension = __dirname + '/lib/ext';
 		this.webview = new Bindings(cfg);
+		instances++;
 		debug('new instance created');
 		cb();
 	}.bind(this));
@@ -854,12 +856,16 @@ function cleanTickets(tickets) {
 function destroy(cb) {
 	if (this.webview) {
 		this.priv.destroyCb = cb;
-		if (this.webview.destroy) this.webview.destroy();
-		else setImmediate(closedListener.bind(this, 'window'));
+		if (this.webview.destroy) {
+			this.webview.destroy();
+			instances--;
+		}	else {
+			setImmediate(closedListener.bind(this, 'window'));
+		}
 	} else {
 		if (cb) setImmediate(cb);
 	}
-	if (this.priv.xvfb) {
+	if (this.priv.xvfb && instances == 0) {
 		this.priv.xvfb.kill();
 	}
 }
