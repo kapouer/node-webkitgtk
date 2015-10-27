@@ -8,7 +8,7 @@ describe("uri property", function suite() {
 		expect(view.uri).to.be(undefined);
 	});
 	it("should be undefined after initialization and before load", function(done) {
-		WebKit(0, function(err, w) {
+		WebKit(function(err, w) {
 			expect(w.uri).to.be(undefined);
 			done();
 		});

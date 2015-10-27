@@ -5,7 +5,7 @@ var fs = require('fs');
 describe("destroy method", function suite() {
 	it("should be idempotent", function(done) {
 		var view = new WebKit();
-		view.init(0, function(err) {
+		view.init(function(err) {
 			expect(err).to.not.be.ok();
 			view.destroy(function(err) {
 				expect(err).to.not.be.ok();

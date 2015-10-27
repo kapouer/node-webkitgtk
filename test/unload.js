@@ -29,7 +29,7 @@ describe("unload method", function suite() {
 	it("should not need to remove listeners after unload", function(done) {
 		this.timeout(10000);
 		var v = new WebKit();
-		v.init(0, function(err) {
+		v.init(function(err) {
 			v.load('http://google.com', {allow: "none"});
 			v.once('ready', function() {
 				v.unload(function(err) {
