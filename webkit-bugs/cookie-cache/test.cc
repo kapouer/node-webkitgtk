@@ -78,7 +78,6 @@ static void loadblanksetcoookie(const gchar* url) {
 	g_signal_connect(view, "load-changed", G_CALLBACK(change), NULL);
 	WebKitSettings* settings = webkit_web_view_get_settings(view);
 	g_object_set(settings,
-		"enable-private-browsing", TRUE,
 		"enable-plugins", FALSE,
 		"enable-javascript", TRUE,
 		"enable-page-cache", FALSE,
