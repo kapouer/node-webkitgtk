@@ -656,7 +656,15 @@ function load(uri, opts, cb) {
 	if (opts.console && this.listeners('console').length == 0) {
 		this.on('console', function(level) {
 			if (this.listeners('console').length <= 1) {
-				console[level].apply(null, Array.prototype.slice.call(arguments, 1));
+				var args = Array.prototype.slice.call(arguments, 1).map(function(arg) {
+					if (arg && arg.stack && arg.name && arg.message) {
+						return arg.name + ': ' + arg.message + '\n ' + arg.stack.replace(/\n/g, '\n ');
+					} else {
+						return arg;
+					}
+				});
+				var err = args.length > 0 && args[0];
+				console[level].apply(null, args);
 			}
 		});
 	}
