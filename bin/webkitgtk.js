@@ -37,7 +37,7 @@ if (!url) {
 	var urlObj = URL.parse(url);
 	if (!urlObj.protocol) url = "http://" + url;
 }
-console.log("loading url", url, opts);
+
 var inst = W.load(url, {
 	content: opts.location ? "" : undefined,
 	offscreen: !opts.show
@@ -48,12 +48,15 @@ var inst = W.load(url, {
 				console.log("cmd is SCOPE");
 			}
 			var fun = function(cmd) {
-				if (!cmd) return {window:true};
-				var obj = {};
-				for (var k in cmd) {
-					obj[k] = true;
+				if (typeof cmd == "object") {
+					var obj = {};
+					for (var k in cmd) {
+						obj[k] = true;
+					}
+					return obj;
+				} else {
+					return cmd;
 				}
-				return obj;
 			}.toString();
 			inst.run('(' + fun + ')(' + cmd + ')', function(err, result) {
 				if (err) console.error(err);
