@@ -175,3 +175,10 @@ event on some sites.
 
 This change breaks version 3.0.6 with its cutInterval, cutTimeout - they
 were a less efficient attempt at solving the same problem.
+
+
+3.2.0
+-----
+
+With a REPL installed as "webkitgtk".
+See `webkitgtk --help`
