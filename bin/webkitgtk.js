@@ -68,7 +68,7 @@ if (!url) {
 }
 
 var inst = W.load(url, {
-	content: opts.location ? "" : undefined,
+	content: opts.location ? "<html></html>" : undefined,
 	offscreen: !opts.show,
 	images: opts.show,
 	filter: !opts.show && function() {
