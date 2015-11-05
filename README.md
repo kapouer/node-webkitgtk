@@ -5,6 +5,9 @@ node-webkitgtk
 
 Pilot webkitgtk from Node.js with a simple API.
 
+Also offers a command-line REPL, able to display (or not) the
+current window, see `webkitgtk --help` for details.
+
 Falls back to jsdom if the module cannot be compiled (with obvious
 limitations like inability to render the DOM nor output png or pdf).
 
