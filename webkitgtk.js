@@ -142,11 +142,6 @@ function done(ev, cb) {
 	cb();
 }
 
-function emitLifeEvent(event) {
-	debug('emit event', event);
-	this.emit(event);
-}
-
 function closedListener(what) {
 	var priv = this.priv;
 	switch (what) {
@@ -194,7 +189,7 @@ function checkIdle() {
 	if (priv.idling && priv.pendingRequests == 0) {
 		this.readyState = "idling";
 		priv.idling = false;
-		emitLifeEvent.call(this, 'idle');
+		this.emit('idle');
 	}
 }
 
@@ -237,10 +232,10 @@ function eventsDispatcher(err, json) {
 		args.unshift(obj.event);
 		if (obj.event == "ready") {
 			this.readyState = "interactive";
-			emitLifeEvent.call(this, obj.event);
+			this.emit(obj.event);
 		} else  if (obj.event == "load") {
 			this.readyState = "complete";
-			emitLifeEvent.call(this, obj.event);
+			this.emit(obj.event);
 		} else if (obj.event == "idle") {
 			priv.idling = true;
 			checkIdle.call(this);
@@ -840,7 +835,7 @@ WebKit.prototype.unload = function(cb) {
 			this.status = null;
 			priv.state = INITIALIZED;
 			priv.tickets = cleanTickets(priv.tickets);
-			emitLifeEvent.call(this, 'unload');
+			this.emit('unload');
 			this.removeAllListeners();
 			this.promises = null;
 			setImmediate(cb);
