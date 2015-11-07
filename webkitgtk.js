@@ -5,7 +5,7 @@ var fs = require('fs');
 var path = require('path');
 var url = require('url');
 var toSource = require('tosource');
-var Q = require('q');
+if (!global.Promise) global.Promise = require('q').Promise;
 var debug = require('debug')('webkitgtk');
 
 // available after init
@@ -545,35 +545,38 @@ function initPromise(ev) {
 	if (ev == "idle") prev = this.promises.load;
 	if (ev == "load") prev = this.promises.ready;
 
-	var evDfr = Q.defer();
-	var list = [evDfr.promise];
-	if (prev) list.push(prev);
-
-	this.promises[ev] = Q.all(list);
+	var holder = {};
+	this.promises[ev] = new Promise(function(resolve) {
+		holder.resolve = resolve;
+	});
+	this.promises[ev].pending = true;
+	if (prev) this.promises[ev].then(prev);
 
 	this.once(ev, function() {
 		var stamp = this.priv.stamp;
-		this.promises[ev].fail(function(err) {
+		this.promises[ev].catch(function(err) {
 			if (err) console.error(err);
-		}).fin(function() {
-			if (stamp != this.priv.stamp) {
+		}).then(function() {
+			if (stamp == this.priv.stamp) {
+				done.call(this, ev, function(err) {
+					if (err) console.error(err);
+				});
+			} else {
 				// typically when a queued listener calls unload/load right away
-				return;
 			}
-			done.call(this, ev, function(err) {
-				if (err) console.error(err);
-			});
 		}.bind(this));
-		evDfr.resolve();
+		this.promises[ev].pending = false;
+		holder.resolve();
 	});
 }
 
 function initWhen() {
-	if (!this.promises) this.promises = {};
+	if (!this.promises) {
+		this.promises = {};
+	}
 	['ready', 'load', 'idle'].forEach(function(ev) {
 		var promise = this.promises[ev];
-		// get rid of non-pending promises
-		if (!promise || !promise.isPending()) {
+		if (!promise || !promise.pending) {
 			initPromise.call(this, ev);
 		}
 	}.bind(this));
@@ -582,11 +585,19 @@ function initWhen() {
 WebKit.prototype.when = function(ev, fn) {
 	var self = this;
 	if (!this.promises) initWhen.call(this);
+	var carry = this.promises[ev].pending;
 	this.promises[ev] = this.promises[ev].then(function() {
-		var deferred = Q.defer();
-		fn.call(self, deferred.makeNodeResolver());
-		return deferred.promise;
-	});
+		return new Promise(function(resolve, reject) {
+			fn.call(self, function(err) {
+				if (err) reject(err);
+				else resolve(Array.prototype.slice.call(arguments, 1));
+			});
+		});
+	}).catch(function(err) {
+		// just report errors ?
+		console.error(err);
+	}.bind(this));
+	this.promises[ev].pending = carry;
 	return this;
 };
 
