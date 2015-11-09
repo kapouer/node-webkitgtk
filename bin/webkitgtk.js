@@ -67,7 +67,7 @@ if (!url) {
 	if (!urlObj.protocol) url = "http://" + url;
 }
 
-var inst = W.load(url, {
+var wk = W.load(url, {
 	content: opts.location ? "<html></html>" : undefined,
 	offscreen: !opts.show,
 	images: opts.show,
@@ -81,40 +81,85 @@ var inst = W.load(url, {
 	decorated: !opts.bare,
 	transparent: opts.transparent
 }, function(err) {
-	repl.start({
-		eval: function(cmd, context, filename, cb) {
-			if (cmd == ".scope") {
-				console.log("cmd is SCOPE");
-			}
-			var fun = function(cmd) {
-				if (typeof cmd == "object") {
-					var obj = {};
-					for (var k in cmd) {
-						obj[k] = true;
-					}
-					return obj;
-				} else {
-					return cmd;
-				}
-			}.toString();
-			inst.run('(' + fun + ')(' + cmd + ')', function(err, result) {
-				if (err) console.error(err);
-				cb(err, result);
-			});
-		}
-	}).on('exit', function() {
-		inst.unload(function() {
-			inst.destroy();
-		});
-	});
+	start(wk);
 });
 
+function dumpCode(cmd) {
+	var obj = eval(cmd);
+	if (typeof obj == "object") {
+		var keys = [];
+		for (var k in obj) {
+			keys.push(k);
+		}
+		return keys;
+	} else {
+		return obj;
+	}
+}
+
+function start(wk) {
+	var pr = repl.start({
+		eval: function(cmd, context, filename, cb) {
+			if (cmd == ".scope") {
+				cmd = "window";
+				wk.run(function() {
+					return Object.keys(window);
+				}, cb);
+			} else {
+				wk.run(function(cmd) {
+					var obj = eval(cmd);
+					if (/string|number|boolean/.test(typeof obj)) return obj;
+					var ret = {}, val;
+					for (var k in obj) {
+						try {
+							val = obj[k];
+						} catch(e) {
+							val = null;
+						}
+						if (!val || /string|number|boolean/.test(typeof val)) {
+							ret[k] = val;
+							continue;
+						}
+						try {
+							var tmp = JSON.stringify(val);
+							if (tmp != null) {
+								ret[k] = val;
+								continue;
+							}
+						} catch(e) {
+						}
+
+						if (val.nodeType) {
+							try {
+								var div = val.ownerDocument.createElement('div');
+								div.appendChild(val.cloneNode(false));
+								ret[k] = div.innerHTML;
+							} catch(e) {
+							}
+						}
+						if (ret[k] == null) ret[k] = val + "";
+					}
+					return ret;
+				}, cmd, function(err, result) {
+					if (err) console.error(err);
+					cb(err, result);
+				});
+			}
+		}
+	}).on('exit', function() {
+		wk.unload(function() {
+			wk.destroy();
+		});
+	});
+	pr.context = {};
+}
+
 if (opts.verbose) {
-	inst.on('response', function(res) {
+	wk.on('response', function(res) {
 		var list = [res.status < 400 ? res.status : chalk.red(res.status)];
 		var type = res.headers['Content-Type'];
 		if (type) list.push(chalk.gray(onlyMime(type)));
-		list.push(onlyPath(inst.uri, res.uri), chalk.green(res.length));
+		list.push(onlyPath(wk.uri, res.uri), chalk.green(res.length));
 		console.info(list.join(' '));
 	});
 }
@@ -130,3 +175,4 @@ function onlyPath(root, str) {
 	if (!str) str = ".";
 	return str;
 }
+
