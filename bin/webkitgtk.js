@@ -107,7 +107,10 @@ function start(wk) {
 				}, cb);
 			} else {
 				wk.run(function(cmd) {
-					var obj = eval(cmd);
+					// this trick allows us to eval in global context
+					// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval
+					var geval = eval;
+					var obj = geval(cmd);
 					if (/string|number|boolean/.test(typeof obj)) return obj;
 					var ret = {}, val;
 					for (var k in obj) {
