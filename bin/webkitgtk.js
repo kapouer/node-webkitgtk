@@ -12,8 +12,7 @@ try {
 		chalk[col] = function(str) { return str; };
 	});
 }
-
-var opts = dash.parse({options: [
+var parser = dash.createParser({options: [
 	{
 		names: ['help', 'h'],
 		type: 'bool',
@@ -55,6 +54,14 @@ var opts = dash.parse({options: [
 		help: 'Transparent window'
 	}
 ]});
+
+var opts = parser.parse(process.argv);
+
+if (opts.help) {
+	var help = parser.help({includeEnv: true}).trimRight();
+	console.log('usage: node foo.js [OPTIONS]\n' + 'options:\n' + help);
+	process.exit(0);
+}
 
 var W = require('../');
 
