@@ -29,6 +29,11 @@ var parser = dash.createParser({options: [
 		help: 'Log requests and responses'
 	},
 	{
+		names: ['quiet', 'q'],
+		type: 'bool',
+		help: 'Disable console'
+	},
+	{
 		names: ['show'],
 		type: 'bool',
 		help: 'Show window'
@@ -52,6 +57,21 @@ var parser = dash.createParser({options: [
 		names: ['transparent'],
 		type: 'bool',
 		help: 'Transparent window'
+	},
+	{
+		names: ['scripts'],
+		type:	'arrayOfString',
+		help:	'URL list of scripts to load'
+	},
+	{
+		names: ['command', 'e'],
+		type:	'string',
+		help:	'execute a command'
+	},
+	{
+		names: ['style'],
+		type:	'string',
+		help:	'a css string'
 	}
 ]});
 
@@ -81,14 +101,38 @@ var wk = W.load(url, {
 	filter: !opts.show && function() {
 		if (/\.css(\?.*)?$/.test(this.uri)) this.cancel = true;
 	},
-	console: opts.verbose,
+	console: !opts.quiet,
 	inspector: opts.show,
+	style: opts.style,
 	width: opts.width,
 	height: opts.height,
 	decorated: !opts.bare,
 	transparent: opts.transparent
 }, function(err) {
-	start(wk);
+	if (opts.scripts) {
+		wk.run(function(scripts, done) {
+			Promise.all(scripts.map(function(url) {
+				return new Promise(function(resolve, reject) {
+					var script = document.createElement('script');
+					document.head.appendChild(script);
+					script.onload = function() {
+						script.remove();
+						resolve();
+					};
+					script.onerror = function() {
+						script.remove();
+						reject(new Error("Failed load of " + url));
+					};
+					script.src = url;
+				});
+			})).then(done.bind(null, null)).catch(done);
+		}, [opts.scripts], function(err) {
+			if (err) console.error(err);
+			start(wk);
+		});
+	} else {
+		start(wk);
+	}
 });
 
 function dumpCode(cmd) {
@@ -162,6 +206,9 @@ function start(wk) {
 		});
 	});
 	pr.context = {};
+	if (opts.command) pr.eval(opts.command, {}, 'opts', function(err) {
+		if (err) console.error(err);
+	});
 }
 
 if (opts.verbose) {
