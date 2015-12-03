@@ -140,4 +140,15 @@ describe("run method", function suite() {
 		});
 	});
 
+	it("should run simple script", function(done) {
+		WebKit.load("http://localhost", {script: "(function() {window.test = true;})()", content: "<html></html>"}).once('ready', function() {
+			this.run(function() {
+				return window.test;
+			}, function(err, val) {
+				expect(val).to.be.ok();
+				done();
+			});
+		});
+	});
+
 });
