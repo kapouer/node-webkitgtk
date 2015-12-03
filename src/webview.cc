@@ -576,6 +576,7 @@ NAN_METHOD(WebView::Load) {
 		"enable-page-cache", FALSE,
 		"enable-write-console-messages-to-stdout", FALSE,
 		"enable-offline-web-application-cache", FALSE,
+		"allow-file-access-from-file-urls", NanBooleanOptionValue(opts, H("localAccess"), false),
 		"auto-load-images", NanBooleanOptionValue(opts, H("images"), true),
 		"zoom-text-only", FALSE,
 		"media-playback-requires-user-gesture", FALSE, // effectively disables media playback ?

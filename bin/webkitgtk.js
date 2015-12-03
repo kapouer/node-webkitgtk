@@ -24,6 +24,11 @@ var parser = dash.createParser({options: [
 		help: 'Sets only location without actually loading the page'
 	},
 	{
+		names: ['local-access'],
+		type: 'bool',
+		help: 'Allow local access from file uris - useful to do local xhr'
+	},
+	{
 		names: ['verbose', 'v'],
 		type: 'bool',
 		help: 'Log requests and responses'
@@ -103,6 +108,7 @@ var wk = W.load(url, {
 	},
 	console: !opts.quiet,
 	inspector: opts.show,
+	localAccess: !!opts['local-access'],
 	style: opts.style,
 	width: opts.width,
 	height: opts.height,

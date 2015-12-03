@@ -228,6 +228,10 @@ load(uri, opts, cb) options
   boolean, default true  
   Load images automatically.
 
+- localAccess  
+  boolean, default false  
+  Allow local access from file uris - useful to do local xhr.
+
 - navigation  
   boolean, default false  
   allow navigation within the webview (changing document.location).
