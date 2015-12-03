@@ -80,7 +80,13 @@ var parser = dash.createParser({options: [
 	}
 ]});
 
-var opts = parser.parse(process.argv);
+var opts;
+try {
+	opts = parser.parse(process.argv);
+} catch(e) {
+	console.error(e.toString());
+	opts = {help: true};
+}
 
 if (opts.help) {
 	var help = parser.help({includeEnv: true}).trimRight();
