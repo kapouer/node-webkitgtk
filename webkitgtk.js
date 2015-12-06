@@ -619,8 +619,8 @@ function load(uri, opts, cb) {
 	priv.state = LOADING;
 	priv.emittedEvents = {};
 	priv.allow = opts.allow || "all";
-	priv.stall = opts.stall || 1000;
-	priv.runTimeout = opts.runTimeout || 10000;
+	priv.stall = opts.stall != null ? opts.stall : 1000;
+	priv.runTimeout = opts.runTimeout != null ? opts.runtTimeout : 10000;
 	priv.tickets = cleanTickets(priv.tickets);
 	priv.stamp = uran();
 
