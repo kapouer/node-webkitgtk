@@ -438,7 +438,7 @@ function responseDispatcher(curstamp, binding) {
 
 function isNetworkProtocol(uri) {
 	var p = uri.split(':', 1).pop();
-	if (p == 'http' || p == 'https') {
+	if (p == 'http' || p == 'https' || p == 'file') {
 		return true;
 	} else {
 		debug("is not network protocol", p);
