@@ -36,7 +36,7 @@ var parser = dash.createParser({options: [
 	{
 		names: ['quiet', 'q'],
 		type: 'bool',
-		help: 'Disable console'
+		help: 'Disable console messages'
 	},
 	{
 		names: ['show'],
