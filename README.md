@@ -431,6 +431,11 @@ These events can happen at any moment:
   res have read-only properties uri, mime, status, length, filename, headers.  
   res.data(function(err, buf)) fetches the response data.
 
+* data  
+  listener(res), called as soon as the first chunk of data is received.  
+  res have read-only properties uri, mime, status, length, filename, headers,  
+  and clength - the length of the received chunk of data.  
+
 * authenticate  
   listener(request) where request.host, request.port, request.realm are
   read-only.  
