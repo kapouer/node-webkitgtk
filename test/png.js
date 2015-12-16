@@ -71,12 +71,11 @@ describe("png method", function suite() {
 	it("should error out when called before document and is loaded", function(done) {
 		var w = new WebKit();
 		w.init(function() {
-			w.load('https://www.debian.org', function() {
-				// this won't even generate a png since no surface is yet acquired
-				w.png(__dirname + '/shots/testr1err.png', function(err) {
-					expect(err).to.be.ok();
-					done();
-				});
+			w.load('https://www.debian.org');
+			// this won't even generate a png since no surface is yet acquired
+			w.png(__dirname + '/shots/testr1err.png', function(err) {
+				expect(err).to.be.ok();
+				done();
 			});
 		});
 	});
