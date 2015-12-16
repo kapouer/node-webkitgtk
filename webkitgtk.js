@@ -157,15 +157,20 @@ function closedListener(what) {
 	}
 }
 
-function receiveDataDispatcher(curstamp, uri, length) {
+function receiveDataDispatcher(curstamp, binding, length) {
 	var priv = this.priv;
-	if (!uri) return;
+	var res = new Response(this, binding);
+	res.clength = length;
+	if (!res.uri) return;
 	if (curstamp != priv.stamp) {
-		debug("stamp mismatch - ignore data dispatch", curstamp, priv.stamp, uri);
+		debug("stamp mismatch - ignore data dispatch", curstamp, priv.stamp, res.uri);
 		return;
 	}
-	var info = priv.uris && priv.uris[uri];
+	var info = priv.uris && priv.uris[res.uri];
 	if (!info) return;
+
+	this.emit('data', res);
+
 	if (!info.mtime || info.mtime == Infinity) return;
 	info.mtime = Date.now();
 }

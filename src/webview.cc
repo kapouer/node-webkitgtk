@@ -344,11 +344,16 @@ void WebView::ResourceReceiveData(WebKitWebResource* resource, guint64 length, g
 	if (vc->closure == NULL) return;
 	WebView* self = (WebView*)(vc->view);
 	const gchar* uri = webkit_web_resource_get_uri(resource);
-	int argc = 3;
+	WebKitURIResponse* response = webkit_web_resource_get_response(resource);
 	Nan::HandleScope scope;
+	Local<Object> obj = Nan::New<FunctionTemplate>(WebResponse::constructor)->GetFunction()->NewInstance();
+	WebResponse* selfResponse = node::ObjectWrap::Unwrap<WebResponse>(obj);
+	selfResponse->init(resource, response);
+
+	int argc = 3;
 	Local<Value> argv[] = {
 		Nan::New<String>((char*)vc->closure).ToLocalChecked(),
-		Nan::New<String>(uri).ToLocalChecked(),
+		obj,
 		Nan::New<Integer>((int)length)
 	};
 	self->receiveDataCallback->Call(argc, argv);
