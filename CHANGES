@@ -182,3 +182,8 @@ were a less efficient attempt at solving the same problem.
 
 With a REPL installed as "webkitgtk".
 See `webkitgtk --help`
+
+3.3.0
+-----
+
+Add data event.
