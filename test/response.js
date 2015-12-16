@@ -38,4 +38,47 @@ describe("response handler data method", function suite() {
 			}
 		});
 	});
+	it("should get data event with mime, status, length, clength", function(done) {
+		this.timeout(6000);
+		var doc = '<html><head></head><body><img src="thing.png">move along';
+		var tail = " - nothing to see</body></html>";
+		for (var i=0; i<8192; i++) doc += ' ';
+		var port;
+		var waited = 0;
+		setTimeout(function() {
+			waited = 1;
+		}, 500);
+		var server = require('http').createServer(function(req, res) {
+			res.statusCode = 200;
+			res.write(doc);
+			setTimeout(function() {
+				res.end(tail);
+			}, 1000);
+		}).listen(function() {
+			port = server.address().port;
+			var url = "http://localhost:" + port + '/';
+			WebKit(function(err, w) {
+				var count = 0;
+				w.on('data', function(res) {
+					if (waited == 1) waited = 2;
+					count++;
+					expect(res.status).to.be(200);
+					expect(res.uri).to.be(url);
+					expect(res.length).to.be(0);
+					expect(res.mime).to.be('text/html');
+					expect(res.clength).to.be.greaterThan(10);
+					expect(res.clength).to.be.lessThan(doc.length + tail.length);
+				});
+				w.on('response', function() {
+					expect(count).to.be.greaterThan(1);
+					expect(waited).to.be(2);
+					done();
+				});
+
+				w.load(url, {
+					images: false
+				});
+			});
+		});
+	});
 });
