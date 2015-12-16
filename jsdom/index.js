@@ -218,7 +218,7 @@ function resourceLoader(resource, cb) {
 	if (resource.cookie) {
 		reqOpts.jar.setCookie(request().cookie(resource.cookie), uri);
 	}
-	return request()(reqOpts, function(err, res, body) {
+	var req = request()(reqOpts, function(err, res, body) {
 		var status = res && res.statusCode || 0;
 		if (!err && status != 200) err = new HTTPError(status);
 		var headers = res && res.headers || {};
@@ -235,7 +235,15 @@ function resourceLoader(resource, cb) {
 		cb(err, body);
 	}.bind(this))
 	.on('data', function(chunk) {
-		priv.cfg.receiveDataListener(stamp, uri, chunk ? chunk.length : 0);
+		var headers = req.response.headers;
+		priv.cfg.receiveDataListener(stamp, {
+			uri: uri,
+			length: headers['content-length'] || 0,
+			mime: (headers['content-type'] || '').split(';').shift(),
+			status: req.response.statusCode,
+			clength: chunk ? chunk.length : 0
+		});
 	}.bind(this));
+	return req;
 }
 
