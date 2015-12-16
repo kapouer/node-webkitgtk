@@ -187,3 +187,9 @@ See `webkitgtk --help`
 -----
 
 Add data event.
+
+3.3.1
+-----
+
+Always download resources, even if mime type is not supported.
+
