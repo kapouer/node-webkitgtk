@@ -298,10 +298,11 @@ gboolean WebView::DecidePolicy(WebKitWebView* web_view, WebKitPolicyDecision* de
 		// const gchar* uri = webkit_uri_request_get_uri(navRequest);
 		// g_print("policy new window decision for\n%s\n", uri);
 	} else if (type == WEBKIT_POLICY_DECISION_TYPE_RESPONSE) {
-		// WebKitResponsePolicyDecision* resDecision = WEBKIT_RESPONSE_POLICY_DECISION(decision);
-		// WebKitURIRequest* resRequest = webkit_response_policy_decision_get_request(resDecision);
-		// const gchar* uri = webkit_uri_request_get_uri(resRequest);
-		// g_print("policy response decision for\n%s\n", uri);
+		WebKitResponsePolicyDecision* resDecision = WEBKIT_RESPONSE_POLICY_DECISION(decision);
+		if (webkit_response_policy_decision_is_mime_type_supported(resDecision) == FALSE) {
+			// requests are not expected to be cancelled
+			return TRUE;
+		}
 	}
 	return FALSE;
 }
