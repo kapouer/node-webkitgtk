@@ -161,18 +161,22 @@ function receiveDataDispatcher(curstamp, binding, length) {
 	var priv = this.priv;
 	var res = new Response(this, binding);
 	res.clength = length;
-	if (!res.uri) return;
+	if (!res.uri) {
+		return;
+	}
 	if (curstamp != priv.stamp) {
 		debug("stamp mismatch - ignore data dispatch", curstamp, priv.stamp, res.uri);
 		return;
 	}
 	var info = priv.uris && priv.uris[res.uri];
-	if (!info) return;
-
+	if (info) {
+		if (!info.mtime || info.mtime == Infinity) return;
+		info.mtime = Date.now();
+	} else if (this.uri && this.uri != res.uri) {
+		debug("ignored data event", this.uri, res.uri);
+		return;
+	}
 	this.emit('data', res);
-
-	if (!info.mtime || info.mtime == Infinity) return;
-	info.mtime = Date.now();
 }
 
 function authDispatcher(request) {
