@@ -105,10 +105,10 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		};
 
 		if (opts.script) {
-			if (!window.run) window.run = runShim.bind(null, require('vm').createContext(window));
+			if (!window.run) window.run = window.eval;
 			window.run(opts.script);
 		}
-		var runlist = this._webview._runlist;
+		var runlist = this._webview && this._webview._runlist;
 		delete this._webview;
 		this.webview = window;
 		if (runlist) runlist.forEach(function(arr) {
