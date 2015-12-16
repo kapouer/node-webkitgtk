@@ -33,10 +33,16 @@ static gchar* JSValueToStr(JSGlobalContextRef context, JSValueRef val) {
 
 static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* request, WebKitURIResponse* redirected_response, gpointer data) {
 	gchar* cstamp = (gchar*)data;
-	const char* uri = webkit_uri_request_get_uri(request);
+	const gchar* uri = webkit_uri_request_get_uri(request);
+	const gchar* pageUri = webkit_web_page_get_uri(page);
 
-	// always allow blank and never report it
-	if (uri == NULL || g_strcmp0(uri, "") == 0 || g_strcmp0(uri, "about:blank") == 0) return FALSE;
+	// always allow and do not report: empty, blank, documentURI
+	if (
+		uri == NULL || pageUri == NULL
+		|| g_strcmp0(uri, "") == 0
+		|| g_strcmp0(uri, "about:blank") == 0
+		|| g_strcmp0(uri, pageUri) == 0
+	) return FALSE;
 
 	JSValueRef result;
 	JSValueRef exception;
