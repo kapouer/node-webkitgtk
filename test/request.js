@@ -261,4 +261,39 @@ describe("request listener", function suite() {
 			});
 		});
 	});
+
+	it("should filter out requests that are not main document, twice in a row", function(done) {
+		this.timeout(5000);
+		var doc = '<html><head></head><body><img src="thing.png">move along</body></html>';
+		var port;
+		var server = require('http').createServer(function(req, res) {
+			res.statusCode = 200;
+			res.end(doc);
+		}).listen(function() {
+			port = server.address().port;
+			WebKit(function(err, w) {
+				var count = 0;
+				var urla = "http://localhost:" + port + '/a';
+				var urlb = "http://localhost:" + port + '/b';
+				w.on('response', function(res) {
+					if (res.uri == urla || res.uri == urlb) count++;
+				});
+
+				w.load(urla, {
+					filter: function() {
+						if (this.uri != document.location.toString()) this.cancel = true;
+					}
+				}).once('idle', function() {
+					w.load(urlb, {
+						filter: function() {
+							if (this.uri != document.location.toString()) this.cancel = true;
+						}
+					}).once('idle', function() {
+						expect(count).to.be(2);
+						done();
+					});
+				});
+			});
+		});
+	});
 });
