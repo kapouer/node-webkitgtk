@@ -247,7 +247,7 @@ gboolean WebView::Authenticate(WebKitWebView* view, WebKitAuthenticationRequest*
 
 	// WebKitCredential* savedCred = webkit_authentication_request_get_proposed_credential(request);
 	// if (savedCred != NULL) {
-		// g_print("saved cred %s\n", webkit_credential_get_username(savedCred));
+		// g_log("saved cred %s\n", webkit_credential_get_username(savedCred));
 		// webkit_authentication_request_authenticate(request, savedCred);
 		// return TRUE;
 	// }
@@ -296,7 +296,7 @@ gboolean WebView::DecidePolicy(WebKitWebView* web_view, WebKitPolicyDecision* de
 		// WebKitNavigationPolicyDecision* navDecision = WEBKIT_NAVIGATION_POLICY_DECISION(decision);
 		// WebKitURIRequest* navRequest = webkit_navigation_policy_decision_get_request(navDecision);
 		// const gchar* uri = webkit_uri_request_get_uri(navRequest);
-		// g_print("policy new window decision for\n%s\n", uri);
+		// g_log("policy new window decision for\n%s\n", uri);
 	} else if (type == WEBKIT_POLICY_DECISION_TYPE_RESPONSE) {
 		WebKitResponsePolicyDecision* resDecision = WEBKIT_RESPONSE_POLICY_DECISION(decision);
 		if (webkit_response_policy_decision_is_mime_type_supported(resDecision) == FALSE) {
@@ -405,7 +405,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 	Nan::HandleScope scope;
 	Nan::Callback* cb;
 	const gchar* uri = webkit_web_view_get_uri(web_view);
-//	g_print("change %d %d %s %s\n", load_event, self->state, self->uri, uri);
+//	g_log("change %d %d %s %s\n", load_event, self->state, self->uri, uri);
 	switch (load_event) {
 		case WEBKIT_LOAD_STARTED: // 0
 			/* New load, we have now a provisional URI */
@@ -470,7 +470,7 @@ gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gcha
 	WebView* self = (WebView*)data;
 	Nan::HandleScope scope;
 	Nan::Callback* cb;
-//  g_print("fail %d %d %s %s\n", load_event, self->state, self->uri, failing_uri);
+//  g_log("fail %d %d %s %s\n", load_event, self->state, self->uri, failing_uri);
 	if (self->state >= DOCUMENT_LOADING && g_strcmp0(failing_uri, self->uri) == 0) {
 		if (self->loadCallback != NULL) {
 			self->state = DOCUMENT_ERROR;
@@ -534,7 +534,7 @@ NAN_METHOD(WebView::Load) {
 
 	if (NanBooleanOptionValue(opts, H("transparent"), false) == TRUE) {
 		if (self->transparencySupport == FALSE) {
-			g_print("Background cannot be transparent: rgba visual not found and/or webkitgtk >= 2.7.4 required");
+			g_warning("Background cannot be transparent: rgba visual not found and/or webkitgtk >= 2.7.4 required");
 		} else {
 	#if WEBKIT_CHECK_VERSION(2,7,4)
 			static const GdkRGBA transparent = {.0, .0, .0, .0};
@@ -598,7 +598,7 @@ NAN_METHOD(WebView::Load) {
 	self->allowDialogs = NanBooleanOptionValue(opts, H("dialogs"), false);
 
 	if (self->loadCallback != NULL) {
-		g_printerr("load callback is still set, this should not happen\n");
+		g_error("load callback is still set, this should not happen");
 		delete self->loadCallback;
 	}
 
