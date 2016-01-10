@@ -184,6 +184,25 @@ Patches are welcome for UI uses, though.
 load(uri, opts, cb) options
 ---------------------------
 
+- WebKitSettings
+  http://webkitgtk.org/reference/webkit2gtk/stable/WebKitSettings.html
+  Some settings have different default values:
+  enable-plugins: FALSE
+  enable-html5-database: FALSE
+  enable-html5-local-storage: FALSE
+  enable-java: FALSE
+  enable-page-cache: FALSE
+  enable-offline-web-application-cache: FALSE
+  default-charset: "utf-8"
+  user-agent: "Mozilla/5.0"
+
+- deprecated WebKitSettings aliases:
+  private: enable-private-browsing
+  images: auto-load-images
+  localAccess: allow-file-access-from-file-urls
+  ua: user-agent
+  charset: default-charset
+
 - cookies  
   string | [string], default none  
   caution: cookies are saved
@@ -220,18 +239,6 @@ load(uri, opts, cb) options
 - filter  
   Convenient option to append one filter to the list in opts.filters.
 
-- private  
-  boolean, default false  
-  run in private (a.k.a. incognito) mode.
-
-- images  
-  boolean, default true  
-  Load images automatically.
-
-- localAccess  
-  boolean, default false  
-  Allow local access from file uris - useful to do local xhr.
-
 - navigation  
   boolean, default false  
   allow navigation within the webview (changing document.location).
@@ -262,9 +269,6 @@ load(uri, opts, cb) options
   boolean, default true  
   show window decorations (title bar, scroll bars)
 
-- ua  
-  user-agent string, default to "Mozilla/5.0"
-
 - timeout  
   number, default 30000  
   timeout for load(), in milliseconds
@@ -289,12 +293,6 @@ load(uri, opts, cb) options
   Send `console` events (see below).  
   Default listener outputs everything and is disabled by registering a custom
   listener.
-
-- charset  
-  string, default "utf-8", previously default was "iso-8859-1"  
-  The default text charset used when interpreting content with an unspecified
-  charset.  
-  Useful to fix Script errors when serving utf-8 encoded javascript files.
 
 - runTimeout  
   number, default 10000  
