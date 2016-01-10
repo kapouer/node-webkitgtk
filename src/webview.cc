@@ -344,7 +344,6 @@ void WebView::ResourceReceiveData(WebKitWebResource* resource, guint64 length, g
 	ViewClosure* vc = (ViewClosure*)data;
 	if (vc->closure == NULL) return;
 	WebView* self = (WebView*)(vc->view);
-	const gchar* uri = webkit_web_resource_get_uri(resource);
 	WebKitURIResponse* response = webkit_web_resource_get_response(resource);
 	Nan::HandleScope scope;
 	Local<Object> obj = Nan::New<FunctionTemplate>(WebResponse::constructor)->GetFunction()->NewInstance();
