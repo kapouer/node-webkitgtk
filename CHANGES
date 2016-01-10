@@ -193,3 +193,9 @@ Add data event.
 
 Always download resources, even if mime type is not supported.
 
+3.4.0
+-----
+
+Give access to all WebKitSettings options,
+deprecate the options that were renamed arbitrarily, see deprecations in README.
+
