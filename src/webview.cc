@@ -581,12 +581,19 @@ NAN_METHOD(WebView::Load) {
 		"enable-page-cache", FALSE,
 		"enable-write-console-messages-to-stdout", FALSE,
 		"enable-offline-web-application-cache", FALSE,
-		"allow-file-access-from-file-urls", NanBooleanOptionValue(opts, H("localAccess"), false),
 		"auto-load-images", NanBooleanOptionValue(opts, H("images"), true),
 		"zoom-text-only", FALSE,
 		"media-playback-requires-user-gesture", FALSE, // effectively disables media playback ?
 		"user-agent", ua, NULL
 	);
+
+	if (NanBooleanOptionValue(opts, H("localAccess"), false) == TRUE) {
+		#if WEBKIT_CHECK_VERSION(2,10,0)
+		g_object_set(settings, "allow-file-access-from-file-urls", TRUE, NULL);
+		#else
+		g_warning("localAccess option works only with webkitgtk >= 2.10");
+		#endif
+	}
 
 	self->allowDialogs = NanBooleanOptionValue(opts, H("dialogs"), false);
 
