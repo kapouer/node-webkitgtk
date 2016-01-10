@@ -16,31 +16,31 @@ GVariant* soup_headers_to_gvariant_dict(SoupMessageHeaders*);
 
 // Method removed from NAN
 NAN_INLINE bool NanBooleanOptionValue(
-    v8::Local<v8::Object> optionsObj
-  , v8::Handle<v8::String> opt, bool def
+		v8::Local<v8::Object> optionsObj
+	, v8::Handle<v8::String> opt, bool def
 ) {
-  if (def) {
-    return optionsObj.IsEmpty()
-      || !optionsObj->Has(opt)
-      || optionsObj->Get(opt)->BooleanValue();
-  } else {
-    return !optionsObj.IsEmpty()
-      && optionsObj->Has(opt)
-      && optionsObj->Get(opt)->BooleanValue();
-  }
+	if (def) {
+		return optionsObj.IsEmpty()
+			|| !optionsObj->Has(opt)
+			|| optionsObj->Get(opt)->BooleanValue();
+	} else {
+		return !optionsObj.IsEmpty()
+			&& optionsObj->Has(opt)
+			&& optionsObj->Get(opt)->BooleanValue();
+	}
 }
 
 // Method removed from NAN
 NAN_INLINE uint32_t NanUInt32OptionValue(
-    v8::Local<v8::Object> optionsObj
-  , v8::Handle<v8::String> opt
-  , uint32_t def
+		v8::Local<v8::Object> optionsObj
+	, v8::Handle<v8::String> opt
+	, uint32_t def
 ) {
-  return !optionsObj.IsEmpty()
-    && optionsObj->Has(opt)
-    && optionsObj->Get(opt)->IsNumber()
-      ? optionsObj->Get(opt)->Uint32Value()
-      : def;
+	return !optionsObj.IsEmpty()
+		&& optionsObj->Has(opt)
+		&& optionsObj->Get(opt)->IsNumber()
+			? optionsObj->Get(opt)->Uint32Value()
+			: def;
 }
 
 #endif
