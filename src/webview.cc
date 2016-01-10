@@ -558,12 +558,12 @@ NAN_METHOD(WebView::Load) {
 	gtk_window_set_default_size(GTK_WINDOW(self->window), w, h);
 	gtk_window_resize(GTK_WINDOW(self->window), w, h);
 
-	const gchar* ua = getStr(opts, "ua");
+	const gchar* ua = getStr(opts, "user-agent");
 	if (ua == NULL) {
 		ua = "Mozilla/5.0";
 	}
 
-	const gchar* charset = getStr(opts, "charset");
+	const gchar* charset = getStr(opts, "default-charset");
 	if (charset == NULL) {
 		charset = "utf-8";
 	}
@@ -571,7 +571,7 @@ NAN_METHOD(WebView::Load) {
 	WebKitSettings* settings = webkit_web_view_get_settings(self->view);
 	g_object_set(settings,
 		"default-charset", charset,
-		"enable-private-browsing", NanBooleanOptionValue(opts, H("private"), false),
+		"enable-private-browsing", NanBooleanOptionValue(opts, H("enable-private-browsing"), false),
 		"enable-plugins", FALSE,
 		"print-backgrounds", TRUE,
 		"enable-javascript", TRUE,
@@ -581,13 +581,13 @@ NAN_METHOD(WebView::Load) {
 		"enable-page-cache", FALSE,
 		"enable-write-console-messages-to-stdout", FALSE,
 		"enable-offline-web-application-cache", FALSE,
-		"auto-load-images", NanBooleanOptionValue(opts, H("images"), true),
+		"auto-load-images", NanBooleanOptionValue(opts, H("auto-load-images"), true),
 		"zoom-text-only", FALSE,
 		"media-playback-requires-user-gesture", FALSE, // effectively disables media playback ?
 		"user-agent", ua, NULL
 	);
 
-	if (NanBooleanOptionValue(opts, H("localAccess"), false) == TRUE) {
+	if (NanBooleanOptionValue(opts, H("allow-file-access-from-file-urls"), false) == TRUE) {
 		#if WEBKIT_CHECK_VERSION(2,10,0)
 		g_object_set(settings, "allow-file-access-from-file-urls", TRUE, NULL);
 		#else
