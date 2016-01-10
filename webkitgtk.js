@@ -82,6 +82,7 @@ WebKit.prototype.init = function(opts, cb) {
 		opts.offscreen = false;
 		opts.inspector = true;
 	}
+
 	debug('init');
 	this.binding(opts, {
 		cstamp: priv.cstamp,
@@ -534,6 +535,19 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	}
 	function next(err) {
 		if (err) return cb(err);
+		var deprecations = {
+			ua: "user-agent",
+			charset: "default-charset",
+			private: "enable-private-browsing",
+			images: "auto-load-images",
+			localAccess: "allow-file-access-from-file-urls"
+		};
+		for (var key in deprecations) {
+			if (opts[key] == null) continue;
+			var newkey = deprecations[key];
+			console.warn(key, "option is deprecated, please use", newkey);
+			opts[newkey] = opts[key];
+		}
 		this.webview.load(uri, this.priv.stamp, opts, cb);
 	}
 };
