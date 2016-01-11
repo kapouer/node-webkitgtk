@@ -594,6 +594,8 @@ NAN_METHOD(WebView::Load) {
 				g_object_set(settings, spec->name, optsVal->BooleanValue(), NULL);
 			} else if (G_IS_PARAM_SPEC_STRING(spec) && optsVal->IsString()) {
 				g_object_set(settings, spec->name, *(Nan::Utf8String(optsVal)), NULL);
+			} else if (G_IS_PARAM_SPEC_UINT(spec) && optsVal->IsUint32()) {
+				g_object_set(settings, spec->name, optsVal->Uint32Value(), NULL);
 			} else {
 				g_warning("Ignored opt name %s", spec->name);
 			}
