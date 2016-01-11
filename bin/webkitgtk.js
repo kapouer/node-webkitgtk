@@ -24,7 +24,7 @@ var parser = dash.createParser({options: [
 		help: 'Sets only location without actually loading the page'
 	},
 	{
-		names: ['local-access'],
+		names: ['allow-file-access-from-file-urls', 'local-access'],
 		type: 'bool',
 		help: 'Allow local access from file uris - useful to do local xhr'
 	},
@@ -105,22 +105,29 @@ if (!url) {
 	if (!urlObj.protocol) url = "http://" + url;
 }
 
-var wk = W.load(url, {
+var loadOpts = {
 	content: opts.location ? "<html></html>" : undefined,
 	offscreen: !opts.show,
-	images: opts.show,
 	filter: !opts.show && function() {
 		if (/\.css(\?.*)?$/.test(this.uri)) this.cancel = true;
 	},
 	console: !opts.quiet,
 	inspector: opts.show,
-	localAccess: !!opts['local-access'],
 	style: opts.style,
 	width: opts.width,
 	height: opts.height,
 	decorated: !opts.bare,
 	transparent: opts.transparent
-}, function(err) {
+};
+
+if (opts["auto-load-images"] == null && opts.show != null) {
+	loadOpts["auto-load-images"] = opts.show;
+}
+if (opts['allow-file-access-from-file-urls'] != null) {
+	loadOpts['allow-file-access-from-file-urls'] = !!opts['allow-file-access-from-file-urls'];
+}
+
+var wk = W.load(url, loadOpts, function(err) {
 	if (opts.scripts) {
 		wk.run(function(scripts, done) {
 			Promise.all(scripts.map(function(url) {
