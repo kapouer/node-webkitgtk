@@ -56,7 +56,7 @@ describe("unload method", function suite() {
 	});
 
 	it("should be ok with unload after a while", function(done) {
-		this.timeout(8000);
+		this.timeout(10000);
 		WebKit.load('http://google.com').once('idle', function() {
 			setTimeout(function() {
 				this.unload(function(err) {
