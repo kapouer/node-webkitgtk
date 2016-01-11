@@ -76,7 +76,7 @@ describe("response handler data method", function suite() {
 				});
 
 				w.load(url, {
-					images: false
+					"auto-load-images": false
 				});
 			});
 		});
