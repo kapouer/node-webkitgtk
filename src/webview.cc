@@ -569,30 +569,35 @@ NAN_METHOD(WebView::Load) {
 	}
 
 	WebKitSettings* settings = webkit_web_view_get_settings(self->view);
+
+	// sane defaults for headless usage
 	g_object_set(settings,
-		"default-charset", charset,
-		"enable-private-browsing", NanBooleanOptionValue(opts, H("enable-private-browsing"), false),
 		"enable-plugins", FALSE,
-		"print-backgrounds", TRUE,
-		"enable-javascript", TRUE,
 		"enable-html5-database", FALSE,
 		"enable-html5-local-storage", FALSE,
 		"enable-java", FALSE,
 		"enable-page-cache", FALSE,
-		"enable-write-console-messages-to-stdout", FALSE,
 		"enable-offline-web-application-cache", FALSE,
-		"auto-load-images", NanBooleanOptionValue(opts, H("auto-load-images"), true),
-		"zoom-text-only", FALSE,
-		"media-playback-requires-user-gesture", FALSE, // effectively disables media playback ?
-		"user-agent", ua, NULL
+		NULL
 	);
 
-	if (NanBooleanOptionValue(opts, H("allow-file-access-from-file-urls"), false) == TRUE) {
-		#if WEBKIT_CHECK_VERSION(2,10,0)
-		g_object_set(settings, "allow-file-access-from-file-urls", TRUE, NULL);
-		#else
-		g_warning("localAccess option works only with webkitgtk >= 2.10");
-		#endif
+	Local<v8::Array> optsProps = Nan::GetOwnPropertyNames(opts).ToLocalChecked();
+	Local<v8::Value> optsName;
+	Local<v8::Value> optsVal;
+	GParamSpec* spec;
+	for (guint optsIndex = 0; optsIndex < optsProps->Length(); optsIndex++) {
+		optsName = Nan::Get(optsProps, optsIndex).ToLocalChecked();
+		spec = g_object_class_find_property(G_OBJECT_GET_CLASS(settings), *(Nan::Utf8String(optsName)));
+		if (spec != NULL) {
+			optsVal = Nan::Get(opts, optsName).ToLocalChecked();
+			if (G_IS_PARAM_SPEC_BOOLEAN(spec) && optsVal->IsBoolean()) {
+				g_object_set(settings, spec->name, optsVal->BooleanValue(), NULL);
+			} else if (G_IS_PARAM_SPEC_STRING(spec) && optsVal->IsString()) {
+				g_object_set(settings, spec->name, *(Nan::Utf8String(optsVal)), NULL);
+			} else {
+				g_warning("Ignored opt name %s", spec->name);
+			}
+		}
 	}
 
 	self->allowDialogs = NanBooleanOptionValue(opts, H("dialogs"), false);
