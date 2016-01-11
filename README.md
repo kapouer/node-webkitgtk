@@ -184,24 +184,24 @@ Patches are welcome for UI uses, though.
 load(uri, opts, cb) options
 ---------------------------
 
-- WebKitSettings
-  http://webkitgtk.org/reference/webkit2gtk/stable/WebKitSettings.html
-  Some settings have different default values:
-  enable-plugins: FALSE
-  enable-html5-database: FALSE
-  enable-html5-local-storage: FALSE
-  enable-java: FALSE
-  enable-page-cache: FALSE
-  enable-offline-web-application-cache: FALSE
-  default-charset: "utf-8"
-  user-agent: "Mozilla/5.0"
+- WebKitSettings  
+  http://webkitgtk.org/reference/webkit2gtk/stable/WebKitSettings.html  
+  Some settings have different default values:  
+  enable-plugins: FALSE  
+  enable-html5-database: FALSE  
+  enable-html5-local-storage: FALSE  
+  enable-java: FALSE  
+  enable-page-cache: FALSE  
+  enable-offline-web-application-cache: FALSE  
+  default-charset: "utf-8"  
+  user-agent: "Mozilla/5.0"  
 
-- deprecated WebKitSettings aliases:
-  private: enable-private-browsing
-  images: auto-load-images
-  localAccess: allow-file-access-from-file-urls
-  ua: user-agent
-  charset: default-charset
+- deprecated WebKitSettings aliases:  
+  private: enable-private-browsing  
+  images: auto-load-images  
+  localAccess: allow-file-access-from-file-urls  
+  ua: user-agent  
+  charset: default-charset  
 
 - cookies  
   string | [string], default none  
