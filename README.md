@@ -23,49 +23,7 @@ system-installed libraries.
 Node.js compatibility
 ---------------------
 
-Tested with Node.js version 0.10.29 or version 4.0.0.
-
-
-New in version 3
-----------------
-
-* Only one event loop for all WebViews, so CPU load stay low.
-* Faster loading
-* Much less memory leaks
-* Instances can be destroyed, so it's easy to hook into a generic pool
-* Easier to debug, supports logging from the webextension
-
-
-Version 2 warning
------------------
-
-The chainable API has been dropped.
-
-Every chained calls must be replaced by callbacks.
-
-The `.wait()` method can be replaced by `.when()`, but the function must
-in turn invoke the callback parameter it receives.
-
-The `.run()` method now behaves like `.runev()` regarding params passing.
-
-
-Version 3 warning
------------------
-
-It is no longer possible to cancel requests, change the request uri, or ignore
-a request for idle counting, in the `request` event.
-
-It is possible to do it using `filters` option of the `load` method.
-
-Is is not (yet) possible to read or write request headers in that filter function.
-That were mostly useless anyway.
-
-There are two advantages of doing so:
-  - no longer directly need dbus, cleaner code
-  - about 5ms by request was spent waiting for dbus calls
-
-But it's no longer easy to map request uri to other uris using application
-variables. Although it is easy to pass constants to filters.
+Node.js >= 4.2
 
 
 usage
