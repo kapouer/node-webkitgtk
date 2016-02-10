@@ -415,7 +415,10 @@ function responseDispatcher(curstamp, binding) {
 			debug('ignored response', uri);
 			return;
 		} else if (uri != mainUri) {
-			console.warn(this.uri, "had an untracked response", uri, status);
+			if (uri.slice(0, 5) != "data:") {
+				// ignore data-uri for that warning
+				console.warn(this.uri, "had an untracked response", uri, status);
+			}
 			return;
 		} else {
 			info = priv.uris[uri] = {
