@@ -519,6 +519,7 @@ function errorLoad(state) {
 
 WebKit.prototype.rawload = function(uri, opts, cb) {
 	var priv = this.priv;
+	priv.state = LOADING;
 	var cookies = opts.cookies;
 	if (cookies) {
 		debug('load cookies');
@@ -551,7 +552,10 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			console.warn(key, "option is deprecated, please use", newkey);
 			opts[newkey] = opts[key];
 		}
-		this.webview.load(uri, this.priv.stamp, opts, cb);
+		this.webview.load(uri, this.priv.stamp, opts, function(err, inst) {
+			priv.state = INITIALIZED;
+			cb(err, inst);
+		});
 	}
 };
 
@@ -642,7 +646,6 @@ function load(uri, opts, cb) {
 
 	initWhen.call(this);
 
-	priv.state = LOADING;
 	priv.emittedEvents = {};
 	priv.allow = opts.allow || "all";
 	priv.stall = opts.stall != null ? opts.stall : 1000;
@@ -733,7 +736,6 @@ function load(uri, opts, cb) {
 
 	this.rawload(uri, opts, function(err, status) {
 		debug('load done %s', uri);
-		priv.state = INITIALIZED;
 		if (priv.timeout) {
 			clearTimeout(priv.timeout);
 			delete priv.timeout;
@@ -862,7 +864,6 @@ WebKit.prototype.unload = function(cb) {
 	}
 
 	function next() {
-		priv.state = INITIALIZED;
 		delete priv.stamp;
 		debug('unload');
 		this.rawload('about:blank', {content:'<html></html>'}, function(err) {
@@ -870,7 +871,6 @@ WebKit.prototype.unload = function(cb) {
 			debug('unload done');
 			this.readyState = null;
 			this.status = null;
-			priv.state = INITIALIZED;
 			priv.tickets = cleanTickets(priv.tickets);
 			this.emit('unload');
 			this.removeAllListeners();
