@@ -87,7 +87,10 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 		redirect = webkit_uri_response_get_uri(redirected_response);
 	}
 
-	const gchar* scriptStr = g_strconcat(funcStr, "(\"", uri, "\", \"", redirect, "\")", NULL);
+	const gchar* scriptStr = g_strconcat(funcStr,
+		"(\"", g_strescape(uri, NULL), "\",\"",
+		g_strescape(redirect, NULL), "\")",
+		NULL);
 	JSStringRef script = JSStringCreateWithUTF8CString(scriptStr);
 	exception = NULL;
 	result = JSEvaluateScript(
