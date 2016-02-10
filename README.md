@@ -400,6 +400,11 @@ These events can happen at any moment:
   Both methods can be called later (asynchronously), but at least one of them
   is supposed to be called if the signal is handled.
 
+* navigate  
+  listener(url)  
+  Called when document location changes (not when history state change).  
+  Navigation is permitted or not using `navigation` option, not this event.
+
 * console (deprecated)
   listener(level, ...) where level is 'log', 'error', 'warn' or 'info'.  
   Remaining arguments are the arguments of the corresponding calls to

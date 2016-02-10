@@ -188,9 +188,12 @@ function authDispatcher(request) {
 
 function policyDispatcher(type, uri) {
 	// prevents navigation once a view has started loading (if navigation is false)
-	if (type == "navigation" && this.priv.navigation == false && this.priv.state > LOADING) {
-		debug("policy ignore", type, uri);
-		return true;
+	if (type == "navigation" && this.priv.state == INITIALIZED) {
+		if (this.listeners('navigate').length > 0) this.emit('navigate', uri);
+		if (this.priv.navigation == false) {
+			debug("policy ignore", type, uri);
+			return true;
+		}
 	}
 }
 
