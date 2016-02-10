@@ -199,3 +199,8 @@ Always download resources, even if mime type is not supported.
 Give access to all WebKitSettings options,
 deprecate the options that were renamed arbitrarily, see deprecations in README.
 
+3.5.0
+-----
+
+Add a `navigate` event that allows, in conjonction with `navigation` option
+to handle redirection.
