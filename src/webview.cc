@@ -558,16 +558,6 @@ NAN_METHOD(WebView::Load) {
 	gtk_window_set_default_size(GTK_WINDOW(self->window), w, h);
 	gtk_window_resize(GTK_WINDOW(self->window), w, h);
 
-	const gchar* ua = getStr(opts, "user-agent");
-	if (ua == NULL) {
-		ua = "Mozilla/5.0";
-	}
-
-	const gchar* charset = getStr(opts, "default-charset");
-	if (charset == NULL) {
-		charset = "utf-8";
-	}
-
 	WebKitSettings* settings = webkit_web_view_get_settings(self->view);
 
 	// sane defaults for headless usage
