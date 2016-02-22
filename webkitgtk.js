@@ -556,7 +556,6 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			opts[newkey] = opts[key];
 		}
 		if (!opts['default-charset']) opts['default-charset'] = "utf-8";
-		if (!opts['user-agent']) opts['user-agent'] = "Mozilla/5.0";
 		this.webview.load(uri, this.priv.stamp, opts, function(err, inst) {
 			priv.state = INITIALIZED;
 			cb(err, inst);
