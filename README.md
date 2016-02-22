@@ -152,7 +152,7 @@ load(uri, opts, cb) options
   enable-page-cache: FALSE  
   enable-offline-web-application-cache: FALSE  
   default-charset: "utf-8"  
-  user-agent: "Mozilla/5.0"  
+  user-agent: backend-specific value  
 
 - deprecated WebKitSettings aliases:  
   private: enable-private-browsing  
