@@ -1597,28 +1597,30 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 			lastEvent: lastEvent,
 			lastRunEvent: lastRunEvent
 		};
-		if (lastEvent <= lastRunEvent) {
-			if (lastEvent == EV.load) {
-				if ((timeouts.ignore || timeouts.len <= timeouts.stall)
-					&& (intervals.ignore || intervals.len <= intervals.stall)
-					&& frames.len == 0 && requests.len <= requests.stall) {
+		w.setTimeout.call(window, function() {
+			if (lastEvent <= lastRunEvent) {
+				if (lastEvent == EV.load) {
+					if ((timeouts.ignore || timeouts.len <= timeouts.stall)
+						&& (intervals.ignore || intervals.len <= intervals.stall)
+						&& frames.len == 0 && requests.len <= requests.stall) {
+						lastEvent += 1;
+						emit("idle", from, url, info);
+					}
+				} else if (lastEvent == EV.idle) {
+					emit("busy", from, url);
+				} else if (lastEvent == EV.init && hasReady) {
 					lastEvent += 1;
-					emit("idle", from, url, info);
+					emit("ready", from, url, info);
+				} else if (lastEvent == EV.ready && hasLoaded) {
+					lastEvent += 1;
+					emit("load", from, url, info);
+					intervals.to = w.setTimeout.call(window, checkIntervals, stallInterval);
+					timeouts.to = w.setTimeout.call(window, checkTimeouts, stallTimeout);
+				} else {
+					return;
 				}
-			} else if (lastEvent == EV.idle) {
-				emit("busy", from, url);
-			} else if (lastEvent == EV.init && hasReady) {
-				lastEvent += 1;
-				emit("ready", from, url, info);
-			} else if (lastEvent == EV.ready && hasLoaded) {
-				lastEvent += 1;
-				emit("load", from, url, info);
-				intervals.to = w.setTimeout.call(window, checkIntervals, stallInterval);
-				timeouts.to = w.setTimeout.call(window, checkTimeouts, stallTimeout);
-			} else {
-				return;
 			}
-		}
+		});
 	}
 }
 
