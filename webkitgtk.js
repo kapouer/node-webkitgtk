@@ -1404,6 +1404,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 	window.setTimeout = function setTimeout(fn, timeout) {
 		var args = Array.prototype.slice.call(arguments, 0);
 		var stall = false;
+		timeout = timeout || 0;
 		if (timeout >= stallTimeout) {
 			stall = true;
 			timeouts.stall++;
@@ -1441,6 +1442,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 
 	window.setInterval = function(fn, interval) {
 		var args = Array.prototype.slice.call(arguments, 0);
+		interval = interval || 0;
 		var stall = false;
 		if (interval >= stallInterval) {
 			stall = true;
