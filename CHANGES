@@ -204,3 +204,10 @@ deprecate the options that were renamed arbitrarily, see deprecations in README.
 
 Add a `navigate` event that allows, in conjonction with `navigation` option
 to handle redirection.
+
+3.6.0
+-----
+
+Shouldn't be a breaking change: default user-agent is now the one set by the
+backend (webkitgtk or jsdom), not "Mozilla/5.0".
+
