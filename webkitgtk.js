@@ -1031,14 +1031,14 @@ function prepareRun(script, ticket, args, priv) {
 			if (ticket) message.ticket = ticket;
 			try {
 				message.args = [ SCRIPT ];
-			} catch(e) {
+			} catch(err) {
 				message.error = {
-					message: e.message,
-					name: e.name,
-					description: e.description,
-					lineNumber: e.lineNumber,
-					columnNumber: e.columnNumber,
-					stack: e.stack
+					message: err.message,
+					name: err.name,
+					description: err.description,
+					lineNumber: err.lineNumber,
+					columnNumber: err.columnNumber,
+					stack: err.stack
 				};
 			}
 			var msg;
@@ -1065,7 +1065,20 @@ function prepareRun(script, ticket, args, priv) {
 				message.event = err;
 			} else {
 				message.ticket = ticket;
-				if (err) message.error = err;
+				if (err) {
+					if (err instanceof Error) message.error = {
+						message: err.message,
+						name: err.name,
+						description: err.description,
+						lineNumber: err.lineNumber,
+						columnNumber: err.columnNumber,
+						stack: err.stack
+					};
+					else message.error = {
+						message: err.toString(),
+						name: 'Error'
+					};
+				}
 			}
 			message.args = Array.prototype.slice.call(arguments, 1).map(function(arg) {
 				if (arg instanceof window.Node) {
