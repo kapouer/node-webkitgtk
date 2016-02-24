@@ -1303,18 +1303,18 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 
 	function disableExternalResources() {
 		function jumpAuto(node) {
-			var att = {
-				body: "onload",
-				link: "rel",
-				script: "type"
-			}[node.nodeName.toLowerCase()];
-			if (!att) return;
-			var val = node.hasAttribute(att) ? node[att] : null;
+			var tag = node.nodeName.toLowerCase();
+			var params = {
+				body: ["onload", null],
+				link: ["rel", ""],
+				script: ["type", "text/plain"]
+			}[tag];
+			if (!params) return;
+			var att = params[0];
+			var val = node.hasAttribute(att) ? node[att] : undefined;
 			if (lastEvent == EV.init) {
-				node[att] = undefined;
+				node[att] = params[1];
 				preloadList.push({node: node, val: val, att: att});
-			} else {
-				node[att] = val;
 			}
 		}
 		observer = new MutationObserver(function(mutations) {
@@ -1354,7 +1354,8 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 		if (preloadList.length) {
 			w.setTimeout.call(window, function() {
 				preloadList.forEach(function(obj) {
-					obj.node[obj.att] = obj.val;
+					if (obj.val === undefined) obj.node.removeAttribute(obj.att);
+					else obj.node[obj.att] = obj.val;
 				});
 				preloadList = [];
 				check("ready");
