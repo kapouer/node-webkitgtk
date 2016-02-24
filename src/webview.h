@@ -101,7 +101,6 @@ private:
 
 	Nan::Callback* loadCallback = NULL;
 	Nan::Callback* stopCallback = NULL;
-	Nan::Callback* requestCallback = NULL;
 	Nan::Callback* receiveDataCallback = NULL;
 	Nan::Callback* responseCallback = NULL;
 	Nan::Callback* policyCallback = NULL;

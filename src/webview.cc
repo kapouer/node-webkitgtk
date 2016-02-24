@@ -156,7 +156,6 @@ void WebView::destroy() {
 
 	if (loadCallback != NULL) delete loadCallback;
 	if (stopCallback != NULL) delete stopCallback;
-	if (requestCallback != NULL) delete requestCallback;
 	if (receiveDataCallback != NULL) delete receiveDataCallback;
 	if (responseCallback != NULL) delete responseCallback;
 	if (policyCallback != NULL) delete policyCallback;
