@@ -59,13 +59,13 @@ describe("stall load options", function suite() {
 			res.statusCode = 200;
 			res.end('<html><head><script type="text/javascript">\
 			window.testDone = 0;\
-			setInterval(function() {window.testDone++;}, 40);\
+			setInterval(function() {window.testDone++;}, 200);\
 			</script></head><body>test</body></html>');
 		}).listen(function() {
 			port = server.address().port;
 			WebKit(function(err, w) {
 				// increasing stall here to 1000 will fail the test (expectedly)
-				w.load("http://localhost:" + port, {stallInterval:100, console: true})
+				w.load("http://localhost:" + port, {stallInterval:500, console: true})
 				.once('idle', function() {
 					this.run(function(cb) {
 						cb(null, window.testDone);
