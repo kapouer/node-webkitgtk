@@ -186,7 +186,6 @@ load(uri, opts, cb) options
    cancel (boolean)  
    ignore (boolean)  
   and has read-only access to  
-   headers (object)  
    from (string, in case the uri was redirected from another uri)  
   In particular, a filter can revert the action of a previous filter.  
   The initial document loading request is not filtered.  

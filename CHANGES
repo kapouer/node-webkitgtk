@@ -211,3 +211,8 @@ to handle redirection.
 Shouldn't be a breaking change: default user-agent is now the one set by the
 backend (webkitgtk or jsdom), not "Mozilla/5.0".
 
+3.6.3
+-----
+
+Officialize the fact that filters never received a populated this.headers by
+removing it from documentation.
