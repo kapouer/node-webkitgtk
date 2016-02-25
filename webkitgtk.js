@@ -1620,6 +1620,11 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 			lastEvent: lastEvent,
 			lastRunEvent: lastRunEvent
 		};
+		if (document.readyState == "complete") {
+			// if loading was stopped (location change or else) the load event
+			// is not emitted but readyState is complete
+			hasLoaded = true;
+		}
 		w.setTimeout.call(window, function() {
 			if (lastEvent <= lastRunEvent) {
 				if (lastEvent == EV.load) {
