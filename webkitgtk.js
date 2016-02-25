@@ -697,8 +697,9 @@ function load(uri, opts, cb) {
 		this.on('console', function(level) {
 			if (this.listeners('console').length <= 1) {
 				var args = Array.prototype.slice.call(arguments, 1).map(function(arg) {
-					if (arg && arg.stack && arg.name && arg.message) {
-						return arg.name + ': ' + arg.message + '\n ' + arg.stack.replace(/\n/g, '\n ');
+					if (arg && arg.stack && arg.name) {
+						return arg.name + ': ' + (arg.message ? arg.message + '\n ' : '')
+							+ arg.stack.replace(/\n/g, '\n ');
 					} else {
 						return arg;
 					}
