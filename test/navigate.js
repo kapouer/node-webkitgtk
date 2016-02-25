@@ -39,25 +39,36 @@ describe("navigation", function suite() {
 		var navcount = 0;
 		var server = require('http').createServer(function(req, res) {
 			res.statusCode = 200;
-			res.end("ok" + counter++);
+			if (req.url == "/") {
+				counter++;
+				res.end(`
+					<html><body>
+					<script type="text/javascript" src="/delay.js"></script>
+					<script type="text/javascript">
+					document.location = "/anotherpage";
+					</script>
+					</body></html>
+				`);
+			} else if (req.url == "/anotherpage") {
+				counter++;
+				res.end("ok" + counter++);
+			} else if (req.url == "/delay.js") {
+				setTimeout(function() {
+					res.end("console.log('delayed');");
+				}, 500);
+			}
 		}).listen(function() {
 			WebKit.load("http://localhost:" + server.address().port, {
 				navigation: false
-			}, function(err, w) {
-				w.run(function(done) {
-					document.location = '/anotherpage';
-					done();
-				}, function() {
-					setTimeout(function() {
-						server.close();
-						expect(counter).to.be(1);
-						expect(navcount).to.be(1);
-						done();
-					}, 100);
-				});
 			}).on('navigate', function(url) {
 				navcount++;
 				expect(url).to.be(this.uri + 'anotherpage');
+			}).when('idle', function(cb) {
+				expect(counter).to.be(1);
+				expect(navcount).to.be(1);
+				cb();
+				server.close();
+				done();
 			});
 		});
 	});
