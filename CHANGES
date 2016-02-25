@@ -218,3 +218,10 @@ Officialize the fact that filters never received a populated this.headers by
 removing it from documentation.
 
 Support console.trace, and provide better output for errors.
+
+3.6.4
+-----
+
+Setting document.location early could stop document while loading and
+make client internal script miss the load event.
+
