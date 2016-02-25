@@ -705,6 +705,7 @@ function load(uri, opts, cb) {
 					}
 				});
 				var err = args.length > 0 && args[0];
+				if (level == "trace") level = "error";
 				console[level].apply(null, args);
 			}
 		});
@@ -1260,6 +1261,12 @@ function errorEmitter(emit) {
 
 function consoleEmitter(emit) {
 	if (!window.console) return;
+	window.console.trace = function() {
+		var args = Array.from(arguments);
+		args.push(new Error());
+		args = ['console', 'trace'].concat(args);
+		emit.apply(null, args);
+	};
 	['log', 'error', 'info', 'warn'].forEach(function(meth) {
 		window.console[meth] = function() {
 			var args = ['console', meth].concat(Array.from(arguments));
