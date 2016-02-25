@@ -625,7 +625,7 @@ WebKit.prototype.when = function(ev, fn) {
 		return new Promise(function(resolve, reject) {
 			fn.call(self, function(err) {
 				if (err) reject(err);
-				else resolve(Array.prototype.slice.call(arguments, 1));
+				else resolve(Array.from(arguments).slice(1));
 			});
 		});
 	}).catch(function(err) {
@@ -696,7 +696,7 @@ function load(uri, opts, cb) {
 	if (opts.console && this.listeners('console').length == 0) {
 		this.on('console', function(level) {
 			if (this.listeners('console').length <= 1) {
-				var args = Array.prototype.slice.call(arguments, 1).map(function(arg) {
+				var args = Array.from(arguments).slice(1).map(function(arg) {
 					if (arg && arg.stack && arg.name) {
 						return arg.name + ': ' + (arg.message ? arg.message + '\n ' : '')
 							+ arg.stack.replace(/\n/g, '\n ');
@@ -922,14 +922,14 @@ WebKit.prototype.destroy = function(cb) {
 };
 
 WebKit.prototype.run = function(script, cb) {
-	var args = Array.prototype.slice.call(arguments, 1);
+	var args = Array.from(arguments).slice(1);
 	if (args.length > 0 && typeof args[args.length-1] == "function") cb = args.pop();
 	runcb.call(this, script, args, cb);
 	return this;
 };
 
 WebKit.prototype.runev = function(script, cb) {
-	var args = Array.prototype.slice.call(arguments, 1);
+	var args = Array.from(arguments).slice(1);
 	if (args.length > 0 && typeof args[args.length-1] == "function") cb = args.pop();
 	run.call(this, script, null, args, cb);
 	return this;
@@ -1081,7 +1081,7 @@ function prepareRun(script, ticket, args, priv) {
 					};
 				}
 			}
-			message.args = Array.prototype.slice.call(arguments, 1).map(function(arg) {
+			message.args = Array.from(arguments).slice(1).map(function(arg) {
 				if (arg instanceof window.Node) {
 					var cont = arg.ownerDocument.createElement('div');
 					cont.appendChild(arg.cloneNode(true));
@@ -1262,7 +1262,7 @@ function consoleEmitter(emit) {
 	if (!window.console) return;
 	['log', 'error', 'info', 'warn'].forEach(function(meth) {
 		window.console[meth] = function() {
-			var args = ['console', meth].concat(Array.prototype.slice.call(arguments));
+			var args = ['console', meth].concat(Array.from(arguments));
 			emit.apply(null, args);
 		};
 	});
@@ -1418,7 +1418,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 		return t;
 	}
 	window.setTimeout = function setTimeout(fn, timeout) {
-		var args = Array.prototype.slice.call(arguments, 0);
+		var args = Array.from(arguments);
 		var stall = false;
 		timeout = timeout || 0;
 		if (timeout >= stallTimeout) {
@@ -1432,7 +1432,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 		args[0] = function(obj) {
 			var err;
 			try {
-				obj.fn.apply(null, Array.prototype.slice.call(arguments, 1));
+				obj.fn.apply(null, Array.from(arguments).slice(1));
 			} catch (e) {
 				err = e;
 			}
@@ -1457,7 +1457,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 	}
 
 	window.setInterval = function(fn, interval) {
-		var args = Array.prototype.slice.call(arguments, 0);
+		var args = Array.from(arguments);
 		interval = interval || 0;
 		var stall = false;
 		if (interval >= stallInterval) {
@@ -1517,7 +1517,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 	};
 
 	if (window.WebSocket) window.WebSocket = function() {
-		var ws = new w.WebSocket(Array.prototype.slice.call(arguments, 0));
+		var ws = new w.WebSocket(Array.from(arguments));
 		function checkws() {
 			check('websocket');
 		}
@@ -1539,7 +1539,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 		this.addEventListener("abort", xhrClean);
 		this.addEventListener("timeout", xhrClean);
 		this._private = {url: absolute(url)};
-		var ret = wopen.apply(this, Array.prototype.slice.call(arguments, 0));
+		var ret = wopen.apply(this, Array.from(arguments));
 		return ret;
 	};
 	var wsend = window.XMLHttpRequest.prototype.send;
@@ -1548,7 +1548,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 		if (!priv) return;
 		requests.len++;
 		try {
-			wsend.apply(this, Array.prototype.slice.call(arguments, 0));
+			wsend.apply(this, Array.from(arguments));
 		} catch (e) {
 			xhrClean.call(this);
 			return;
