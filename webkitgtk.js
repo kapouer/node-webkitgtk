@@ -737,7 +737,7 @@ function load(uri, opts, cb) {
 		scripts.push(opts.script);
 	}
 	if (Array.isArray(opts.scripts)) {
-		scripts = script.concat(opts.scripts);
+		scripts = scripts.concat(opts.scripts);
 	} else if (opts.scripts) {
 		console.warn("scripts option should be an array");
 	}
