@@ -733,9 +733,17 @@ function load(uri, opts, cb) {
 			opts.stallInterval != null ? opts.stallInterval : 1000
 		]
 	});
-	if (opts.script) scripts.push(Buffer.isBuffer(opts.script) ? opts.script.toString() : opts.script);
+	if (opts.script) {
+		scripts.push(opts.script);
+	}
+	if (Array.isArray(opts.scripts)) {
+		scripts = script.concat(opts.scripts);
+	} else if (opts.scripts) {
+		console.warn("scripts option should be an array");
+	}
 
 	opts.script = '\n' + scripts.map(function(fn) {
+		if (Buffer.isBuffer(fn)) fn = fn.toString();
 		return prepareRun(fn.fn || fn, null, fn.args || null, priv).script;
 	}).join('\n');
 

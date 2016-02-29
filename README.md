@@ -209,8 +209,11 @@ load(uri, opts, cb) options
   load this content with the given base uri.
 
 - script  
-  string, default null  
+  buffer, string or {fn: function(..args) {}, args: [..]}, default null  
   insert script at the beginning of loaded document.
+
+- scripts  
+  same as script but an array of them, default []
 
 - style  
   string, default null  

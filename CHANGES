@@ -225,3 +225,8 @@ Support console.trace, and provide better output for errors.
 Setting document.location early could stop document while loading and
 make client internal script miss the load event.
 
+3.6.5
+-----
+
+Add load 'scripts' option.
+
