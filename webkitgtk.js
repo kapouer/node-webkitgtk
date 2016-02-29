@@ -641,6 +641,7 @@ WebKit.prototype.prepare = function() {
 };
 
 function load(uri, opts, cb) {
+	opts = Object.assign({}, opts);
 	if (uri && !url.parse(uri).protocol) uri = 'http://' + uri;
 
 	var priv = this.priv;
