@@ -210,7 +210,8 @@ load(uri, opts, cb) options
 
 - script  
   buffer, string or {fn: function(..args) {}, args: [..]}, default null  
-  insert script at the beginning of loaded document.
+  insert script at the beginning of loaded document.  
+  args length must match function arity.
 
 - scripts  
   same as script but an array of them, default []
