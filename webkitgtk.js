@@ -1025,9 +1025,12 @@ function prepareRun(script, ticket, args, priv) {
 	}
 
 	if (typeof script == "function") script = script.toString();
+
 	if (!async && isfunction && !ticket) {
-		throw new Error("cannot call runev without a script that accepts a listener function as last parameter");
+		args.push(toSource(function(s) {}));
+		async = true;
 	}
+
 	var obj = {
 		sync: !async,
 		ticket: ticket
