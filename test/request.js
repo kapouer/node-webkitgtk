@@ -7,31 +7,58 @@ describe("request listener", function suite() {
 		this.timeout(1000);
 		var haspng = false;
 		var hasjs = false;
+		var hasdatauri = false;
 		var hasSlash = false;
-		WebKit.load("http://localhost", {
-			content: '<script src="http://localhost/test.js"></script><img src="http://localhost/test.png" /><img src="http://localhost/slash/test.jpg" />',
-			filter: [function(re) {
-				if (/\.png$/.test(this.uri)) this.cancel = true;
-				if (re.test(this.uri)) this.cancel = true;
-			}, new RegExp('/slash/.*')]
-		}, function(err) {
-			expect(err).to.be(null);
-		}).on('response', function(res) {
-			if (/\/slash\/.*/.test(res.uri)) {
-				hasSlash = true;
+		var server = require('http').createServer(function(req, res) {
+			if (req.url == "/test.js") {
+				res.statusCode = 200;
+				res.end('console.log("hello");');
+			} else {
+				res.statusCode = 404;
+				res.end("Not Found");
 			}
-			if (/\.png$/.test(res.uri)) {
-				haspng = true;
-			}
-			if (/\.js$/.test(res.uri)) {
-				hasjs = true;
-			}
-		})
-		.once('idle', function() {
-			expect(haspng).to.not.be.ok();
-			expect(hasSlash).to.not.be.ok();
-			expect(hasjs).to.be.ok();
-			done();
+		}).listen(function() {
+			WebKit.load("http://localhost:" + server.address().port, {
+				content: `<!DOCTYPE html>
+				<html>
+				<head>
+				<script src="/test.js"></script>
+				</head>
+				<body>
+				<img src="/test.png">
+				<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+				<img src="/slash/test.jpg">
+				</body>
+				</html>`,
+				filter: [function(re) {
+					if (/\.png$/.test(this.uri)) this.cancel = true;
+					if (re.test(this.uri)) this.cancel = true;
+					if (/^data:/.test(this.uri)) this.cancel = true;
+				}, new RegExp('/slash/.*')]
+			}, function(err) {
+				expect(err).to.be(null);
+			}).on('response', function(res) {
+				if (/\/slash\/.*/.test(res.uri)) {
+					hasSlash = true;
+				}
+				if (/\.png$/.test(res.uri)) {
+					haspng = true;
+				}
+				if (/\.js$/.test(res.uri)) {
+					hasjs = true;
+				}
+				if (/^data:/.test(res.uri)) {
+					hasdatauri = true;
+				}
+			})
+			.once('idle', function() {
+				expect(haspng).to.not.be.ok();
+				expect(hasSlash).to.not.be.ok();
+				expect(hasjs).to.be.ok();
+				expect(hasdatauri).to.not.be.ok();
+				server.close();
+				done();
+			});
 		});
 	});
 
