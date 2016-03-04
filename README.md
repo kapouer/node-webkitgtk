@@ -174,9 +174,7 @@ load(uri, opts, cb) options
 - allow  
   "all" or "same-origin" or "none" or a RegExp, default "all"  
   A short-hand filter that is run after all other filters.  
-  Nota Bene: some v8 implementations do not escape RegExp.toString() properly,
-  and the resulting string is not evaluable. Make sure to escape slashes when
-  writing regular expressions.
+  Note that data:uri are discarded by "none" and allowed by "same-origin".
 
 - filters  
   An array of request filters that are run in browser, synchronously.  

@@ -770,7 +770,8 @@ function allowFilter(allow) {
 	if (allow == "none") {
 		this.cancel = true;
 	} else if (allow == "same-origin") {
-		if ((new URL(this.uri)).host != document.location.host) this.cancel = true;
+		var obj = new URL(this.uri);
+		if (obj.protocol != "data:" && obj.host != document.location.host) this.cancel = true;
 	} else if (allow instanceof RegExp) {
 		if (!allow.test(this.uri)) this.cancel = true;
 	}

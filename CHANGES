@@ -230,3 +230,8 @@ make client internal script miss the load event.
 
 Add load 'scripts' option.
 
+3.6.6
+-----
+
+allow: "same-origin" now allows data:uri.
+
