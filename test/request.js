@@ -66,14 +66,19 @@ describe("request listener", function suite() {
 		this.timeout(5000);
 		var onlyjs = /\.js/;
 		var hadmain = false;
-		WebKit.load('http://github.com', {allow: onlyjs, console: true})
+		var hadjs = false;
+		WebKit.load('http://twitter.com', {allow: onlyjs, console: true})
 		.on('response', function(res) {
 			if (res.uri == this.uri) hadmain = true;
-			else expect(onlyjs.test(res.uri)).to.be(true);
+			else {
+				expect(onlyjs.test(res.uri)).to.be(true);
+				hadjs = true;
+			}
 		})
 		.once('idle', function(err) {
 			expect(err).to.not.be.ok();
 			expect(hadmain).to.be(true);
+			expect(hadjs).to.be(true);
 			done();
 		});
 	});
