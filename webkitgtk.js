@@ -200,10 +200,12 @@ function policyDispatcher(type, uri) {
 
 function checkIdle() {
 	var priv = this.priv;
-	if (priv.idling && priv.pendingRequests == 0) {
-		this.readyState = "idling";
-		priv.idling = false;
-		this.emit('idle');
+	if (priv.pendingRequests == 0) {
+		if (priv.idling) {
+			this.readyState = "idling";
+			priv.idling = false;
+			this.emit('idle');
+		}
 	}
 }
 
