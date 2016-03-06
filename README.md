@@ -247,6 +247,11 @@ load(uri, opts, cb) options
   wait that long before ignoring all setTimeout tasks as idle condition.  
   Set to 0 to ignore all.
 
+- stallFrame  
+  number, default 1000  
+  wait that long before ignoring requestAnimationFrames as idle condition.  
+  Set to 0 to ignore all.
+
 - console  
   boolean, default false  
   Send `console` events (see below).  

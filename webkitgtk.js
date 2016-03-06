@@ -732,7 +732,8 @@ function load(uri, opts, cb) {
 			priv.cstamp,
 			priv.stall,
 			opts.stallTimeout != null ? opts.stallTimeout : 100,
-			opts.stallInterval != null ? opts.stallInterval : 1000
+			opts.stallInterval != null ? opts.stallInterval : 1000,
+			opts.stallFrame != null ? opts.stallFrame : 1000
 		]
 	});
 	if (opts.script) {
@@ -1290,7 +1291,9 @@ function consoleEmitter(emit) {
 	});
 }
 
-function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, stallInterval, emit) {
+function stateTracker(preload, charset, cstamp,
+stallXhr, stallTimeout, stallInterval, stallFrame,
+emit) {
 	var EV = {
 		init: 0,
 		ready: 1,
@@ -1308,7 +1311,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 
 	var intervals = {len: 0, stall: 0, inc: 1};
 	var timeouts = {len: 0, stall: 0, inc: 1};
-	var frames = {len: 0};
+	var frames = {len: 0, stall: 0, ignore: !stallFrame};
 	var requests = {len: 0, stall: 0};
 
 	if (preload) disableExternalResources();
@@ -1513,24 +1516,32 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 		if (id && frames[id]) {
 			delete frames[id];
 			frames.len--;
-			if (frames.len == 0) {
+			if (frames.len <= frames.stall && !frames.ignore) {
 				check('frame');
 			}
 		}
 	}
 	window.requestAnimationFrame = function(fn) {
-		frames.len++;
 		var id = w.requestAnimationFrame.call(window, function(ts) {
 			var err;
+			doneFrame(id);
 			try {
 				fn(ts);
 			} catch (e) {
 				err = e;
 			}
-			doneFrame(id);
 			if (err) throw err; // rethrow
 		});
-		frames[id] = true;
+		if (!frames.ignore) {
+			frames.len++;
+			frames[id] = true;
+		}
+		if (!frames.timeout && !frames.ignore) {
+			frames.timeout = w.setTimeout.call(window, function() {
+				frames.ignore = true;
+				check('frame');
+			}, stallFrame);
+		}
 		return id;
 	};
 	window.cancelAnimationFrame = function(id) {
@@ -1592,7 +1603,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 				req.count--;
 				check('xhr timeout', url);
 			}
-		}, staleXhrTimeout);
+		}, stallXhr);
 	}
 	function xhrProgress(e) {
 		var priv = this._private;
@@ -1630,7 +1641,7 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 		var info = {
 			timeouts: timeouts.len - timeouts.stall,
 			intervals: intervals.len - intervals.stall,
-			frames: frames.len,
+			frames: frames.len - frames.stall,
 			requests: requests.len - requests.stall,
 			lastEvent: lastEvent,
 			lastRunEvent: lastRunEvent
@@ -1645,7 +1656,8 @@ function stateTracker(preload, charset, cstamp, staleXhrTimeout, stallTimeout, s
 				if (lastEvent == EV.load) {
 					if ((timeouts.ignore || timeouts.len <= timeouts.stall)
 						&& (intervals.ignore || intervals.len <= intervals.stall)
-						&& frames.len == 0 && requests.len <= requests.stall) {
+						&& (frames.ignore || frames.len <= frames.stall)
+						&& requests.len <= requests.stall) {
 						lastEvent += 1;
 						emit("idle", from, url, info);
 					}
