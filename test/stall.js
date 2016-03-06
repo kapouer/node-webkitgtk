@@ -78,5 +78,36 @@ describe("stall load options", function suite() {
 			});
 		});
 	});
+	it("should not account for idling if > stallFrame", function(done) {
+		this.timeout(1500);
+		var port;
+		var server = require('http').createServer(function(req, res) {
+			res.statusCode = 200;
+			res.end(`<html><head><script type="text/javascript">
+			window.testDone = 0;
+			(function doRAF() {
+				window.requestAnimationFrame(function() {
+					doRAF();
+					testDone++;
+				});
+			})();
+			</script></head><body>test</body></html>`);
+		}).listen(function() {
+			port = server.address().port;
+			WebKit(function(err, w) {
+				// increasing stall here to 1000 will fail the test (expectedly)
+				w.load("http://localhost:" + port, {stallFrame:300, console: true})
+				.once('idle', function() {
+					this.run(function(cb) {
+						cb(null, window.testDone);
+					}, function(err, result) {
+						expect(result).to.be.greaterThan(10);
+						server.close();
+						done();
+					});
+				});
+			});
+		});
+	});
 });
 
