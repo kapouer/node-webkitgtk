@@ -111,9 +111,8 @@ WebKit
 .when("ready", function(cb) {
   setTimeout(cb, 100);
 })
-.when("idle", function(cb) {
-  // and so on
-  cb();
+.when("idle", function() {
+  // promise variant
 });
 ```
 
