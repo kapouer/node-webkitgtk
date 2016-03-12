@@ -5,7 +5,7 @@ if (!useJSDOM) {
 		hasNative = require.resolve(__dirname + '/lib/webkitgtk.node');
 	} catch(e) {}
 }
-var WebKit = require('./webkitgtk');
+var WebKit = require('./src/webkitgtk');
 if (!hasNative) {
 	var jsdom = require('jsdom');
 	if (!useJSDOM) {
