@@ -346,19 +346,16 @@ These are lifecycle events:
 
 * ready  
   same as document's DOMContentLoaded event  
-  listener()
 
 * load  
   same as window's load event  
-  listener()
 
 * idle  
-  when all requests are finished, failed, or just hanging, and when the
-  gtk loop has been doing nothing for a couple of cycles.  
+  when all requests (xhr included), timeouts, intervals, animation requests,
+  are finished or timed out (see stall* options).  
 
 * unload  
   same as window's unload event  
-  listener()
 
 These events happen *once* and *in that order*.
 
@@ -428,49 +425,50 @@ methods
   creates an unitialized instance upon which init() must be called.  
   WebKit is also an EventEmitter.
 
-* WebKit([opts], cb)  
+* WebKit(opts?, cb?)  
   Same as above.  
   If arguments are given, equals `new WebKit().init(opts, cb)`.
 
-* init([opts], cb)  
+* init(opts?, cb)  
   see parameters described above  
   *must be invoked before (pre)load*.  
   Callback receives (err, instance).
 
-* preload(uri, [opts], [cb])  
+* preload(uri, opts?, cb?)  
   load uri into webview  
   scripts are not run, resources are not loaded.  
   These options are not effective: `cookies`, `script`, `allow`.  
   Callback receives (err, instance).
 
-* load(uri, [opts], [cb])  
+* load(uri, opts?, cb?)  
   load uri into webview  
   see parameters described above.  
   Callback receives (err, instance).
 
-* once(event, listener)   /the EventEmitter interface/
+* once(event, listener)  
+  the standard synchronous EventEmitter interface
 
 * when(event, actor)  
   Allow queuing of jobs on an event and before next event.  
   The actor receives a unique callback parameter, to be called when done.
 
-* run(sync-script, <param>*, cb)  
+* run(sync-script, param*, cb)  
   any synchronous script text or global function.  
   If it's a function, multiple parameters can be passed, as long as they are
   serializable.
 
-* run(async-script, <param>*, cb)  
+* run(async-script, param*, cb)  
   async-script must be a function with callback as last argument,
-  whose arguments will be passed to cb, as long as they are stringifyable.  
+  whose arguments will be passed to cb, as long as they are stringifyable.
 
-* runev(async-script, <param>*, cb)  
+* runev(async-script, param*, cb)  
   async-script must be a function, it receives an `emit` function as last
   argument, which in turn acts as event emitter: each call emits the named event
   on current instance, and can be listened using view.on(event, listener).  
   The listener receives additional arguments as long as they're stringifyable.  
-  Can be used to listen recurring events.  
+  Can be used to listen recurring events.
 
-* png(writableStream or filename, [cb])  
+* png(writableStream or filename, cb?)  
   takes a png snapshot of the whole document right now.  
   If invoked with a filename, save the stream to file.  
   Tip: use custom css to cut portions of the document.
@@ -479,7 +477,7 @@ methods
   get the whole document html, prepended with its doctype, right now.  
   Callback receives (err, str).
 
-* pdf(filepath, [opts], [cb])  
+* pdf(filepath, opts?, cb?)  
   print page to file right now  
   see parameters described above.
 
