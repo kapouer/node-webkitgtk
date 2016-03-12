@@ -448,9 +448,11 @@ methods
 * once(event, listener)  
   the standard synchronous EventEmitter interface
 
-* when(event, actor)  
+* when(event, asyncListener)  
   Allow queuing of jobs on an event and before next event.  
-  The actor receives a unique callback parameter, to be called when done.
+  The async listener can have a function length of zero, in which case
+  it is considered to be a thenable and can return a promise; it will
+  receive a callback parameter to be called when done.
 
 * run(sync-script, param*, cb)  
   any synchronous script text or global function.  
