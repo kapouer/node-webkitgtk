@@ -629,17 +629,16 @@ WebKit.prototype.when = function(ev, fn) {
 	var self = this;
 	if (!this.promises) initWhen.call(this);
 	var carry = this.promises[ev].pending;
-	this.promises[ev] = this.promises[ev].then(function() {
-		return new Promise(function(resolve, reject) {
-			fn.call(self, function(err) {
-				if (err) reject(err);
-				else resolve(Array.from(arguments).slice(1));
-			});
+	var thenable = fn.length == 0 ? fn : new Promise(function(resolve, reject) {
+		fn.call(self, function(err) {
+			if (err) reject(err);
+			else resolve();
 		});
-	}).catch(function(err) {
+	});
+	this.promises[ev] = this.promises[ev].then(thenable).catch(function(err) {
 		// just report errors ?
 		console.error(err);
-	}.bind(this));
+	});
 	this.promises[ev].pending = carry;
 	return this;
 };
