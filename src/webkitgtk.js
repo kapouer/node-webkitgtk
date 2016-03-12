@@ -42,6 +42,12 @@ function WebKit(opts, cb) {
 
 util.inherits(WebKit, EventEmitter);
 
+try {
+	WebKit.navigator = require(path.join(__dirname, '../navigator.json'));
+} catch(ex) {
+	WebKit.navigator = {};
+}
+
 WebKit.load = function(uri, opts, cb) {
 	if (!cb && typeof opts == "function") {
 		cb = opts;

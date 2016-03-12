@@ -42,7 +42,7 @@
     "pdfinfo": "0.0.3"
   },
   "scripts": {
-    "install": "node-gyp rebuild || exit 0",
+    "install": "make || exit 0",
     "test": "mocha -R spec"
   },
   "repository": "git@github.com:kapouer/node-webkitgtk.git",

@@ -1,5 +1,6 @@
 lib: ./build
 	node-gyp build
+	node src/navigator.js > navigator.json
 
 ./build:
 	node-gyp configure

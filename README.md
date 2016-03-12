@@ -495,6 +495,9 @@ methods
 properties
 ----------
 
+* WebKit.navigator  
+  static property, a copy of the currently installed engine.
+
 * uri  
   Read-only, get current uri of the web view.
 
