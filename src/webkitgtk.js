@@ -110,8 +110,8 @@ WebKit.prototype.binding = function(opts, cfg, cb) {
 		var priv = this.priv;
 		if (child) priv.xvfb = child;
 		process.env.DISPLAY = ":" + newDisplay;
-		var Bindings = require(__dirname + '/lib/webkitgtk.node');
-		cfg.webextension = __dirname + '/lib/ext';
+		var Bindings = require(path.join(__dirname, '../lib/webkitgtk.node'));
+		cfg.webextension = path.join(__dirname, '../lib/ext');
 		this.webview = new Bindings(cfg);
 		instances++;
 		debug('new instance created');
