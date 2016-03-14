@@ -307,9 +307,8 @@ init(opts, cb) options
   string, "always", "never", any other string defaults to "no third party".
 
 If width, height, depth options are given, an xvfb instance listening
-given display port will be spawn using `headless` module.
-
-It is advised and safer to monitor xvfb using a proper daemon tool.
+given display port will be spawned using `headless` module.
+Wrapping the application with `xvfb-run` command line tool is a safe(r) alternative.
 
 
 pdf() options
