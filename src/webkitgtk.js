@@ -603,16 +603,20 @@ function initPromise(ev) {
 	if (ev == "idle") prev = this.promises.load;
 	if (ev == "load") prev = this.promises.ready;
 
-	var holder = {};
-	this.promises[ev] = new Promise(function(resolve) {
+	var holder = {
+		pending: true
+	};
+	var initialPromise = holder.promise = new Promise(function(resolve) {
 		holder.resolve = resolve;
 	});
-	this.promises[ev].pending = true;
-	if (prev) this.promises[ev].then(prev);
+	this.promises[ev] = holder;
+	if (prev) holder.promise = prev.promise.then(function() {
+		return initialPromise;
+	});
 
 	this.once(ev, function() {
 		var stamp = this.priv.stamp;
-		this.promises[ev].catch(function(err) {
+		holder.promise.catch(function(err) {
 			if (err) console.error(err);
 		}).then(function() {
 			if (stamp == this.priv.stamp) {
@@ -623,7 +627,7 @@ function initPromise(ev) {
 				// typically when a queued listener calls unload/load right away
 			}
 		}.bind(this));
-		this.promises[ev].pending = false;
+		holder.pending = false;
 		holder.resolve();
 	});
 }
@@ -633,8 +637,8 @@ function initWhen() {
 		this.promises = {};
 	}
 	['ready', 'load', 'idle'].forEach(function(ev) {
-		var promise = this.promises[ev];
-		if (!promise || !promise.pending) {
+		var holder = this.promises[ev];
+		if (!holder || !holder.pending) {
 			initPromise.call(this, ev);
 		}
 	}.bind(this));
@@ -643,8 +647,10 @@ function initWhen() {
 WebKit.prototype.when = function(ev, fn) {
 	var self = this;
 	if (!this.promises) initWhen.call(this);
-	var carry = this.promises[ev].pending;
-	var thenable = fn.length == 0 ? fn : function() {
+	var holder = this.promises[ev];
+	if (!fn) return holder.promise;
+	var isThen = fn.length == 0;
+	var thenable = isThen ? fn : function() {
 		return new Promise(function(resolve, reject) {
 			fn.call(self, function(err) {
 				if (err) reject(err);
@@ -652,12 +658,12 @@ WebKit.prototype.when = function(ev, fn) {
 			});
 		});
 	};
-	this.promises[ev] = this.promises[ev].then(thenable).catch(function(err) {
+	holder.promise = holder.promise.then(thenable).catch(function(err) {
 		// just report errors ?
 		console.error(err);
 	});
-	this.promises[ev].pending = carry;
-	return this;
+	if (isThen) return holder.promise;
+	else return this;
 };
 
 WebKit.prototype.prepare = function() {
