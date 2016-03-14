@@ -100,8 +100,8 @@ describe("wait for event", function suite() {
 		var page = WebKit.load("https://www.debian.org/").once("ready", function(err) {
 			expect(err).to.not.be.ok();
 			page.when('idle', function() {
-				return page.when('idle', function() {
-					return page.when('ready', function() {
+				page.when('idle', function() {
+					page.when('ready', function() {
 						done();
 					});
 				});
