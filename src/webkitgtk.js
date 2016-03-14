@@ -36,7 +36,7 @@ var hasRunEvent = '(' + function(name, event) {
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
 		var inst = new WebKit();
-		if (arguments.length) inst.init(opts, cb);
+		if (arguments.length) return inst.init(opts, cb);
 		return inst;
 	}
 	this.priv = initialPriv();
@@ -56,11 +56,13 @@ WebKit.load = function(uri, opts, cb) {
 		cb = opts;
 		opts = null;
 	}
-	var inst = WebKit(opts, function(err, w) {
-		if (err) return cb(err, w);
-		w.load(uri, opts, cb);
+	var inst = new WebKit();
+	var pcb = promet(inst, cb);
+	inst.init(opts, function(err, w) {
+		if (err) return pcb.cb(err, w);
+		inst.load(uri, opts, pcb.cb);
 	});
-	return inst;
+	return pcb.ret;
 };
 
 WebKit.prototype.init = function(opts, cb) {
@@ -70,6 +72,8 @@ WebKit.prototype.init = function(opts, cb) {
 	}
 	if (opts == null) opts = {};
 	else if (typeof opts != "object") opts = {display: opts};
+
+	var pcb = promet(this, cb);
 
 	if (opts.verbose) {
 		debugStall = console.warn;
@@ -82,7 +86,7 @@ WebKit.prototype.init = function(opts, cb) {
 	}
 
 	var priv = this.priv;
-	if (priv.state >= INITIALIZING) return cb(new Error("init must not be called twice"), this);
+	if (priv.state >= INITIALIZING) return pcb.cb(new Error("init must not be called twice"), this);
 	priv.state = INITIALIZING;
 
 	if (opts.offscreen == null) opts.offscreen = true;
@@ -107,9 +111,9 @@ WebKit.prototype.init = function(opts, cb) {
 		inspector: opts.inspector
 	}, function(err) {
 		priv.state = INITIALIZED;
-		cb(err, this);
+		pcb.cb(err, this);
 	}.bind(this));
-	return this;
+	return pcb.ret;
 };
 
 WebKit.prototype.binding = function(opts, cfg, cb) {
@@ -536,24 +540,31 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	var priv = this.priv;
 	priv.state = LOADING;
 	var cookies = opts.cookies;
+	var pcb = promet(this, cb);
+	var p = Promise.resolve();
 	if (cookies) {
-		debug('load cookies');
-		if (!Array.isArray(cookies)) cookies = [cookies];
-		var script = cookies.map(function(cookie) {
-			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
+		p = p.then(function() {
+			debug('load cookies');
+			if (!Array.isArray(cookies)) cookies = [cookies];
+			var script = cookies.map(function(cookie) {
+				return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
+			}).join(";\n");
+			var content = `<html><head>
+				<script type="text/javascript">${script}</script>
+				</head></html>`;
+			return new Promise(function(resolve, reject) {
+				this.webview.load(uri, priv.stamp, {
+					content: content
+				}, function(err) {
+					if (err) reject(err);
+					else resolve();
+				});
+			}.bind(this));
+		}.bind(this)).catch(function(err) {
+			pcb.cb(err);
 		});
-		this.webview.load(uri, priv.stamp, {
-			content: "<html><head><script type='text/javascript'>%SCRIPT</script></head><body></body></html>"
-				.replace('%SCRIPT', script.join(';\n'))
-		}, function(err) {
-			debug('load cookies done', err);
-			next.call(this, err);
-		}.bind(this));
-	} else {
-		next.call(this);
 	}
-	function next(err) {
-		if (err) return cb(err);
+	p.then(function() {
 		var deprecations = {
 			ua: "user-agent",
 			charset: "default-charset",
@@ -570,9 +581,10 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		if (!opts['default-charset']) opts['default-charset'] = "utf-8";
 		this.webview.load(uri, this.priv.stamp, opts, function(err, inst) {
 			priv.state = INITIALIZED;
-			cb(err, inst);
+			pcb.cb(err, inst);
 		});
-	}
+	}.bind(this));
+	return pcb.ret;
 };
 
 WebKit.prototype.load = function(uri, opts, cb) {
@@ -581,9 +593,9 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		opts = null;
 	}
 	if (!opts) opts = {};
-	if (!cb) cb = noop;
-	load.call(this, uri, opts, cb);
-	return this;
+	var pcb = promet(this, cb);
+	load.call(this, uri, opts, pcb.cb);
+	return pcb.ret;
 };
 
 function initPromise(ev) {
@@ -837,30 +849,30 @@ WebKit.prototype.preload = function(uri, opts, cb) {
 		opts = null;
 	}
 	if (!opts) opts = {};
-	if (!cb) cb = noop;
+	var pcb = promet(this, cb);
 	var nopts = {};
 	for (var key in opts) nopts[key] = opts[key];
 	nopts.allow = "none";
 	nopts.preload = true;
-	load.call(this, uri, nopts, cb);
-	return this;
+	load.call(this, uri, nopts, pcb.cb);
+	return pcb.ret;
 };
 
 WebKit.prototype.stop = function(cb) {
 	debug("stop");
 	var priv = this.priv;
-	cb = cb || noop;
-	if (priv.state < INITIALIZED) return cb(errorLoad(priv.state));
+	var pcb = promet(this, cb);
+	if (priv.state < INITIALIZED) return pcb.cb(errorLoad(priv.state));
 	var wasLoading = false;
 	var fincb = function() {
 		debug("stop done");
-		cb(null, wasLoading);
+		pcb.cb(null, wasLoading);
 	}.bind(this);
 	wasLoading = this.webview && this.webview.stop && this.webview.stop(fincb);
-	// immediately returned
+	// was not loading, meaning stop(cb) will not call cb so call it on this side
 	if (!wasLoading) setImmediate(fincb);
 	this.readyState = "stop";
-	return this;
+	return pcb.ret;
 };
 
 WebKit.prototype.unload = function(cb) {
@@ -871,7 +883,7 @@ WebKit.prototype.unload = function(cb) {
 		delete priv.responseInterval;
 	}
 	if (priv.uris) delete priv.uris;
-	cb = cb || noop;
+	var pcb = promet(this, cb);
 
 	this.removeAllListeners('ready');
 	this.removeAllListeners('load');
@@ -884,31 +896,32 @@ WebKit.prototype.unload = function(cb) {
 
 	cleanTickets(priv.tickets);
 
-	if (priv.state == LOADING) {
-		this.stop(function(err, wasLoading) {
-			if (err) console.error(err);
-			next.call(this);
-		}.bind(this));
-	} else {
-		next.call(this);
-	}
+	var p = Promise.resolve();
 
-	function next() {
+	if (priv.state == LOADING) {
+		p = p.then(function() {
+			return this.stop();
+		}.bind(this)).catch(function(err) {
+			console.error(err);
+		});
+	}
+	p.then(function() {
 		delete priv.stamp;
 		debug('unload');
-		this.rawload('about:blank', {content:'<html></html>'}, function(err) {
-			if (err) console.error(err);
-			debug('unload done');
-			this.readyState = null;
-			this.status = null;
-			priv.tickets = cleanTickets(priv.tickets);
-			this.emit('unload');
-			this.removeAllListeners();
-			this.promises = null;
-			setImmediate(cb);
-		}.bind(this));
-	}
-	return this;
+		return this.rawload('about:blank', {content:'<html></html>'});
+	}.bind(this)).catch(function(err) {
+		console.error(err);
+	}).then(function() {
+		debug('unload done');
+		this.readyState = null;
+		this.status = null;
+		priv.tickets = cleanTickets(priv.tickets);
+		this.emit('unload');
+		this.removeAllListeners();
+		this.promises = null;
+		setImmediate(pcb.cb);
+	}.bind(this));
+	return pcb.ret;
 };
 
 function cleanTickets(tickets) {
@@ -941,22 +954,25 @@ function destroy(cb) {
 }
 
 WebKit.prototype.destroy = function(cb) {
-	destroy.call(this, cb);
-	return this;
+	var pcb = promet(this, cb);
+	destroy.call(this, pcb.cb);
+	return pcb.ret;
 };
 
 WebKit.prototype.run = function(script, cb) {
 	var args = Array.from(arguments).slice(1);
 	if (args.length > 0 && typeof args[args.length-1] == "function") cb = args.pop();
-	runcb.call(this, script, args, cb);
-	return this;
+	var pcb = promet(this, cb);
+	runcb.call(this, script, args, pcb.cb);
+	return pcb.ret;
 };
 
 WebKit.prototype.runev = function(script, cb) {
 	var args = Array.from(arguments).slice(1);
 	if (args.length > 0 && typeof args[args.length-1] == "function") cb = args.pop();
-	run.call(this, script, null, args, cb);
-	return this;
+	var pcb = promet(this, cb);
+	run.call(this, script, null, args, pcb.cb);
+	return pcb.ret;
 };
 
 function runcb(script, args, cb) {
@@ -1143,18 +1159,17 @@ function prepareRun(script, ticket, args, priv) {
 
 WebKit.prototype.png = function(obj, cb) {
 	var wstream;
+	var pcb = promet(this, cb);
 	if (typeof obj == "string") {
 		wstream = fs.createWriteStream(obj);
-		wstream.on('error', cb);
+		wstream.on('error', pcb.cb);
 	} else if (obj instanceof stream.Writable || obj instanceof stream.Duplex) {
 		wstream = obj;
 	} else {
-		cb(new Error("png() first arg must be either a writableStream or a file path"));
-		return this;
+		return pcb.cb(new Error("png() first arg must be either a writableStream or a file path"));
 	}
-	cb = cb || noop;
-	png.call(this, wstream, cb);
-	return this;
+	png.call(this, wstream, pcb.cb);
+	return pcb.ret;
 };
 
 function png(wstream, cb) {
@@ -1176,6 +1191,7 @@ function png(wstream, cb) {
 
 WebKit.prototype.html = function(cb) {
 	debug('output html');
+	var pcb = promet(this, cb);
 	this.run(function() {
 		var dtd = document.doctype;
 		var html = "";
@@ -1190,9 +1206,9 @@ WebKit.prototype.html = function(cb) {
 		return html;
 	}, function(err, str) {
 		debug('output html done');
-		cb(err, str);
+		pcb.cb(err, str);
 	});
-	return this;
+	return pcb.ret;
 };
 
 WebKit.prototype.pdf = function(filepath, opts, cb) {
@@ -1201,9 +1217,9 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 		opts = null;
 	}
 	if (!opts) opts = {};
-	if (!cb) cb = noop;
-	pdf.call(this, filepath, opts, cb);
-	return this;
+	var pcb = promet(this, cb);
+	pdf.call(this, filepath, opts, pcb.cb);
+	return pcb.ret;
 };
 
 function pdf(filepath, opts, cb) {
@@ -1216,6 +1232,28 @@ function uran() {
 	return (Date.now() * 1e4 + Math.round(Math.random() * 1e4)).toString();
 }
 
+function promet(self, cb) {
+	var def = {};
+	def.promise = new Promise(function(resolve, reject) {
+		def.resolve = resolve;
+		def.reject = reject;
+	});
+	def.cb = function(err) {
+		var args = Array.from(arguments);
+		if (cb) cb.apply(this, args);
+		else if (err) def.reject(err);
+		else def.resolve.apply(null, args.slice(1));
+		return def.ret; // so that return pcb.cb() is still possible
+	};
+	def.ret = cb ? self : def.promise;
+
+	// keep some compatibility with code that used to load without cb and chain
+	if (self.once) def.promise.once = self.once.bind(self);
+	if (self.on) def.promise.on = self.on.bind(self);
+	if (self.when) def.promise.when = self.when.bind(self);
+
+	return def;
+}
 
 
 

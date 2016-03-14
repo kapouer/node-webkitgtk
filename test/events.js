@@ -97,14 +97,11 @@ describe("wait for event", function suite() {
 	});
 	it("in any order", function(done) {
 		this.timeout(3000);
-		WebKit.load("https://www.debian.org/").once("ready", function(err) {
+		var page = WebKit.load("https://www.debian.org/").once("ready", function(err) {
 			expect(err).to.not.be.ok();
-			this.when('idle', function(cb) {
-				cb();
-				this.when('idle', function(cb) {
-					cb();
-					this.when('ready', function(cb) {
-						cb();
+			page.when('idle', function() {
+				return page.when('idle', function() {
+					return page.when('ready', function() {
 						done();
 					});
 				});

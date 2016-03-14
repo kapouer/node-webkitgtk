@@ -29,6 +29,13 @@ Node.js LTS branch 4.x
 usage
 -----
 
+The API has two styles:
+- with callbacks, all methods return current instance
+- without callbacks, all methods return promise.
+
+For convenience, the returned promises have bound methods once, on, when.
+
+
 ```js
 var WebKit = require('webkitgtk');
 var fs = require('fs');
@@ -43,16 +50,12 @@ var displayOpts = {
 
 // old-style creation
 var view = new WebKit();
-view.init(displayOpts, function(err, view) {
+view.init(displayOpts).then(function() {
   view.load(uri, {
     style: fs.readFileSync('css/png.css') // useful stylesheet for snapshots
-  }, function(err) {
-    if (err) console.error(err);
-  }).once('load', function() {
-    this.png('test.png', function(err) {
-      if (err) console.error(err);
-      else console.log("screenshot saved", uri);
-    });
+  })
+  view.when('load', function() {
+    return this.png('test.png');
   });
 });
 

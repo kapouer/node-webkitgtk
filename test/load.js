@@ -68,17 +68,21 @@ describe("load method", function suite() {
 		});
 	});
 
-	it("should not stop after a stop call", function(done) {
+	it("should stop after a stop call", function(done) {
 		this.timeout(10000);
-		var w = WebKit.load('http://google.com');
-		setImmediate(function() {
-			w.stop(function(err, wasLoading) {
-				expect(w.readyState).to.be('stop');
-				expect(err).to.not.be.ok();
-				expect(wasLoading).to.be(true);
-				done();
+
+		WebKit(function(err, w) {
+			w.load('http://google.com');
+			setImmediate(function() {
+				w.stop(function(err, wasLoading) {
+					expect(w.readyState).to.be('stop');
+					expect(err).to.not.be.ok();
+					expect(wasLoading).to.be(true);
+					done();
+				});
 			});
 		});
+
 		// meaning of this ?
 		/*
 		w.once('idle', function() {

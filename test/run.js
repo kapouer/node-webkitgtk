@@ -151,4 +151,17 @@ describe("run method", function suite() {
 		});
 	});
 
+	it("should run and return promise", function(done) {
+		WebKit.load("http://localhost", {script: "(function() {window.test = true;})()", content: "<html></html>"}).once('ready', function() {
+			this.run(function() {
+				return window.test;
+			}).catch(function(err) {
+				expect(err).to.be.not.ok();
+			}).then(function(val) {
+				expect(val).to.be.ok();
+				done();
+			});
+		});
+	});
+
 });
