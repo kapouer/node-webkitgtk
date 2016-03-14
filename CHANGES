@@ -235,3 +235,9 @@ Add load 'scripts' option.
 
 allow: "same-origin" now allows data:uri.
 
+4.0.0
+-----
+
+Expose a promise-based API, expose WebKit.navigator constant.
+
+Bump major because there might be subtle incompatibilities.
