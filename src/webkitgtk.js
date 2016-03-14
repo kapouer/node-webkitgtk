@@ -967,7 +967,9 @@ WebKit.prototype.destroy = function(cb) {
 
 WebKit.prototype.run = function(script, cb) {
 	var args = Array.from(arguments).slice(1);
-	if (args.length > 0 && typeof args[args.length-1] == "function") cb = args.pop();
+	var argType = args.length > 0 ? typeof args[args.length-1] : null;
+	if (argType == "function") cb = args.pop();
+	else cb = null;
 	var pcb = promet(this, cb);
 	runcb.call(this, script, args, pcb.cb);
 	return pcb.ret;
@@ -975,7 +977,9 @@ WebKit.prototype.run = function(script, cb) {
 
 WebKit.prototype.runev = function(script, cb) {
 	var args = Array.from(arguments).slice(1);
-	if (args.length > 0 && typeof args[args.length-1] == "function") cb = args.pop();
+	var argType = args.length > 0 ? typeof args[args.length-1] : null;
+	if (argType == "function") cb = args.pop();
+	else cb = null;
 	var pcb = promet(this, cb);
 	run.call(this, script, null, args, pcb.cb);
 	return pcb.ret;
