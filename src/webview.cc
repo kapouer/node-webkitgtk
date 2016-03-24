@@ -576,7 +576,8 @@ NAN_METHOD(WebView::Load) {
 	GParamSpec* spec;
 	for (guint optsIndex = 0; optsIndex < optsProps->Length(); optsIndex++) {
 		optsName = Nan::Get(optsProps, optsIndex).ToLocalChecked();
-		spec = g_object_class_find_property(G_OBJECT_GET_CLASS(settings), *(Nan::Utf8String(optsName)));
+		gchar* optsNameStr = *(Nan::Utf8String(optsName));
+		spec = g_object_class_find_property(G_OBJECT_GET_CLASS(settings), optsNameStr);
 		if (spec != NULL) {
 			optsVal = Nan::Get(opts, optsName).ToLocalChecked();
 			if (G_IS_PARAM_SPEC_BOOLEAN(spec) && optsVal->IsBoolean()) {
