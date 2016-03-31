@@ -756,7 +756,6 @@ function load(uri, opts, cb) {
 		fn: clientTracker,
 		args: [
 			opts.preload && !priv.jsdom,
-			opts.charset || opts['default-charset'] || "utf-8",
 			priv.cstamp,
 			priv.stall,
 			opts.stallTimeout != null ? opts.stallTimeout : 100,

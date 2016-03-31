@@ -1,4 +1,4 @@
-module.exports = function tracker(preload, charset, cstamp,
+module.exports = function tracker(preload, cstamp,
 stallXhr, stallTimeout, stallInterval, stallFrame,
 emit) {
 	var EV = {
@@ -36,8 +36,6 @@ emit) {
 			check('lastrun' + event);
 		}
 	};
-
-	document.charset = charset;
 
 	window['ignore_' + cstamp] = ignoreListener;
 
