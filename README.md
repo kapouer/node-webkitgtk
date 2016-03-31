@@ -550,12 +550,14 @@ install
 
 Linux only.
 
+Compatible with webkitgtk (WebKit2) versions 2.6 to 2.12.
+
 These libraries and their development files must be available in usual
 locations.
 
 ```
 webkit2gtk-3.0 (2.4.x), for node-webkitgtk 1.2.x
-webkit2gtk-4.0 (2.6.x to 2.8.x), for node-webkitgtk >= 1.3.0
+webkit2gtk-4.0 (>= 2.6.x), for node-webkitgtk >= 1.3.0
 glib-2.0
 gtk+-3.0
 libsoup2.4
@@ -569,7 +571,7 @@ On debian/jessie, these packages will pull necessary dependencies:
 nodejs
 npm
 libwebkit2gtk-3.0-dev (2.4.x), for node-webkitgtk 1.2.x
-libwebkit2gtk-4.0-dev (2.6.x to 2.8.x), for node-webkitgtk >= 1.3.0
+libwebkit2gtk-4.0-dev (>= 2.6.x), for node-webkitgtk >= 1.3.0
 ```
 
 On fedora/21:
