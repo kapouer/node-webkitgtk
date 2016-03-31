@@ -26,7 +26,8 @@ void timeout_cb(uv_timer_t* handle, int status) {
 }
 
 WebView::WebView(Handle<Object> opts) {
-	this->cstamp = getStr(opts, "cstamp");
+	Nan::Utf8String* cstampStr = getOptStr(opts, "cstamp");
+	this->cstamp = **cstampStr;
 	this->receiveDataCallback = getCb(opts, "receiveDataListener");
 	this->responseCallback = getCb(opts, "responseListener");
 	this->eventsCallback = getCb(opts, "eventsListener");
@@ -49,28 +50,33 @@ WebView::WebView(Handle<Object> opts) {
 	instances.insert(ObjMapPair(this->cstamp, this));
 
 	WebKitWebContext* context = webkit_web_context_get_default();
-	const gchar* cacheDir = getStr(opts, "cacheDir");
-	if (cacheDir == NULL) {
+	Nan::Utf8String* cacheDirStr = getOptStr(opts, "cacheDir");
+	const gchar* cacheDir;
+	if (cacheDirStr->length() == 0) {
 		cacheDir = g_build_filename(g_get_user_cache_dir(), "node-webkitgtk", NULL);
+	} else {
+		cacheDir = **cacheDirStr;
 	}
 	webkit_web_context_set_disk_cache_directory(context, cacheDir);
+	delete cacheDirStr;
 	webkit_web_context_set_process_model(context, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
 	webkit_web_context_set_cache_model(context, WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
 	webkit_web_context_set_tls_errors_policy(context, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 
-	const gchar* cookiePolicy = getStr(opts, "cookiePolicy");
+	Nan::Utf8String* cookiePolicyStr = getOptStr(opts, "cookiePolicy");
 	WebKitCookieManager* cookieManager = webkit_web_context_get_cookie_manager(context);
-	if (!g_strcmp0(cookiePolicy, "never")) {
+	if (!g_strcmp0(**cookiePolicyStr, "never")) {
 		webkit_cookie_manager_set_accept_policy(cookieManager, WEBKIT_COOKIE_POLICY_ACCEPT_NEVER);
-	} else if (!g_strcmp0(cookiePolicy, "always")) {
+	} else if (!g_strcmp0(**cookiePolicyStr, "always")) {
 		webkit_cookie_manager_set_accept_policy(cookieManager, WEBKIT_COOKIE_POLICY_ACCEPT_ALWAYS);
 	} else {
 		webkit_cookie_manager_set_accept_policy(cookieManager, WEBKIT_COOKIE_POLICY_ACCEPT_NO_THIRD_PARTY);
 	}
+	delete cookiePolicyStr;
 
-	const gchar* wePath = getStr(opts, "webextension");
-	if (wePath != NULL) {
-		webkit_web_context_set_web_extensions_directory(context, wePath);
+	Nan::Utf8String* wePathStr = getOptStr(opts, "webextension");
+	if (wePathStr->length() > 0) {
+		webkit_web_context_set_web_extensions_directory(context, **wePathStr);
 		this->contextSignalId = g_signal_connect(
 			context,
 			"initialize-web-extensions",
@@ -78,6 +84,7 @@ WebView::WebView(Handle<Object> opts) {
 			this
 		);
 	}
+	delete wePathStr;
 
 	view = WEBKIT_WEB_VIEW(webkit_web_view_new_with_user_content_manager(webkit_user_content_manager_new()));
 
@@ -626,12 +633,11 @@ NAN_METHOD(WebView::Load) {
 
 	self->state = DOCUMENT_LOADING;
 	self->updateUri(**uri);
-	gboolean isEmpty = g_strcmp0(**uri, "") == 0;
 
-	char* script = getStr(opts, "script");
-	if (script != NULL) {
+	Nan::Utf8String* script = getOptStr(opts, "script");
+	if (script->length() > 0) {
 		self->userScript = webkit_user_script_new(
-			script,
+			**script,
 			WEBKIT_USER_CONTENT_INJECT_TOP_FRAME,
 			WEBKIT_USER_SCRIPT_INJECT_AT_DOCUMENT_START,
 			NULL, NULL
@@ -642,10 +648,10 @@ NAN_METHOD(WebView::Load) {
 		script = NULL;
 	}
 
-	char* style = getStr(opts, "style");
-	if (style != NULL) {
+	Nan::Utf8String* style = getOptStr(opts, "style");
+	if (style->length() > 0) {
 		self->userStyleSheet = webkit_user_style_sheet_new(
-			style,
+			**style,
 			WEBKIT_USER_CONTENT_INJECT_TOP_FRAME,
 			WEBKIT_USER_STYLE_LEVEL_USER,
 			NULL, NULL
@@ -655,20 +661,29 @@ NAN_METHOD(WebView::Load) {
 		self->userStyleSheet = NULL;
 		script = NULL;
 	}
-	char* content = getStr(opts, "content");
 	self->waitFinish = NanBooleanOptionValue(opts, H("waitFinish"), FALSE);
-	if (isEmpty || content != NULL) {
+
+	Nan::Utf8String* content = getOptStr(opts, "content");
+
+	gboolean isEmpty = g_strcmp0(**uri, "") == 0;
+
+	if (isEmpty || content->length() > 0) {
 		self->userContent = TRUE;
-		if (content == NULL) content = g_strconcat("", NULL);
 		if (isEmpty) {
 			g_free(self->uri);
 			self->uri = NULL;
 		}
-		webkit_web_view_load_html(self->view, content, self->uri);
+		webkit_web_view_load_bytes(
+			self->view,
+			g_bytes_new_take(**content, content->length()), "text/html",
+			webkit_settings_get_default_charset(settings),
+			self->uri
+		);
 	} else {
 		self->userContent = FALSE;
 		webkit_web_view_load_uri(self->view, self->uri);
 	}
+	delete content;
 	return;
 }
 
@@ -686,6 +701,7 @@ void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) 
 		};
 		self->eventsCallback->Call(2, argv);
 		g_error_free(error);
+		delete nStr;
 	} else {
 		webkit_javascript_result_unref(js_result);
 	}
@@ -734,6 +750,7 @@ void WebView::RunSyncFinished(GObject* object, GAsyncResult* result, gpointer da
 		};
 		self->eventsCallback->Call(2, argv);
 		g_error_free(error);
+		delete nStr;
 		delete vc;
 		return;
 	}
@@ -911,17 +928,22 @@ NAN_METHOD(WebView::Print) {
 	GtkPageSetup* setup = gtk_page_setup_new();
 
 	GtkPaperSize* paperSize;
+	Nan::Utf8String* paperStr = NULL;
+	Nan::Utf8String* unitStr = NULL;
+
 	Local<Value> paperVal = opts->Get(H("paper"));
 	if (paperVal->IsString()) {
-		paperSize = gtk_paper_size_new(getStr(opts, "paper"));
+		paperStr = new Nan::Utf8String(paperVal);
+		paperSize = gtk_paper_size_new(**paperStr);
 	} else if (paperVal->IsObject()) {
 		Local<Object> paperObj = paperVal->ToObject();
+		unitStr = getOptStr(paperObj, "unit");
 		paperSize = gtk_paper_size_new_custom(
 			"custom",
 			"custom",
 			NanUInt32OptionValue(paperObj, H("width"), 0),
 			NanUInt32OptionValue(paperObj, H("height"), 0),
-			getUnit(getStr(paperObj, "unit"))
+			getUnit(**unitStr)
 		);
 	} else {
 		paperSize = gtk_paper_size_new(gtk_paper_size_get_default());
@@ -957,7 +979,9 @@ NAN_METHOD(WebView::Print) {
 	GtkPrintSettings* settings = gtk_print_settings_new();
 	GtkPageOrientation orientation = GTK_PAGE_ORIENTATION_PORTRAIT;
 
-	if (g_strcmp0(getStr(opts, "orientation"), "landscape")) {
+	Nan::Utf8String* orientationStr = getOptStr(opts, "orientation");
+
+	if (g_strcmp0(**orientationStr, "landscape")) {
 		orientation = GTK_PAGE_ORIENTATION_LANDSCAPE;
 	}
 	gtk_print_settings_set_orientation(settings, orientation);
@@ -977,6 +1001,9 @@ NAN_METHOD(WebView::Print) {
 	webkit_print_operation_print(op);
 	g_object_unref(op);
 	g_object_unref(settings);
+	if (paperStr != NULL) delete paperStr;
+	if (unitStr != NULL) delete unitStr;
+	delete orientationStr;
 	return;
 }
 
