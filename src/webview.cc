@@ -49,7 +49,6 @@ WebView::WebView(Handle<Object> opts) {
 	}
 	instances.insert(ObjMapPair(this->cstamp, this));
 
-	WebKitWebContext* context = webkit_web_context_get_default();
 	Nan::Utf8String* cacheDirStr = getOptStr(opts, "cacheDir");
 	const gchar* cacheDir;
 	if (cacheDirStr->length() == 0) {
@@ -57,14 +56,30 @@ WebView::WebView(Handle<Object> opts) {
 	} else {
 		cacheDir = **cacheDirStr;
 	}
-	webkit_web_context_set_disk_cache_directory(context, cacheDir);
+
+	WebKitWebContext* webContext = NULL;
+	#if WEBKIT_CHECK_VERSION(2,10,0)
+	WebKitWebsiteDataManager* dataManager = webkit_website_data_manager_new(
+		"base-cache-directory", cacheDir,
+		NULL
+	);
+	webContext = webkit_web_context_new_with_website_data_manager(dataManager);
+	#else
+		#if WEBKIT_CHECK_VERSION(2,8,0)
+	webContext = webkit_web_context_new();
+		#else
+	webContext = webkit_web_context_get_default();
+		#endif
+	webkit_web_context_set_disk_cache_directory(webContext, cacheDir);
+	#endif
 	delete cacheDirStr;
-	webkit_web_context_set_process_model(context, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
-	webkit_web_context_set_cache_model(context, WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
-	webkit_web_context_set_tls_errors_policy(context, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
+
+	webkit_web_context_set_process_model(webContext, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
+	webkit_web_context_set_cache_model(webContext, WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
+	webkit_web_context_set_tls_errors_policy(webContext, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 
 	Nan::Utf8String* cookiePolicyStr = getOptStr(opts, "cookiePolicy");
-	WebKitCookieManager* cookieManager = webkit_web_context_get_cookie_manager(context);
+	WebKitCookieManager* cookieManager = webkit_web_context_get_cookie_manager(webContext);
 	if (!g_strcmp0(**cookiePolicyStr, "never")) {
 		webkit_cookie_manager_set_accept_policy(cookieManager, WEBKIT_COOKIE_POLICY_ACCEPT_NEVER);
 	} else if (!g_strcmp0(**cookiePolicyStr, "always")) {
@@ -76,9 +91,9 @@ WebView::WebView(Handle<Object> opts) {
 
 	Nan::Utf8String* wePathStr = getOptStr(opts, "webextension");
 	if (wePathStr->length() > 0) {
-		webkit_web_context_set_web_extensions_directory(context, **wePathStr);
+		webkit_web_context_set_web_extensions_directory(webContext, **wePathStr);
 		this->contextSignalId = g_signal_connect(
-			context,
+			webContext,
 			"initialize-web-extensions",
 			G_CALLBACK(WebView::InitExtensions),
 			this
@@ -86,7 +101,11 @@ WebView::WebView(Handle<Object> opts) {
 	}
 	delete wePathStr;
 
-	view = WEBKIT_WEB_VIEW(webkit_web_view_new_with_user_content_manager(webkit_user_content_manager_new()));
+	view = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+		"user-content-manager", webkit_user_content_manager_new(),
+		"web-context", webContext,
+		NULL
+	));
 
 	if (!this->offscreen) {
 		window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
