@@ -2,19 +2,11 @@
 
 using namespace v8;
 
-gchar* getStr(Handle<Object> opts, const gchar* name) {
-	Nan::Utf8String* str = NULL;
-	if (opts->Has(H(name))) {
-		Local<Value> opt = opts->Get(H(name));
-		if (opt->IsString()) {
-			str = new Nan::Utf8String(opt);
-		}
-	}
-	if (str != NULL && str->length() > 1) {
-		return **str;
-	} else {
-		return NULL;
-	}
+Nan::Utf8String* getOptStr(Handle<Object> opts, const gchar* name) {
+	Local<Value> opt = opts->Get(H(name));
+	Local<Value> empty;
+	Nan::Utf8String* str = new Nan::Utf8String(opt->IsString() ? opt : empty);
+	return str;
 }
 
 Nan::Callback* getCb(Handle<Object> opts, const gchar* name) {

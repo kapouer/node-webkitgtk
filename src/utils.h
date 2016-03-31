@@ -9,7 +9,7 @@
 #include <glib.h>
 #include <soup.h>
 
-gchar* getStr(v8::Handle<v8::Object>, const gchar*);
+Nan::Utf8String* getOptStr(v8::Handle<v8::Object>, const gchar*);
 Nan::Callback* getCb(v8::Handle<v8::Object>, const gchar*);
 void update_soup_headers_with_dict(SoupMessageHeaders*, GVariant*);
 GVariant* soup_headers_to_gvariant_dict(SoupMessageHeaders*);
