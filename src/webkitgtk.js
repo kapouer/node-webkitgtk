@@ -775,10 +775,10 @@ function load(uri, opts, cb) {
 		console.warn("scripts option should be an array");
 	}
 
-	opts.script = '\n' + scripts.map(function(fn) {
+	opts.script = scripts.map(function(fn) {
 		if (Buffer.isBuffer(fn)) fn = fn.toString();
 		return prepareRun(fn.fn || fn, null, fn.args || null, priv).script;
-	}).join('\n');
+	}).join(';\n');
 
 	debug('load', uri);
 	priv.uris[uri] = {mtime: Date.now(), main: true};
