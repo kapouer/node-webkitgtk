@@ -138,7 +138,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			if (obj.stall) timeouts.stall--;
 			delete timeouts[id];
 			timeouts.len--;
-			if (timeouts.len <= timeouts.stall && !timeouts.ignore) {
+			if (timeouts.len <= timeouts.stall) {
 				check('timeout');
 			}
 			t = obj.t;
@@ -150,7 +150,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	window.setTimeout = function setTimeout(fn, timeout) {
 		var stall = false;
 		timeout = timeout || 0;
-		if (timeout >= stallTimeout) {
+		if (timeout >= stallTimeout || timeouts.ignore && timeout > 0) {
 			stall = true;
 			timeouts.stall++;
 		}
@@ -324,6 +324,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	function xhrClean() {
 		var priv = this._private;
 		if (!priv) return;
+		delete this._private;
 		this.removeEventListener("progress", xhrProgress);
 		this.removeEventListener("load", xhrChange);
 		this.removeEventListener("abort", xhrClean);
@@ -335,49 +336,50 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			req.count--;
 			if (req.stall) requests.stall--;
 		}
-		delete this._private;
 		requests.len--;
 		check('xhr clean');
 	}
 
 	function check(from, url) {
+		w.setTimeout(function() {
+			checkNow(from, url);
+		});
+	}
+
+	function checkNow(from, url) {
 		var info = {
-			timeouts: timeouts.len - timeouts.stall,
-			intervals: intervals.len - intervals.stall,
-			frames: frames.len - frames.stall,
-			requests: requests.len - requests.stall,
+			timeouts: timeouts.len <= timeouts.stall,
+			intervals: intervals.len <= intervals.stall || intervals.ignore,
+			frames: frames.len <= frames.stall || frames.ignore,
+			requests: requests.len <= requests.stall,
 			lastEvent: lastEvent,
 			lastRunEvent: lastRunEvent
 		};
+
 		if (document.readyState == "complete") {
 			// if loading was stopped (location change or else) the load event
 			// is not emitted but readyState is complete
 			hasLoaded = true;
 		}
-		w.setTimeout.call(window, function() {
-			if (lastEvent <= lastRunEvent) {
-				if (lastEvent == EV.load) {
-					if ((timeouts.ignore || timeouts.len <= timeouts.stall)
-						&& (intervals.ignore || intervals.len <= intervals.stall)
-						&& (frames.ignore || frames.len <= frames.stall)
-						&& requests.len <= requests.stall) {
-						lastEvent += 1;
-						emit("idle", from, url, info);
-					}
-				} else if (lastEvent == EV.idle) {
-					emit("busy", from, url);
-				} else if (lastEvent == EV.init && hasReady) {
+		if (lastEvent <= lastRunEvent) {
+			if (lastEvent == EV.load) {
+				if (info.timeouts && info.intervals && info.frames && info.requests) {
 					lastEvent += 1;
-					emit("ready", from, url, info);
-				} else if (lastEvent == EV.ready && hasLoaded) {
-					lastEvent += 1;
-					emit("load", from, url, info);
-					intervals.to = w.setTimeout.call(window, checkIntervals, stallInterval);
-					timeouts.to = w.setTimeout.call(window, checkTimeouts, stallTimeout);
-				} else {
-					return;
+					emit("idle", from, url, info);
 				}
+			} else if (lastEvent == EV.idle) {
+				emit("busy", from, url);
+			} else if (lastEvent == EV.init && hasReady) {
+				lastEvent += 1;
+				emit("ready", from, url, info);
+			} else if (lastEvent == EV.ready && hasLoaded) {
+				lastEvent += 1;
+				emit("load", from, url, info);
+				intervals.to = w.setTimeout(checkIntervals, stallInterval);
+				timeouts.to = w.setTimeout(checkTimeouts, stallTimeout);
+			} else {
+				return;
 			}
-		});
+		}
 	}
 };

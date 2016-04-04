@@ -246,7 +246,8 @@ load(uri, opts, cb) options
 
 - stallTimeout  
   number, default 100  
-  wait that long before ignoring all setTimeout tasks as idle condition.  
+  wait that long before ignoring all setTimeout tasks with timeout > 0 as
+  idle condition. Tasks with 0 timeout will not be ignored, though.  
   Set to 0 to ignore all.
 
 - stallFrame  
