@@ -241,3 +241,19 @@ allow: "same-origin" now allows data:uri.
 Expose a promise-based API, expose WebKit.navigator constant.
 
 Bump major because there might be subtle incompatibilities.
+
+4.1.0
+-----
+
+stallTimeout ignores timeouts after a given period of time since page opening.
+This is good to make sure recurring timeouts do not prevent 'idle' event; this
+was bad because it led to ignoring zero-timeouts (the ones used to queue tasks).
+This is fixed in this version and it should give better 'idle' behavior.
+
+webkitgtk 2.12 library has an implementation of Promise that has an unpredictable
+micro-task queue behavior, leading to some tasks not being run before next
+setTimeout task queue, and those tasks could then not be run before idle event.
+To fix this, we use another Promise implementation that uses asap module and leads
+to a more predictable behavior. This is a workaround - but monkey-patching
+Promise object is too difficult for the author :)
+
