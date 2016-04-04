@@ -19,6 +19,7 @@
     "dashdash": "^1.10.1",
     "debug": "^2.2.0",
     "nan": "^2.0.5",
+    "promise": "^7.1.1",
     "tosource": "^1.0.0"
   },
   "engines": {
@@ -33,6 +34,7 @@
     "urlutils": "^0.0.3"
   },
   "devDependencies": {
+    "browserify": "^13.0.0",
     "engine.io": "^1.4.2",
     "engine.io-client": "^1.4.2",
     "expect.js": "^0.3.1",
@@ -43,6 +45,7 @@
   },
   "scripts": {
     "install": "make || exit 0",
+    "prepublish": "browserify -r promise/lib/es6-extensions -s Promise > lib/client-promise.js ",
     "test": "mocha -R spec"
   },
   "repository": "git@github.com:kapouer/node-webkitgtk.git",
