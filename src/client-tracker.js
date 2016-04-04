@@ -72,7 +72,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 				}
 			}
 		});
-		observer.observe(document, {
+		observer.observe(document.documentElement, {
 			childList: true,
 			subtree: true
 		});
@@ -95,6 +95,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		if (lastEvent != EV.init) return;
 
 		if (preloadList.length) {
+			observer.disconnect();
 			w.setTimeout(function() {
 				preloadList.forEach(function(obj) {
 					if (obj.val === undefined) obj.node.removeAttribute(obj.att);
