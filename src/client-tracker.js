@@ -1,6 +1,4 @@
-module.exports = function tracker(preload, cstamp,
-stallXhr, stallTimeout, stallInterval, stallFrame,
-emit) {
+module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stallInterval, stallFrame, emit) {
 	var EV = {
 		init: 0,
 		ready: 1,
@@ -14,7 +12,8 @@ emit) {
 	var hasLoaded = false;
 	var hasReady = false;
 	var missedEvent;
-	var preloadList = [], observer;
+	var preloadList = [];
+	var observer;
 
 	var intervals = {len: 0, stall: 0, inc: 1};
 	var timeouts = {len: 0, stall: 0, inc: 1};
@@ -28,7 +27,7 @@ emit) {
 	'setInterval', 'clearInterval',
 	'XMLHttpRequest', 'WebSocket',
 	'requestAnimationFrame', 'cancelAnimationFrame'].forEach(function(meth) {
-		w[meth] = window[meth];
+		w[meth] = window[meth].bind(window);
 	});
 	window['hasRunEvent_' + cstamp] = function(event) {
 		if (EV[event] > lastRunEvent) {
@@ -96,7 +95,7 @@ emit) {
 		if (lastEvent != EV.init) return;
 
 		if (preloadList.length) {
-			w.setTimeout.call(window, function() {
+			w.setTimeout(function() {
 				preloadList.forEach(function(obj) {
 					if (obj.val === undefined) obj.node.removeAttribute(obj.att);
 					else obj.node[obj.att] = obj.val;
@@ -104,13 +103,13 @@ emit) {
 				preloadList = [];
 				check("ready");
 				if (missedEvent == EV.load) {
-					w.setTimeout.call(window, check.bind(this, 'load'), 0);
+					w.setTimeout(check.bind(this, 'load'));
 				}
-			}, 0);
+			});
 		} else {
 			check("ready");
 			if (missedEvent == EV.load) {
-				w.setTimeout.call(window, check.bind(this, 'load'), 0);
+				w.setTimeout(check.bind(this, 'load'));
 			}
 		}
 	}
@@ -148,7 +147,6 @@ emit) {
 		return t;
 	}
 	window.setTimeout = function setTimeout(fn, timeout) {
-		var args = Array.from(arguments);
 		var stall = false;
 		timeout = timeout || 0;
 		if (timeout >= stallTimeout) {
@@ -159,7 +157,7 @@ emit) {
 		var obj = {
 			fn: fn
 		};
-		args[0] = function(obj) {
+		var fnobj = function(obj) {
 			var err;
 			try {
 				obj.fn.apply(null, Array.from(arguments).slice(1));
@@ -169,7 +167,7 @@ emit) {
 			doneTimeout(obj.id);
 			if (err) throw err; // rethrow
 		}.bind(null, obj);
-		var t = w.setTimeout.apply(window, args);
+		var t = w.setTimeout(fnobj, timeout);
 		var id = ++timeouts.inc;
 		timeouts[id] = {stall: stall, t: t};
 		obj.id = id;
@@ -177,7 +175,7 @@ emit) {
 	};
 	window.clearTimeout = function(id) {
 		var t = doneTimeout(id);
-		return w.clearTimeout.call(window, t);
+		return w.clearTimeout(t);
 	};
 
 	function checkIntervals() {
@@ -187,7 +185,6 @@ emit) {
 	}
 
 	window.setInterval = function(fn, interval) {
-		var args = Array.from(arguments);
 		interval = interval || 0;
 		var stall = false;
 		if (interval >= stallInterval) {
@@ -195,7 +192,7 @@ emit) {
 			intervals.stall++;
 		}
 		intervals.len++;
-		var t = w.setInterval.apply(window, args);
+		var t = w.setInterval(fn, interval);
 		var id = ++intervals.inc;
 		intervals[id] = {stall: stall, t: t};
 		return id;
@@ -214,7 +211,7 @@ emit) {
 		} else {
 			t = id;
 		}
-		return w.clearInterval.call(window, t);
+		return w.clearInterval(t);
 	};
 
 	function doneFrame(id) {
@@ -227,7 +224,7 @@ emit) {
 		}
 	}
 	window.requestAnimationFrame = function(fn) {
-		var id = w.requestAnimationFrame.call(window, function(ts) {
+		var id = w.requestAnimationFrame(function(ts) {
 			var err;
 			doneFrame(id);
 			try {
@@ -242,7 +239,7 @@ emit) {
 			frames[id] = true;
 		}
 		if (!frames.timeout && !frames.ignore) {
-			frames.timeout = w.setTimeout.call(window, function() {
+			frames.timeout = w.setTimeout(function() {
 				frames.ignore = true;
 				check('frame');
 			}, stallFrame);
@@ -251,7 +248,7 @@ emit) {
 	};
 	window.cancelAnimationFrame = function(id) {
 		doneFrame(id);
-		return w.cancelAnimationFrame.call(window, id);
+		return w.cancelAnimationFrame(id);
 	};
 
 	if (window.WebSocket) window.WebSocket = function() {
@@ -301,7 +298,7 @@ emit) {
 		priv.timeout = xhrTimeout(priv.url);
 	};
 	function xhrTimeout(url) {
-		return w.setTimeout.call(window, function() {
+		return w.setTimeout(function() {
 			var req = requests[url];
 			if (req) {
 				if (!req.stall) requests.stall++;
@@ -315,7 +312,7 @@ emit) {
 		if (!priv) return;
 		if (e.totalSize > 0 && priv.timeout) {
 			// set a new timeout
-			w.clearTimeout.call(window, priv.timeout);
+			w.clearTimeout(priv.timeout);
 			priv.timeout = xhrTimeout(priv.url);
 		}
 	}
@@ -331,7 +328,7 @@ emit) {
 		this.removeEventListener("abort", xhrClean);
 		this.removeEventListener("error", xhrClean);
 		this.removeEventListener("timeout", xhrClean);
-		if (priv.timeout) w.clearTimeout.call(window, priv.timeout);
+		if (priv.timeout) w.clearTimeout(priv.timeout);
 		var req = requests[priv.url];
 		if (req) {
 			req.count--;
