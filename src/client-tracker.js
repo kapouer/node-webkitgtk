@@ -27,7 +27,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	'setInterval', 'clearInterval',
 	'XMLHttpRequest', 'WebSocket',
 	'requestAnimationFrame', 'cancelAnimationFrame'].forEach(function(meth) {
-		w[meth] = window[meth].bind(window);
+		if (window[meth]) w[meth] = window[meth].bind(window);
 	});
 	window['hasRunEvent_' + cstamp] = function(event) {
 		if (EV[event] > lastRunEvent) {
@@ -224,7 +224,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			}
 		}
 	}
-	window.requestAnimationFrame = function(fn) {
+	if (w.requestAnimationFrame) window.requestAnimationFrame = function(fn) {
 		var id = w.requestAnimationFrame(function(ts) {
 			var err;
 			doneFrame(id);
@@ -247,12 +247,12 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		}
 		return id;
 	};
-	window.cancelAnimationFrame = function(id) {
+	if (w.cancelAnimationFrame) window.cancelAnimationFrame = function(id) {
 		doneFrame(id);
 		return w.cancelAnimationFrame(id);
 	};
 
-	if (window.WebSocket) window.WebSocket = function() {
+	if (w.WebSocket) window.WebSocket = function() {
 		var ws = new w.WebSocket(Array.from(arguments));
 		function checkws() {
 			check('websocket');
