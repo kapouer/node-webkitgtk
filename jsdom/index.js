@@ -43,6 +43,8 @@ WebKit.prototype.binding = function(opts, cfg, cb) {
 };
 
 WebKit.prototype.rawload = function(uri, opts, cb) {
+	var pcb = WebKit.promet(this, cb);
+	var p = Promise.resolve();
 	var jsdomOpts = {
 		resourceLoader: resourceLoader.bind(this),
 		features: {}
@@ -72,7 +74,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 				throw obj.error;
 			}
 		};
-		if (err) return cb(err);
+		if (err) return pcb.cb(err);
 		window.uri = uri;
 		window.runSync = function(script, ticket) {
 			var ret;
@@ -119,7 +121,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		});
 
 		this.status = 200;
-		cb(null, 200);
+		pcb.cb(null, 200);
 	}.bind(this);
 
 	this._webview = this.webview = {
@@ -154,7 +156,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 					status = err.code || 0;
 					if (typeof status == "string") status = 0;
 				}
-				if (err || status != 200) return cb(err, status);
+				if (err || status != 200) return pcb.cb(err, status);
 				var doc = jsdom(body, jsdomOpts);
 				this.webview = doc.parentWindow || doc.defaultView;
 			}.bind(this));
@@ -171,6 +173,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			}.bind(this);
 		}
 	}.bind(this));
+	return pcb.ret;
 };
 
 };

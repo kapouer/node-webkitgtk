@@ -1266,6 +1266,7 @@ function promet(self, cb) {
 
 	return def;
 }
+WebKit.promet = promet;
 
 
 
