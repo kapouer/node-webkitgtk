@@ -9,7 +9,6 @@ var clientConsole = require('./client-console');
 var clientError = require('./client-error');
 var clientTracker = require('./client-tracker');
 var clientPromise = fs.readFileSync(require.resolve('../lib/client-promise'));
-if (!global.Promise) global.Promise = require('q').Promise;
 var debug = require('debug')('webkitgtk');
 
 // available after init
