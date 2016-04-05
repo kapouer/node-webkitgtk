@@ -60,7 +60,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		jsdomOpts.features.ProcessExternalResources = ['script'];
 	}
 
-	jsdomOpts.url = uri;
+	jsdomOpts.url = uri || "about:blank";
 	var cookies = opts.cookies;
 	if (cookies) {
 		if (!Array.isArray(cookies)) cookies = [cookies];
