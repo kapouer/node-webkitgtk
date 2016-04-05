@@ -28,10 +28,9 @@
   "optionalDependencies": {
     "chalk": "^1.1.1",
     "headless": "^1.0.0",
-    "jsdom": ">=3.1.2",
     "q": "^1.4.1",
-    "request": "^2.60.0",
-    "urlutils": "^0.0.3"
+    "jsdom": "^8.0.0",
+    "request": "^2.60.0"
   },
   "devDependencies": {
     "browserify": "^13.0.0",
