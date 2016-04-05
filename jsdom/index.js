@@ -123,7 +123,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	setImmediate(function() {
 		if (opts.content != null) {
 			var doc = jsdom(opts.content, jsdomOpts);
-			this.webview = doc.parentWindow || doc.defaultView;
+			this.webview = doc.defaultView;
 		} else {
 			// trick to have a main uri before loading main doc
 			this.webview.loading = true;
