@@ -135,10 +135,12 @@ if (!url) {
 	if (!urlObj.protocol) url = "http://" + url;
 }
 
+var render = !!(opts.show || opts.pdf || opts.png);
+
 var loadOpts = {
 	content: opts.location ? "<html></html>" : undefined,
 	offscreen: !opts.show,
-	filter: !opts.pdf && !opts.png && !opts.show && function() {
+	filter: !render && function() {
 		if (/\.css(\?.*)?$/.test(this.uri)) this.cancel = true;
 	},
 	console: !opts.quiet,
@@ -150,8 +152,8 @@ var loadOpts = {
 	transparent: opts.transparent
 };
 
-if (opts["auto-load-images"] == null && opts.show != null) {
-	loadOpts["auto-load-images"] = opts.show;
+if (opts["auto-load-images"] == null) {
+	loadOpts["auto-load-images"] = render;
 }
 if (opts['allow-file-access-from-file-urls'] != null) {
 	loadOpts['allow-file-access-from-file-urls'] = !!opts['allow-file-access-from-file-urls'];
