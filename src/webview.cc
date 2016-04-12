@@ -1001,7 +1001,7 @@ NAN_METHOD(WebView::Print) {
 
 	Nan::Utf8String* orientationStr = getOptStr(opts, "orientation");
 
-	if (g_strcmp0(**orientationStr, "landscape")) {
+	if (g_strcmp0(**orientationStr, "landscape") == 0) {
 		orientation = GTK_PAGE_ORIENTATION_LANDSCAPE;
 	}
 	gtk_print_settings_set_orientation(settings, orientation);
