@@ -77,6 +77,36 @@ var parser = dash.createParser({options: [
 		names: ['style'],
 		type:	'string',
 		help:	'a css string'
+	},
+	{
+		names: ['pdf'],
+		type: 'string',
+		help: 'pdf output file path'
+	},
+	{
+		names: ['paper'],
+		type: 'string',
+		help: 'paper name or paper dimensions (iso_a4 or 210x297)'
+	},
+	{
+		names: ['margins'],
+		type: 'arrayOfString',
+		help: 'paper margins (10 or 10 10 10 10)'
+	},
+	{
+		names: ['unit'],
+		type: 'string',
+		help: 'units for paper dimensions and margins, defaults to mm (millimeters)'
+	},
+	{
+		names: ['orientation'],
+		type: 'string',
+		help: 'orientation landscape or portrait (default)'
+	},
+	{
+		names: ['png'],
+		type: 'string',
+		help: 'png output file path'
 	}
 ]});
 
@@ -94,7 +124,7 @@ if (opts.help) {
 	process.exit(0);
 }
 
-var W = require('../');
+var WebKit = require('../');
 
 var url = opts._args.pop();
 if (!url) {
@@ -127,9 +157,14 @@ if (opts['allow-file-access-from-file-urls'] != null) {
 	loadOpts['allow-file-access-from-file-urls'] = !!opts['allow-file-access-from-file-urls'];
 }
 
-var wk = W.load(url, loadOpts, function(err) {
-	if (opts.scripts) {
-		wk.run(function(scripts, done) {
+var wk = new WebKit();
+var p = wk.init(loadOpts).then(function() {
+	return wk.load(url, loadOpts);
+});
+
+if (opts.scripts) {
+	p = p.then(function(wk) {
+		return wk.run(function(scripts, done) {
 			Promise.all(scripts.map(function(url) {
 				return new Promise(function(resolve, reject) {
 					var script = document.createElement('script');
@@ -145,13 +180,25 @@ var wk = W.load(url, loadOpts, function(err) {
 					script.src = url;
 				});
 			})).then(done.bind(null, null)).catch(done);
-		}, [opts.scripts], function(err) {
-			if (err) console.error(err);
-			start(wk);
-		});
-	} else {
-		start(wk);
-	}
+		}, [opts.scripts]);
+	});
+}
+if (opts.pdf) {
+	p = p.then(pdf);
+} else if (opts.png) {
+	p = p.then(png);
+} else {
+	p = p.then(start);
+}
+p.then(function() {
+	return wk.unload();
+}).then(function() {
+	return wk.destroy();
+});
+
+p.catch(function(err) {
+	console.error(err);
+	process.exit(1);
 });
 
 function dumpCode(cmd) {
@@ -167,7 +214,47 @@ function dumpCode(cmd) {
 	}
 }
 
+function pdf(wk) {
+	return wk.when('idle', function() {
+		var pdfOpts = {};
+		if (opts.paper) {
+			var paper = {};
+			opts.paper.split('x').forEach(function(it, index) {
+				if (index == 0) paper.width = parseFloat(it);
+				else if (index == 1) paper.height = parseFloat(it);
+			});
+			paper.unit = opts.unit || 'mm';
+			if (paper.width && paper.height) pdfOpts.paper = paper;
+		}
+		if (opts.margins) {
+			var margins = {};
+			margins.unit = opts.unit || 'mm';
+			var index = 0;
+			// top right bottom left
+			margins.top = opts.margins[index];
+			if (opts.margins.length > 1) index++;
+			margins.right = opts.margins[index];
+			if (opts.margins.length > 2) index++;
+			margins.bottom = opts.margins[index];
+			if (opts.margins.length > 3) index++;
+			margins.left = opts.margins[index];
+			pdfOpts.margins = margins;
+		}
+		return wk.pdf(opts.pdf, pdfOpts);
+	});
+}
+
+function png(wk) {
+	return wk.when('idle', function() {
+		return wk.png(opts.png);
+	});
+}
+
 function start(wk) {
+	var resolve;
+	var p = new Promise(function(fun) {
+		resolve = fun;
+	});
 	var pr = repl.start({
 		eval: function(cmd, context, filename, cb) {
 			if (cmd == ".scope") {
@@ -220,14 +307,13 @@ function start(wk) {
 			}
 		}
 	}).on('exit', function() {
-		wk.unload(function() {
-			wk.destroy();
-		});
+		resolve();
 	});
 	pr.context = {};
 	if (opts.command) pr.eval(opts.command, {}, 'opts', function(err) {
 		if (err) console.error(err);
 	});
+	return p;
 }
 
 if (opts.verbose) {
