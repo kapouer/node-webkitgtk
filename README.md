@@ -37,6 +37,26 @@ The API has two styles:
 For convenience, the returned promises have bound methods once, on, when.
 
 
+These calls will output pdf/png version of fully loaded pages (see documentation
+below about idle event).
+
+Pdf output from cli:
+
+```
+webkitgtk --pdf test.pdf \
+	--paper 210x297 \
+	--margins 20,20,20,20 \
+	--unit mm \
+	http://google.fr
+```
+
+Png output from cli:
+
+```
+webkitgtk --png test.png http://nasa.gov
+```
+
+
 ```js
 var WebKit = require('webkitgtk');
 var fs = require('fs');
