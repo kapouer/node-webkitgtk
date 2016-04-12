@@ -245,6 +245,7 @@ function pdf(wk) {
 		if (opts.orientation && opts.orientation == "landscape") {
 			pdfOpts.orientation = opts.orientation;
 		}
+		console.info(`Generating ${opts.pdf} with options\n`, JSON.stringify(pdfOpts, null, "  "));
 		return wk.pdf(opts.pdf, pdfOpts);
 	});
 }
