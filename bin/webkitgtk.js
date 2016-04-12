@@ -138,7 +138,7 @@ if (!url) {
 var loadOpts = {
 	content: opts.location ? "<html></html>" : undefined,
 	offscreen: !opts.show,
-	filter: !opts.show && function() {
+	filter: !opts.pdf && !opts.png && !opts.show && function() {
 		if (/\.css(\?.*)?$/.test(this.uri)) this.cancel = true;
 	},
 	console: !opts.quiet,
