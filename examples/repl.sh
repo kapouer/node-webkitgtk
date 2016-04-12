@@ -19,3 +19,6 @@ webkitgtk --show --bare --transparent --verbose http://phhht.com/putz/clock.html
 # unfortunately buggy on some webkit2gtk versions
 webkitgtk --show --bare --transparent --verbose --command 'document.body.webkitRequestFullScreen();' --style 'body:-webkit-full-screen {width:100%;height:100%;}' http://phhht.com/putz/clock.html
 
+# print to pdf
+webkitgtk --pdf test.pdf --margins 20,20,20,20 --unit mm http://google.fr
+
