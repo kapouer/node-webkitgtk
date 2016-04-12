@@ -90,8 +90,8 @@ var parser = dash.createParser({options: [
 	},
 	{
 		names: ['margins'],
-		type: 'arrayOfString',
-		help: 'paper margins (10 or 10 10 10 10)'
+		type: 'string',
+		help: 'paper margins (10 or 10,10,10,10)'
 	},
 	{
 		names: ['unit'],
@@ -225,20 +225,25 @@ function pdf(wk) {
 			});
 			paper.unit = opts.unit || 'mm';
 			if (paper.width && paper.height) pdfOpts.paper = paper;
+			else pdfOpts.paper = opts.paper;
 		}
 		if (opts.margins) {
+			var arr = opts.margins.split(',');
 			var margins = {};
 			margins.unit = opts.unit || 'mm';
 			var index = 0;
 			// top right bottom left
-			margins.top = opts.margins[index];
+			margins.top = parseFloat(arr[index]);
 			if (opts.margins.length > 1) index++;
-			margins.right = opts.margins[index];
+			margins.right = parseFloat(arr[index]);
 			if (opts.margins.length > 2) index++;
-			margins.bottom = opts.margins[index];
+			margins.bottom = parseFloat(arr[index]);
 			if (opts.margins.length > 3) index++;
-			margins.left = opts.margins[index];
+			margins.left = parseFloat(arr[index]);
 			pdfOpts.margins = margins;
+		}
+		if (opts.orientation && opts.orientation == "landscape") {
+			pdfOpts.orientation = opts.orientation;
 		}
 		return wk.pdf(opts.pdf, pdfOpts);
 	});
