@@ -72,10 +72,18 @@ describe("png method", function suite() {
 		var w = new WebKit();
 		w.init(function() {
 			w.load('https://www.debian.org');
-			// this won't even generate a png since no surface is yet acquired
-			w.png(__dirname + '/shots/testr1err.png', function(err) {
-				expect(err).to.be.ok();
-				done();
+			// this may won't even generate a png since no surface is yet acquired
+			var pngFile = __dirname + '/shots/testr1err.png';
+			w.png(pngFile, function(err) {
+				require('fs').stat(pngFile, function(errStat, stat) {
+					if (errStat) {
+						// no file so an error happened
+						expect(err).to.be.ok();
+					} else {
+						expect(err).to.not.be.ok();
+					}
+					done();
+				});
 			});
 		});
 	});
