@@ -14,6 +14,7 @@ using namespace v8;
 Nan::Persistent<Function> WebView::constructor;
 
 static uv_timer_t timeout_handle;
+static WebKitWebContext* webContext;
 
 #if UV_VERSION_MAJOR >= 1
 void timeout_cb(uv_timer_t* handle) {
@@ -49,30 +50,30 @@ WebView::WebView(Handle<Object> opts) {
 	}
 	instances.insert(ObjMapPair(this->cstamp, this));
 
-	Nan::Utf8String* cacheDirStr = getOptStr(opts, "cacheDir");
-	const gchar* cacheDir;
-	if (cacheDirStr->length() == 0) {
-		cacheDir = g_build_filename(g_get_user_cache_dir(), "node-webkitgtk", NULL);
-	} else {
-		cacheDir = **cacheDirStr;
-	}
-
-	WebKitWebContext* webContext = NULL;
-	#if WEBKIT_CHECK_VERSION(2,10,0)
-	WebKitWebsiteDataManager* dataManager = webkit_website_data_manager_new(
-		"base-cache-directory", cacheDir,
-		NULL
-	);
-	webContext = webkit_web_context_new_with_website_data_manager(dataManager);
-	#else
-		#if WEBKIT_CHECK_VERSION(2,8,0)
-	webContext = webkit_web_context_new();
+	if (!webContext) {
+		Nan::Utf8String* cacheDirStr = getOptStr(opts, "cacheDir");
+		const gchar* cacheDir;
+		if (cacheDirStr->length() == 0) {
+			cacheDir = g_build_filename(g_get_user_cache_dir(), "node-webkitgtk", NULL);
+		} else {
+			cacheDir = **cacheDirStr;
+		}
+		#if WEBKIT_CHECK_VERSION(2,10,0)
+		WebKitWebsiteDataManager* dataManager = webkit_website_data_manager_new(
+			"base-cache-directory", cacheDir,
+			NULL
+		);
+		webContext = webkit_web_context_new_with_website_data_manager(dataManager);
 		#else
-	webContext = webkit_web_context_get_default();
+			#if WEBKIT_CHECK_VERSION(2,8,0)
+		webContext = webkit_web_context_new();
+			#else
+		webContext = webkit_web_context_get_default();
+			#endif
+		webkit_web_context_set_disk_cache_directory(webContext, cacheDir);
 		#endif
-	webkit_web_context_set_disk_cache_directory(webContext, cacheDir);
-	#endif
-	delete cacheDirStr;
+		delete cacheDirStr;
+	}
 
 	webkit_web_context_set_process_model(webContext, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
 	webkit_web_context_set_cache_model(webContext, WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
