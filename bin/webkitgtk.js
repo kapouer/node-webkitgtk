@@ -3,6 +3,7 @@
 var dash = require('dashdash');
 var repl = require('repl');
 var URL = require('url');
+var Path = require('path');
 var chalk;
 try {
 	chalk = require('chalk');
@@ -132,7 +133,16 @@ if (!url) {
 	url = "";
 } else {
 	var urlObj = URL.parse(url);
-	if (!urlObj.protocol) url = "http://" + url;
+	if (!urlObj.protocol) {
+		if (url.startsWith('.') || url.startsWith('/')) {
+			if (opts['allow-file-access-from-file-urls'] == null) {
+				opts['allow-file-access-from-file-urls'] = true;
+			}
+			url = "file://" + Path.resolve(url);
+		} else {
+			url = "http://" + url;
+		}
+	}
 }
 
 var render = !!(opts.show || opts.pdf || opts.png);
