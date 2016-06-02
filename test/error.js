@@ -37,7 +37,7 @@ describe("error reporting", function suite() {
 			w.load("http://localhost", {content: '<html></html>'}, function(err) {
 				w.run(function(done) {
 					setTimeout(function myfunc() {
-						var err = new Error("i am here");
+						var err = new SyntaxError("i am here");
 						err.code = 404;
 						throw err;
 						done(); // won't actually be called
@@ -50,6 +50,8 @@ describe("error reporting", function suite() {
 				expect(err).to.be.ok();
 				expect(err.message).to.be("i am here");
 				expect(err.code).to.be(404);
+				expect(err.name).to.be("SyntaxError");
+				expect(err instanceof SyntaxError).to.be.ok();
 				expect(err.stack).to.be.ok();
 				done();
 			});
