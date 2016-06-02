@@ -13,7 +13,7 @@ using namespace v8;
 
 Nan::Persistent<Function> WebView::constructor;
 
-static uv_timer_t timeout_handle;
+static uv_timer_t* timeout_handle = new uv_timer_t;
 static WebKitWebContext* webContext;
 
 #if UV_VERSION_MAJOR >= 1
@@ -46,7 +46,7 @@ WebView::WebView(Handle<Object> opts) {
 	idEventsHandler = 0;
 
 	if (instances.size() == 0) {
-		uv_timer_start(&timeout_handle, timeout_cb, 0, 5);
+		uv_timer_start(timeout_handle, timeout_cb, 0, 5);
 	}
 	instances.insert(ObjMapPair(this->cstamp, this));
 
@@ -191,7 +191,7 @@ void WebView::destroy() {
 	if (closeCallback != NULL) delete closeCallback;
 	instances.erase(cstamp);
 	if (instances.size() == 0) {
-		uv_timer_stop(&timeout_handle);
+		uv_timer_stop(timeout_handle);
 	}
 }
 
@@ -245,7 +245,7 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 	WebAuthRequest::Init(exports);
 
 	gtk_init(0, NULL);
-	uv_timer_init(uv_default_loop(), &timeout_handle);
+	uv_timer_init(uv_default_loop(), timeout_handle);
 }
 
 void WebView::InspectorClosed(WebKitWebInspector* inspector, gpointer data) {
