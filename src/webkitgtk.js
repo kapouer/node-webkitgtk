@@ -630,7 +630,8 @@ function initPromise(ev) {
 	this.once(ev, function() {
 		var stamp = this.priv.stamp;
 		holder.promise.catch(function(err) {
-			if (err) console.error(err);
+			// not logged - it's up to the client to catch its own errors
+			// using .when(ev).catch()
 		}).then(function() {
 			if (stamp == this.priv.stamp) {
 				done.call(this, ev, function(err) {
