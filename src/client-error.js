@@ -3,9 +3,9 @@ module.exports = function errorEmitter(emit) {
 	var OriginalError = window.Error;
 	window.Error = function Error(message) {
 		var err = new OriginalError(message);
+		Object.assign(this, err);
 		var isParent = Object.getPrototypeOf(this) == Error.prototype;
-		// remove parts that comes from these error functions
-		this.stack = err.stack.split('\n').slice(isParent ? 1 : 2).join('\n');
+		this.stack = err.stack.split('\n').slice(isParent ? 1 : 2).join('\n    ');
 		this.message = err.message;
 		this.name = err.name;
 		lastError = this;
@@ -55,6 +55,19 @@ module.exports = function errorEmitter(emit) {
 	};
 	EvalError.prototype = Object.create(Error.prototype);
 	EvalError.prototype.constructor = EvalError;
+
+	window.Error.prototype.toJSON = OriginalError.prototype.toJSON = function() {
+		var obj = Object.assign({}, this);
+		if (this.stack) {
+			delete obj.line;
+			delete obj.column;
+			delete obj.sourceURL;
+			obj.stack = this.stack;
+		}
+		obj.name = this.name;
+		obj.message = this.message;
+		return obj;
+	};
 
 	window.onerror = function(message, file, line, col, err) {
 		var ret = ["error", message, file, line, col];

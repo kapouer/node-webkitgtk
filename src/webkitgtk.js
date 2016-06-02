@@ -222,6 +222,24 @@ function checkIdle() {
 	}
 }
 
+function errorReviver(key, val) {
+	if (!val || typeof val != "object") return val;
+	var name = val.name;
+	if (!name || /Error$/.test(name) == false || !global[name]) return val;
+	var err = new (global[name])();
+	if (!val.stack) delete err.stack;
+	err.stack = val.stack;
+	err.toString = function() {
+		return this.name + ': ' + (this.message || "") + (this.stack ? "\n    " + this.stack : "");
+	};
+	err.inspect = function() {
+		return this.toString();
+	};
+	delete val.name;
+	Object.assign(err, val);
+	return err;
+}
+
 function eventsDispatcher(err, json) {
 	var priv = this.priv;
 	if (err) {
@@ -237,7 +255,7 @@ function eventsDispatcher(err, json) {
 	}
 	var obj, parseError;
 	try {
-		obj = JSON.parse(json);
+		obj = JSON.parse(json, errorReviver);
 	} catch(e) {
 		parseError = e;
 	}
@@ -286,12 +304,6 @@ function eventsDispatcher(err, json) {
 				delete cbObj.timeout;
 			}
 			if (!cbObj.cb) return; // already called by timeout
-			if (obj.error && !util.isError(obj.error)) {
-				var typeErr = obj.error.type || 'Error';
-				var customErr = new global[typeErr]();
-				for (var k in obj.error) customErr[k] = obj.error[k];
-				obj.error = customErr;
-			}
 			args.unshift(obj.error);
 			try {
 				cbObj.cb.apply(this, args);
@@ -1110,13 +1122,7 @@ function prepareRun(script, ticket, args, priv) {
 				message.event = err;
 			} else {
 				message.ticket = ticket;
-				if (err) {
-					if (err instanceof Error) message.error = err;
-					else message.error = {
-						message: err.toString(),
-						name: 'Error'
-					};
-				}
+				if (err) message.error = err;
 			}
 			message.args = Array.from(arguments).slice(1).map(function(arg) {
 				if (arg instanceof window.Node) {
