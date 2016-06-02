@@ -793,7 +793,7 @@ function load(uri, opts, cb) {
 	priv.uris[uri] = {mtime: Date.now(), main: true};
 
 	this.rawload(uri, opts, function(err, status) {
-		debug('load done %s', uri);
+		debug('load done %s', uri, status);
 		if (priv.timeout) {
 			clearTimeout(priv.timeout);
 			delete priv.timeout;
