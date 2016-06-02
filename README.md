@@ -474,8 +474,10 @@ methods
 * when(event, asyncListener*)  
   Allow queuing asynchronous jobs on an event and before next event.  
   The async listener can have a function length of zero, in which case
-  it is considered to be a thenable.  
-  Otherwise the callback-style API is assumed.
+  it is considered to be a thenable; and the method returns the promise.  
+  If asyncListener is missing it returns the latest promise.  
+  Using promises is the only way to catch errors from previous jobs.  
+  Otherwise the callback-style API is assumed.  
 
 * run(sync-script, param*, cb)  
   any synchronous script text or global function.  

@@ -257,3 +257,8 @@ To fix this, we use another Promise implementation that uses asap module and lea
 to a more predictable behavior. This is a workaround - but monkey-patching
 Promise object is too difficult for the author :)
 
+4.2.0
+-----
+
+Do not catch errors from thenables added in when().
+
