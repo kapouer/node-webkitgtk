@@ -37,7 +37,9 @@ describe("error reporting", function suite() {
 			w.load("http://localhost", {content: '<html></html>'}, function(err) {
 				w.run(function(done) {
 					setTimeout(function myfunc() {
-						throw new Error("i am here");
+						var err = new Error("i am here");
+						err.code = 404;
+						throw err;
 						done(); // won't actually be called
 					}, 100);
 				}, function(err) {
@@ -47,6 +49,7 @@ describe("error reporting", function suite() {
 			w.on('error', function(msg, uri, line, col, err) {
 				expect(err).to.be.ok();
 				expect(err.message).to.be("i am here");
+				expect(err.code).to.be(404);
 				expect(err.stack).to.be.ok();
 				done();
 			});
