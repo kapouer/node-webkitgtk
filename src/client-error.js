@@ -16,6 +16,7 @@ module.exports = function errorEmitter(emit) {
 
 	window.URIError = function URIError(message) {
 		Error.call(this, message);
+		this.name = arguments.callee.name;
 		return this;
 	};
 	URIError.prototype = Object.create(Error.prototype);
@@ -23,6 +24,7 @@ module.exports = function errorEmitter(emit) {
 
 	window.TypeError = function TypeError(message) {
 		Error.call(this, message);
+		this.name = arguments.callee.name;
 		return this;
 	};
 	TypeError.prototype = Object.create(Error.prototype);
@@ -30,6 +32,7 @@ module.exports = function errorEmitter(emit) {
 
 	window.SyntaxError = function SyntaxError(message) {
 		Error.call(this, message);
+		this.name = arguments.callee.name;
 		return this;
 	};
 	SyntaxError.prototype = Object.create(Error.prototype);
@@ -37,6 +40,7 @@ module.exports = function errorEmitter(emit) {
 
 	window.ReferenceError = function ReferenceError(message) {
 		Error.call(this, message);
+		this.name = arguments.callee.name;
 		return this;
 	};
 	ReferenceError.prototype = Object.create(Error.prototype);
@@ -44,6 +48,7 @@ module.exports = function errorEmitter(emit) {
 
 	window.RangeError = function RangeError(message) {
 		Error.call(this, message);
+		this.name = arguments.callee.name;
 		return this;
 	};
 	RangeError.prototype = Object.create(Error.prototype);
@@ -51,6 +56,7 @@ module.exports = function errorEmitter(emit) {
 
 	window.EvalError = function EvalError(message) {
 		Error.call(this, message);
+		this.name = arguments.callee.name;
 		return this;
 	};
 	EvalError.prototype = Object.create(Error.prototype);
