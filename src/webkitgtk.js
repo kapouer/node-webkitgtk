@@ -1084,14 +1084,7 @@ function prepareRun(script, ticket, args, priv) {
 			try {
 				message.args = [ SCRIPT ];
 			} catch(err) {
-				message.error = {
-					message: err.message,
-					name: err.name,
-					description: err.description,
-					lineNumber: err.lineNumber,
-					columnNumber: err.columnNumber,
-					stack: err.stack
-				};
+				message.error = err;
 			}
 			var msg;
 			try {
@@ -1118,14 +1111,7 @@ function prepareRun(script, ticket, args, priv) {
 			} else {
 				message.ticket = ticket;
 				if (err) {
-					if (err instanceof Error) message.error = {
-						message: err.message,
-						name: err.name,
-						description: err.description,
-						lineNumber: err.lineNumber,
-						columnNumber: err.columnNumber,
-						stack: err.stack
-					};
+					if (err instanceof Error) message.error = err;
 					else message.error = {
 						message: err.toString(),
 						name: 'Error'
