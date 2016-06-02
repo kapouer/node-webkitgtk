@@ -659,10 +659,7 @@ WebKit.prototype.when = function(ev, fn) {
 			});
 		});
 	};
-	holder.promise = holder.promise.then(thenable).catch(function(err) {
-		// just report errors ?
-		console.error(err);
-	});
+	holder.promise = holder.promise.then(thenable);
 	if (isThen) return holder.promise;
 	else return this;
 };
