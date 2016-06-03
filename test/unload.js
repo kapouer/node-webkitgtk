@@ -15,10 +15,23 @@ describe("unload method", function suite() {
 
 	it("should allow chaining load-unload-load", function(done) {
 		this.timeout(10000);
-		WebKit.load('http://google.com', function(err, w) {
+		WebKit.load('http://google.com', {'auto-load-images': false}, function(err, w) {
 			w.unload(function(err) {
 				expect(err).to.not.be.ok();
-				w.load('http://www.selmer.fr', function(err) {
+				w.load('http://www.selmer.fr', {'auto-load-images': false}, function(err) {
+					expect(err).to.not.be.ok();
+					done();
+				});
+			});
+		});
+	});
+
+	it("should allow chaining load-reset-load", function(done) {
+		this.timeout(10000);
+		WebKit.load('http://google.com', {'auto-load-images': false}, function(err, w) {
+			w.reset(function(err) {
+				expect(err).to.not.be.ok();
+				w.load('http://www.selmer.fr', {'auto-load-images': false}, function(err) {
 					expect(err).to.not.be.ok();
 					done();
 				});

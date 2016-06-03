@@ -892,6 +892,34 @@ WebKit.prototype.stop = function(cb) {
 	return pcb.ret;
 };
 
+WebKit.prototype.reset = function(cb) {
+	var pcb = promet(this, cb);
+	var p = Promise.resolve();
+	var priv = this.priv;
+	if (priv.state == LOADING) {
+		p = p.then(function() {
+			return this.stop();
+		}.bind(this)).catch(function(err) {
+			console.error(err);
+		});
+	}
+	p.then(function() {
+		this.removeAllListeners();
+		this.promises = null;
+		this.readyState = null;
+		if (priv.responseInterval) {
+			clearInterval(priv.responseInterval);
+			delete priv.responseInterval;
+		}
+		if (priv.uris) delete priv.uris;
+		priv.idling = false;
+		priv.tickets = cleanTickets(priv.tickets);
+		this.status = null;
+		setImmediate(pcb.cb);
+	}.bind(this));
+	return pcb.ret;
+};
+
 WebKit.prototype.unload = function(cb) {
 	var priv = this.priv;
 	this.readyState = "unloading";

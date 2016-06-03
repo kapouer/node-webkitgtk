@@ -508,6 +508,10 @@ methods
   print page to file right now  
   see parameters described above.
 
+* reset(cb)  
+  Stops loading if it was, unregister listeners, allows .load() to be run
+  sooner than when calling unload.
+
 * unload(cb)  
   Sets current view to an empty document and uri.  
   Emits 'unload' event.
