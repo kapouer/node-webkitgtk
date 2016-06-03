@@ -262,3 +262,10 @@ Promise object is too difficult for the author :)
 
 Do not catch errors from thenables added in when().
 
+
+4.3.0
+-----
+
+- cacheModel option to choose between cache models. Defaults to "web", a change
+w.r.t. previous versions where it was "none".
+- reset(cb) allows one to do a quicker .load() calls on same instance
