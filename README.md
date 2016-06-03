@@ -299,6 +299,12 @@ init(opts, cb) options
   Changing cacheDir can fail silently if webkitgtk lib is already initialized.
   The simplest way to clear the cache is to delete this directory.
 
+- cacheModel  
+  string, defaults to browser.  
+  none: disables cache completely  
+  local: cache optimized for viewing local files  
+  browser: the real deal  
+
 - debug  
   boolean, default false  
   shows a real window with a web inspector.  

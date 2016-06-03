@@ -75,8 +75,20 @@ WebView::WebView(Handle<Object> opts) {
 		delete cacheDirStr;
 	}
 
+	Nan::Utf8String* cacheModelStr = getOptStr(opts, "cacheModel");
+	WebKitCacheModel cacheModel = WEBKIT_CACHE_MODEL_WEB_BROWSER;
+	if (cacheModelStr->length() != 0) {
+		if (g_strcmp0(**cacheModelStr, "none") == 0) {
+			cacheModel = WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER;
+		} else if (g_strcmp0(**cacheModelStr, "browser") == 0) {
+			cacheModel = WEBKIT_CACHE_MODEL_WEB_BROWSER;
+		} else if (g_strcmp0(**cacheModelStr, "local") == 0) {
+			cacheModel = WEBKIT_CACHE_MODEL_DOCUMENT_BROWSER;
+		}
+	}
+
 	webkit_web_context_set_process_model(webContext, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
-	webkit_web_context_set_cache_model(webContext, WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
+	webkit_web_context_set_cache_model(webContext, cacheModel);
 	webkit_web_context_set_tls_errors_policy(webContext, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 
 	Nan::Utf8String* cookiePolicyStr = getOptStr(opts, "cookiePolicy");

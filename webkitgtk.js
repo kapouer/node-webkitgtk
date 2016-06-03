@@ -94,6 +94,7 @@ WebKit.prototype.init = function(opts, cb) {
 		closedListener: closedListener.bind(this),
 		cookiePolicy: opts.cookiePolicy || "",
 		cacheDir: opts.cacheDir,
+		cacheModel: opts.cacheModel,
 		offscreen: opts.offscreen,
 		inspector: opts.inspector
 	}, function(err) {
