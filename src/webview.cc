@@ -857,7 +857,7 @@ void WebView::PngFinished(GObject* object, GAsyncResult* result, gpointer data) 
 		status = CAIRO_STATUS_INVALID_STATUS;
 	}
 	Nan::HandleScope scope;
-	Local<Value> argv[] = {};
+	Local<Value> argv[1] = {};
 	if (status == CAIRO_STATUS_SUCCESS) {
 		argv[0] = Nan::Null();
 	} else if (error != NULL && error->message != NULL) {
