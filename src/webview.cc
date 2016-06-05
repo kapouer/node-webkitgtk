@@ -648,14 +648,14 @@ NAN_METHOD(WebView::Load) {
 
 	ViewClosure* vc = new ViewClosure(self, info[1]->IsString() ? **(new Nan::Utf8String(info[1])) : NULL);
 
-	webkit_user_content_manager_register_script_message_handler(contman, "events");
-
 	self->idEventsHandler = g_signal_connect(
 		contman,
 		"script-message-received::events",
 		G_CALLBACK(WebView::handleEventMessage),
 		vc
 	);
+
+	webkit_user_content_manager_register_script_message_handler(contman, "events");
 
 	self->idResourceResponse = g_signal_connect(
 		self->view,
