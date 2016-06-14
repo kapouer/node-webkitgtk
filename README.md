@@ -24,7 +24,7 @@ system-installed libraries.
 Node.js compatibility
 ---------------------
 
-Node.js LTS branch 4.x, and 5.x.
+Node.js LTS and Current.
 
 
 usage
