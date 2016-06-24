@@ -21,8 +21,8 @@ void timeout_cb(uv_timer_t* handle) {
 #else
 void timeout_cb(uv_timer_t* handle, int status) {
 #endif
-	while (gtk_events_pending()) {
-		gtk_main_iteration_do(true);
+	if (gtk_events_pending()) {
+		gtk_main_iteration_do(false);
 	}
 }
 
