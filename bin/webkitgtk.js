@@ -192,7 +192,9 @@ if (opts.scripts) {
 					script.src = url;
 				});
 			})).then(done.bind(null, null)).catch(done);
-		}, [opts.scripts]);
+		}, [opts.scripts]).then(function() {
+			return wk;
+		});
 	});
 }
 if (opts.pdf) {
