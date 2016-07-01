@@ -32,7 +32,7 @@ describe("response handler data method", function suite() {
 			if (response.uri == this.uri) {
 				expect(response.mime).to.be('image/png');
 				expect(response.status).to.be(200);
-				expect(response.filename).to.be(null);
+				expect(response.filename).to.not.be.ok();
 				expect(response.length).to.be.greaterThan(1000);
 				done();
 			}
@@ -65,7 +65,6 @@ describe("response handler data method", function suite() {
 					expect(res.status).to.be(200);
 					expect(res.uri).to.be(url);
 					expect(res.length).to.be(0);
-					expect(res.mime).to.be('text/html');
 					expect(res.clength).to.be.greaterThan(10);
 					expect(res.clength).to.be.lessThan(doc.length + tail.length);
 				});

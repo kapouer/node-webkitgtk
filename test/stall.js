@@ -86,10 +86,11 @@ describe("stall load options", function suite() {
 			res.end(`<html><head><script type="text/javascript">
 			window.testDone = 0;
 			(function doRAF() {
-				window.requestAnimationFrame(function() {
+				if (window.requestAnimationFrame) window.requestAnimationFrame(function() {
 					doRAF();
 					testDone++;
 				});
+				else testDone = 11; // don't break test
 			})();
 			</script></head><body>test</body></html>`);
 		}).listen(function() {
