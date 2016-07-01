@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title bind-text="title"></title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="Content-Script-Type" content="text/javascript; charset=utf-8" />
+
+<link rel="stylesheet" href='/css/live.css' />
+
+<script src="/js/agent.js"></script>
+<script src="/js/jquery.js"></script>
+<script src="/js/domt.js"></script>
+<script src="/js/window-page.js"></script>
+<script src="/js/moment.js"></script>
+<script src="/js/moment-fr.js"></script>
+<script src="/js/throttle.js"></script>
+<script src="/js/procrastify.js"></script>
+<script src="/js/diffDOM.js"></script>
+<script src="/js/front.js"></script>
+<link rel="import" href="/components/image.html">
+<link rel="import" href="/components/embed.html">
+</head>
+<body>
+<section id="live-messages" class="live-messages" data-page-stage data-lazy-root="5">
+<meta id="opta-customer-id" content="" />
+<header class="live-header">
+<div class="live-controls">
+<div class="filter">
+<label class="checked">TOUT LE LIVE</label>
+<label>LES ESSENTIELS</label>
+</div>
+<div class="sort">
+<label>ORDRE DES POSTS</label>
+</div>
+</div>
+<div class="live-status">
+<p bind-hidden="page|before|drop" class="before">
+À VENIR : Début du direct :
+<time class="stamp" bind-datetime="page.start" bind-text="page.start|date">non précisé</time>
+</p>
+<p bind-hidden="page|during|drop" class="during">
+EN COURS : Mis à jour
+<time class="stamp" bind-datetime="page.iotime" bind-text="page.iotime|calendar">il y a 12 minutes</time>
+</p>
+<p bind-hidden="page|after|drop" class="after">
+TERMINÉ : Fin du direct :
+<time class="stamp" bind-datetime="page.stop" bind-text="page.stop|date">non précisé</time>
+</p>
+</div>
+</header>
+<article repeat="articles|rest"
+class="live-message"
+bind-class="live-message [articles.data.articleType]"
+>
+<a bind-href="#[articles.data.anchor]" bind-id="articles.data.anchor">
+<time class="live-time" bind-datetime="articles.ctime" bind-text="articles.ctime|calendar">Non publié</time>
+</a>
+<h3 class="live-title" bind-text="articles.title">Titre</h3>
+<aside class="live-icons" bind-bind="articles.components|component">
+<img bind-src="image.url" type="picto" where="aside" />
+</aside>
+<div class="live-article" bind-bind="articles.components|component">
+<p
+where="any"
+type="text"
+bind-html="data.content"
+></p>
+<component-image
+where="any"
+type="image"
+bind-param-legend="data.legend"
+bind-param-credit="data.credit"
+bind-param-position="data.position"
+bind-param-src="image.url"
+bind-param-link="link.url"
+></component-image>
+<component-embed
+where="any"
+type="embed"
+bind-param-html="embed.meta.html"
+></component-embed>
+</div>
+</article>
+</section>
+</body>
+</html>
