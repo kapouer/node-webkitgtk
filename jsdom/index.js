@@ -228,9 +228,13 @@ function resourceLoader(resource, cb) {
 		var status = res && res.statusCode || 0;
 		if (!err && status != 200) err = new HTTPError(status);
 		var headers = res && res.headers || {};
+		var uheaders = {};
+		for (var name in headers) {
+			uheaders[name.split('-').map(function(str) { return str[0].toUpperCase() + str.substring(1); }).join('-')] = headers[name];
+		}
 		priv.cfg.responseListener(stamp, {
 			uri: uri,
-			headers: headers,
+			headers: uheaders,
 			length: body ? body.length : 0,
 			mime: headers['content-type'],
 			status: status,
@@ -242,13 +246,13 @@ function resourceLoader(resource, cb) {
 	}.bind(this))
 	.on('data', function(chunk) {
 		var headers = req.response.headers;
-		priv.cfg.receiveDataListener(stamp, {
+		var res =  {
 			uri: uri,
 			length: headers['content-length'] || 0,
 			mime: (headers['content-type'] || '').split(';').shift(),
-			status: req.response.statusCode,
-			clength: chunk ? chunk.length : 0
-		});
+			status: req.response.statusCode
+		};
+		priv.cfg.receiveDataListener(stamp, res, chunk ? chunk.length : 0);
 	}.bind(this));
 	return req;
 }
