@@ -28,7 +28,7 @@
   "optionalDependencies": {
     "chalk": "^1.1.1",
     "headless": "^1.0.0",
-    "jsdom": "^9.1.0",
+    "jsdom": "^9.3.0",
     "request": "^2.60.0"
   },
   "devDependencies": {
