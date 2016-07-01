@@ -1,5 +1,8 @@
 var debug = require('debug')('webkitgtk');
 var jsdom = require('jsdom').jsdom;
+var idlUtils = require("jsdom/lib/jsdom/living/generated/utils");
+var DocumentFeatures = require('jsdom/lib/jsdom/browser/documentfeatures');
+var vm = require("vm");
 var httpCodes = require('http').STATUS_CODES;
 
 var request = function() { // lazy loading request
@@ -51,12 +54,31 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	}
 
 	jsdomOpts.created = function(err, window) {
+		this.webview = window;
 		window.raise = function(ev, msg, obj) {
 			if (obj && obj.error) {
 				throw obj.error;
 			}
 		};
 		if (err) return pcb.cb(err);
+
+		var windowImpl;
+		if (opts.preload) {
+			jsdomOpts.features.ProcessExternalResources = ['script'];
+			DocumentFeatures.applyDocumentFeatures(window.document, jsdomOpts.features);
+			var docImpl = idlUtils.implForWrapper(window.document);
+			windowImpl = docImpl._global;
+			delete docImpl._global;
+			jsdomOpts.features.ProcessExternalResources = [];
+			DocumentFeatures.applyDocumentFeatures(window.document, jsdomOpts.features);
+		}
+
+		if (!window.run) {
+			window.run = window.eval ? window.eval.bind(window) : function(code) {
+				return vm.runInContext(code, windowImpl);
+			};
+		}
+
 		window.uri = uri;
 		window.runSync = function(script, ticket) {
 			var ret;
@@ -87,8 +109,8 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			}
 		};
 
+
 		if (opts.script) {
-			if (!window.run) window.run = window.eval;
 			window.run(opts.script);
 		}
 		var runlist = this._webview && this._webview._runlist;
