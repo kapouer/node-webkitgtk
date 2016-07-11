@@ -186,7 +186,7 @@ load(uri, opts, cb) options
 
 - cookies  
   string | [string], default none  
-  caution: cookies are saved
+  note that as of webkitgtk 4.3.3 cookies are properly cleared and isolated between views.
 
 - width  
   number, 1024

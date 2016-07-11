@@ -567,7 +567,8 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 				</head></html>`;
 			return new Promise(function(resolve, reject) {
 				this.webview.load(uri, priv.stamp, {
-					content: content
+					content: content,
+					clearCookies: true
 				}, function(err) {
 					if (err) reject(err);
 					else resolve();
@@ -954,7 +955,10 @@ WebKit.prototype.unload = function(cb) {
 	p.then(function() {
 		delete priv.stamp;
 		debug('unload');
-		return this.rawload('about:blank', {content:'<html></html>'});
+		return this.rawload('about:blank', {
+			content:'<html></html>',
+			clearCookies: true
+		});
 	}.bind(this)).catch(function(err) {
 		console.error(err);
 	}).then(function() {

@@ -141,5 +141,27 @@ describe("cookies option", function suite() {
 			});
 		});
 	});
+	it("should clear cookies when setting them on a view", function() {
+		return WebKit.load('http://localhost/test', {
+			content: '<html><body>A</body></html>',
+			cookies: 'cn=one'
+		}).then(function(view) {
+			return view.run(function(done) {
+				done(null, document.cookie);
+			}).then(function(cookie) {
+				expect(cookie).to.be("cn=one");
+				return view.load('http://localhost/test', {
+					content: '<html><body>A</body></html>',
+					cookies: 'cp=two'
+				}).then(function() {
+					return view.run(function(done) {
+						done(null, document.cookie);
+					});
+				});
+			}).then(function(cookie) {
+				expect(cookie).to.be("cp=two");
+			})
+		});
+	});
 });
 
