@@ -6,19 +6,22 @@ bool load1 = FALSE;
 bool load2 = FALSE;
 const gchar* uri1 = "http://localhost:40001/one";
 const gchar* uri2 = "http://localhost:40001/two";
-const gchar* setCookie1 = "document.cookie = 'sid=firstcookie; Path=/';";
-const gchar* setCookie2 = "document.cookie = 'sid=secondcookie; Path=/';";
+const gchar* setCookie1 = "document.cookie = 'sid=firstcookie';";
+const gchar* setCookie2 = "document.cookie = 'sid=secondcookie';";
 const gchar* page1 = "<html><script type='text/javascript'>\
 var xhr = new XMLHttpRequest();\
 xhr.open('GET', 'http://localhost:40001/xhr', true);\
 xhr.send();\
 </script></html>";
 
-static void loadblanksetcoookie(const gchar*);
+WebKitWebView* view1;
+WebKitWebView* view2;
+
+static WebKitWebView* loadblanksetcoookie(const gchar*, const gchar*);
 
 int main(int argc, char *argv[]) {
 	gtk_init_check(&argc, &argv);
-	loadblanksetcoookie(uri1);
+	view1 = loadblanksetcoookie(uri1, "uri1");
 	gtk_main();
 }
 
@@ -34,10 +37,11 @@ static void runDone(GObject* object, GAsyncResult* result, void*) {
 	}
 	webkit_javascript_result_unref(js_result);
 	if (g_strcmp0(uri, uri1) == 0) {
-		loadblanksetcoookie(uri2);
+		view2 = loadblanksetcoookie(uri2, "uri2");
 	} else {
 		g_print("load actual page1 content with script that do a xhr GET request to /xhr (need a http server)\n");
-		webkit_web_view_load_html(view, page1, uri1);
+		// TODO view is the second view !!!
+		webkit_web_view_load_html(view1, page1, uri1);
 	}
 }
 
@@ -66,12 +70,21 @@ static void change(WebKitWebView* view, WebKitLoadEvent load_event, gpointer dat
 	}
 }
 
-static void loadblanksetcoookie(const gchar* url) {
+static WebKitWebView* loadblanksetcoookie(const gchar* url, const gchar* cache) {
 	g_print("loading new page %s\n", url);
-	WebKitWebContext* context = webkit_web_context_get_default();
+	WebKitWebsiteDataManager* dataManager = webkit_website_data_manager_new(
+		"base-cache-directory", cache,
+		"base-data-directory", cache,
+		NULL
+	);
+	WebKitWebContext* context = webkit_web_context_new_with_website_data_manager(dataManager);
+//	WebKitWebContext* context = webkit_web_context_get_default();
 	webkit_web_context_set_process_model(context, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
 	webkit_web_context_set_cache_model(context, WEBKIT_CACHE_MODEL_WEB_BROWSER);
-	WebKitWebView* view = WEBKIT_WEB_VIEW(webkit_web_view_new());
+	WebKitCookieManager* cookieManager = webkit_web_context_get_cookie_manager(context);
+	webkit_cookie_manager_delete_all_cookies(cookieManager);
+	webkit_cookie_manager_set_accept_policy(cookieManager, WEBKIT_COOKIE_POLICY_ACCEPT_NO_THIRD_PARTY);
+	WebKitWebView* view = WEBKIT_WEB_VIEW(webkit_web_view_new_with_context(context));
 	GtkWidget* window = gtk_offscreen_window_new();
 	gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 	gtk_widget_show_all(window);
@@ -84,4 +97,5 @@ static void loadblanksetcoookie(const gchar* url) {
 		NULL
 	);
 	webkit_web_view_load_html(view, "<html></html>", url);
+	return view;
 }
