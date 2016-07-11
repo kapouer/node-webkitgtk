@@ -85,7 +85,7 @@ private:
 	bool userContent;
 	bool waitFinish;
 
-
+	WebKitWebContext* context = NULL;
 	WebKitWebView* view = NULL;
 	GtkWidget* window = NULL;
 	WebKitWebInspector* inspector = NULL;

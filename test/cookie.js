@@ -104,5 +104,42 @@ describe("cookies option", function suite() {
 			});
 		}
 	});
+
+	it("should set same cookie in two views and not interfere", function() {
+		return Promise.all([WebKit.load('http://localhost/test', {
+			content: '<html><body>A</body></html>'
+		}), WebKit.load('http://localhost/test', {
+			content: '<html><body>B</body></html>'
+		})]).then(function(all) {
+			var ia = all[0];
+			var ib = all[1];
+			return ia.run(function() {
+				document.cookie = "cn=1234";
+			}).then(function() {
+				return ib.run(function(done) {
+					done(null, document.cookie);
+					document.cookie = "cn=4567";
+				});
+			}).then(function(cookie) {
+				expect(cookie).to.not.be.ok();
+				return ia.run(function(done) {
+					done(null, document.cookie);
+					document.cookie = "cn=12345";
+				});
+			}).then(function(cookie) {
+				expect(cookie).to.be("cn=1234");
+				return ib.run(function(done) {
+					done(null, document.cookie);
+				});
+			}).then(function(cookie) {
+				expect(cookie).to.be("cn=4567");
+				return ia.run(function(done) {
+					done(null, document.cookie);
+				});
+			}).then(function(cookie) {
+				expect(cookie).to.be("cn=12345");
+			});
+		});
+	});
 });
 

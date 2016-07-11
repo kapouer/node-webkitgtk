@@ -14,7 +14,6 @@ using namespace v8;
 Nan::Persistent<Function> WebView::constructor;
 
 static uv_timer_t* timeout_handle = new uv_timer_t;
-static WebKitWebContext* webContext;
 
 #if UV_VERSION_MAJOR >= 1
 void timeout_cb(uv_timer_t* handle) {
@@ -50,30 +49,29 @@ WebView::WebView(Handle<Object> opts) {
 	}
 	instances.insert(ObjMapPair(this->cstamp, this));
 
-	if (!webContext) {
-		Nan::Utf8String* cacheDirStr = getOptStr(opts, "cacheDir");
-		const gchar* cacheDir;
-		if (cacheDirStr->length() == 0) {
-			cacheDir = g_build_filename(g_get_user_cache_dir(), "node-webkitgtk", NULL);
-		} else {
-			cacheDir = **cacheDirStr;
-		}
-		#if WEBKIT_CHECK_VERSION(2,10,0)
-		WebKitWebsiteDataManager* dataManager = webkit_website_data_manager_new(
-			"base-cache-directory", cacheDir,
-			NULL
-		);
-		webContext = webkit_web_context_new_with_website_data_manager(dataManager);
-		#else
-			#if WEBKIT_CHECK_VERSION(2,8,0)
-		webContext = webkit_web_context_new();
-			#else
-		webContext = webkit_web_context_get_default();
-			#endif
-		webkit_web_context_set_disk_cache_directory(webContext, cacheDir);
-		#endif
-		delete cacheDirStr;
+	Nan::Utf8String* cacheDirStr = getOptStr(opts, "cacheDir");
+	const gchar* cacheDir;
+	if (cacheDirStr->length() == 0) {
+		cacheDir = g_build_filename(g_get_user_cache_dir(), "node-webkitgtk", NULL);
+	} else {
+		cacheDir = **cacheDirStr;
 	}
+	#if WEBKIT_CHECK_VERSION(2,10,0)
+	WebKitWebsiteDataManager* dataManager = webkit_website_data_manager_new(
+		"base-cache-directory", cacheDir,
+		NULL
+	);
+	context = webkit_web_context_new_with_website_data_manager(dataManager);
+	g_object_unref(dataManager);
+	#else
+		#if WEBKIT_CHECK_VERSION(2,8,0)
+	context = webkit_web_context_new();
+		#else
+	context = webkit_web_context_get_default();
+		#endif
+	webkit_web_context_set_disk_cache_directory(context, cacheDir);
+	#endif
+	delete cacheDirStr;
 
 	Nan::Utf8String* cacheModelStr = getOptStr(opts, "cacheModel");
 	WebKitCacheModel cacheModel = WEBKIT_CACHE_MODEL_WEB_BROWSER;
@@ -87,12 +85,12 @@ WebView::WebView(Handle<Object> opts) {
 		}
 	}
 
-	webkit_web_context_set_process_model(webContext, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
-	webkit_web_context_set_cache_model(webContext, cacheModel);
-	webkit_web_context_set_tls_errors_policy(webContext, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
+	webkit_web_context_set_process_model(context, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
+	webkit_web_context_set_cache_model(context, cacheModel);
+	webkit_web_context_set_tls_errors_policy(context, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 
 	Nan::Utf8String* cookiePolicyStr = getOptStr(opts, "cookiePolicy");
-	WebKitCookieManager* cookieManager = webkit_web_context_get_cookie_manager(webContext);
+	WebKitCookieManager* cookieManager = webkit_web_context_get_cookie_manager(context);
 	if (!g_strcmp0(**cookiePolicyStr, "never")) {
 		webkit_cookie_manager_set_accept_policy(cookieManager, WEBKIT_COOKIE_POLICY_ACCEPT_NEVER);
 	} else if (!g_strcmp0(**cookiePolicyStr, "always")) {
@@ -104,9 +102,9 @@ WebView::WebView(Handle<Object> opts) {
 
 	Nan::Utf8String* wePathStr = getOptStr(opts, "webextension");
 	if (wePathStr->length() > 0) {
-		webkit_web_context_set_web_extensions_directory(webContext, **wePathStr);
+		webkit_web_context_set_web_extensions_directory(context, **wePathStr);
 		this->contextSignalId = g_signal_connect(
-			webContext,
+			context,
 			"initialize-web-extensions",
 			G_CALLBACK(WebView::InitExtensions),
 			this
@@ -116,7 +114,7 @@ WebView::WebView(Handle<Object> opts) {
 
 	view = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
 		"user-content-manager", webkit_user_content_manager_new(),
-		"web-context", webContext,
+		"web-context", context,
 		NULL
 	));
 
@@ -178,6 +176,10 @@ NAN_METHOD(WebView::Destroy) {
 void WebView::destroy() {
 	if (view == NULL) return;
 	unloaded();
+	if (context != NULL) {
+		g_object_unref(context);
+		context = NULL;
+	}
 	view = NULL;
 	inspector = NULL;
 	if (window != NULL) {
