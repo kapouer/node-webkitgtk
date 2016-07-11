@@ -642,10 +642,6 @@ NAN_METHOD(WebView::Load) {
 
 	if (self->state == DOCUMENT_LOADED) webkit_web_view_stop_loading(self->view);
 
-	if (NanBooleanOptionValue(opts, H("clearCookies"), FALSE)) {
-		webkit_cookie_manager_delete_all_cookies(webkit_web_context_get_cookie_manager(self->context));
-	}
-
 	self->unloaded();
 
 	self->loadCallback = loadCb;

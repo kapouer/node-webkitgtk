@@ -160,6 +160,15 @@ describe("cookies option", function suite() {
 				});
 			}).then(function(cookie) {
 				expect(cookie).to.be("cp=two");
+				return view.load('http://localhost/test', {
+					content: '<html><body>A</body></html>'
+				}).then(function() {
+					return view.run(function(done) {
+						done(null, document.cookie);
+					});
+				}).then(function(cookie) {
+					expect(cookie).to.not.be.ok();
+				});
 			})
 		});
 	});

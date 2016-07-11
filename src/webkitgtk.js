@@ -33,6 +33,14 @@ var hasRunEvent = '(' + function(name, event) {
 	}
 }.toString() + ')("%name", "%event")';
 
+var clearCookiesScript = '(' + function() {
+	var cookies = (document.cookie || '').split(/ *; */);
+	cookies.forEach(function(cookie) {
+		var name = cookie.split('=').shift();
+		if (name) document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+	});
+}.toString() + ')();\n';
+
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
 		var inst = new WebKit();
@@ -559,7 +567,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		p = p.then(function() {
 			debug('load cookies');
 			if (!Array.isArray(cookies)) cookies = [cookies];
-			var script = cookies.map(function(cookie) {
+			var script = clearCookiesScript + cookies.map(function(cookie) {
 				return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 			}).join(";\n");
 			var content = `<html><head>
@@ -567,8 +575,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 				</head></html>`;
 			return new Promise(function(resolve, reject) {
 				this.webview.load(uri, priv.stamp, {
-					content: content,
-					clearCookies: true
+					content: content
 				}, function(err) {
 					if (err) reject(err);
 					else resolve();
@@ -577,6 +584,9 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		}.bind(this)).catch(function(err) {
 			pcb.cb(err);
 		});
+	} else if (!opts.preload) {
+		if (!opts.script) opts.script = "";
+		opts.script = clearCookiesScript + opts.script;
 	}
 	p.then(function() {
 		var deprecations = {
@@ -956,8 +966,7 @@ WebKit.prototype.unload = function(cb) {
 		delete priv.stamp;
 		debug('unload');
 		return this.rawload('about:blank', {
-			content:'<html></html>',
-			clearCookies: true
+			content:'<html></html>'
 		});
 	}.bind(this)).catch(function(err) {
 		console.error(err);
