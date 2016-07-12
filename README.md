@@ -524,7 +524,8 @@ methods
 
 * destroy(cb)  
   does the reverse of init - frees webview and xvfb instance if any.  
-  init() can be called again to recover a working instance.
+  init() can be called again to recover a working instance.  
+  destroy must be called after unload to avoid memory leaks.
 
 
 properties
