@@ -560,30 +560,36 @@ function errorLoad(state) {
 WebKit.prototype.rawload = function(uri, opts, cb) {
 	var priv = this.priv;
 	priv.state = LOADING;
+	if (opts.content != null && !opts.content || !uri) opts.content = "<html></html>";
 	var cookies = opts.cookies;
 	var pcb = promet(this, cb);
 	var p = Promise.resolve();
 	if (cookies) {
-		p = p.then(function() {
-			debug('load cookies');
-			if (!Array.isArray(cookies)) cookies = [cookies];
-			var script = clearCookiesScript + cookies.map(function(cookie) {
-				return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
-			}).join(";\n");
-			var content = `<html><head>
-				<script type="text/javascript">${script}</script>
-				</head></html>`;
-			return new Promise(function(resolve, reject) {
-				this.webview.load(uri, priv.stamp, {
-					content: content
-				}, function(err) {
-					if (err) reject(err);
-					else resolve();
-				});
-			}.bind(this));
-		}.bind(this)).catch(function(err) {
-			pcb.cb(err);
-		});
+		debug('load cookies');
+		if (!Array.isArray(cookies)) cookies = [cookies];
+		var script = clearCookiesScript + cookies.map(function(cookie) {
+			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
+		}).concat(['']).join(";\n");
+		if (!opts.content) { // blank load to be able to set cookies before real one
+			p = p.then(function() {
+				var content = `<html><head>
+					<script type="text/javascript">${script}</script>
+					</head></html>`;
+				return new Promise(function(resolve, reject) {
+					this.webview.load(uri, priv.stamp, {
+						content: content
+					}, function(err) {
+						if (err) reject(err);
+						else resolve();
+					});
+				}.bind(this));
+			}.bind(this)).catch(function(err) {
+				pcb.cb(err);
+			});
+		} else { // no main document loading, just set in user script
+			if (!opts.script) opts.script = "";
+			opts.script = script + opts.script;
+		}
 	} else if (!opts.preload) {
 		if (!opts.script) opts.script = "";
 		opts.script = clearCookiesScript + opts.script;
@@ -603,7 +609,6 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			opts[newkey] = opts[key];
 		}
 		if (!opts['default-charset']) opts['default-charset'] = "utf-8";
-		if (opts.content != null && !opts.content || !uri) opts.content = "<html></html>";
 		this.webview.load(uri, this.priv.stamp, opts, function(err, inst) {
 			priv.state = INITIALIZED;
 			pcb.cb(err, inst);
