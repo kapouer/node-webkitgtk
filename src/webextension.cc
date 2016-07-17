@@ -115,6 +115,7 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 		} else {
 			g_message("reject %s", uri);
 			webkit_uri_request_set_uri(request, g_strconcat("#", uri, NULL));
+			return TRUE;
 		}
 	} else if (JSValueIsString(jsContext, result)) {
 		gchar* str_value = JSValueToStr(jsContext, result);
