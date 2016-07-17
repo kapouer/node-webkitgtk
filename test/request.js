@@ -328,4 +328,50 @@ describe("request listener", function suite() {
 			});
 		});
 	});
+
+	it("should reject requests even when resource is in browser cache", function(done) {
+		this.timeout(5000);
+		var doc = `<!DOCTYPE html>
+		<html><head>
+		<script type="text/javascript" src="test.js"></script>
+		</head><body>
+		content
+		</body></html>`;
+		var port;
+		var server = require('http').createServer(function(req, res) {
+			if (req.url == "/test.js") {
+				var delay = 60;
+				res.setHeader('Expires', new Date(Date.now() + delay*1000).toUTCString());
+				res.setHeader('Cache-Control', 'max-age=' + delay);
+				res.statusCode = 200;
+				res.setHeader('Content-Type', "text/javascript");
+				res.end("console.log('test has run');");
+			} else if (req.url == "/") {
+				res.statusCode = 200;
+				res.end(doc);
+			} else {
+				res.statusCode = 404;
+				res.end("Not Found");
+			}
+		}).listen(function() {
+			var url = "http://localhost:" + server.address().port;
+			WebKit(function(err, w) {
+				var count = 0;
+				w.on('response', function(res) {
+					if (res.uri == url + "/test.js") count++;
+				});
+
+				w.load(url).once('idle', function() {
+					w.load(url, {
+						filter: function() {
+							if (this.uri != document.location.toString()) this.cancel = true;
+						}
+					}).once('idle', function() {
+						expect(count).to.be(1);
+						done();
+					});
+				});
+			});
+		});
+	});
 });
