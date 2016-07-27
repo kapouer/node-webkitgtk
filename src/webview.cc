@@ -85,11 +85,6 @@ WebView::WebView(Handle<Object> opts) {
 		}
 	}
 
-	if (opts->Get(H("clearCache"))->BooleanValue() == TRUE) {
-		g_print("clear cache\n");
-		webkit_web_context_clear_cache(context);
-	}
-
 	webkit_web_context_set_process_model(context, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
 	webkit_web_context_set_cache_model(context, cacheModel);
 	webkit_web_context_set_tls_errors_policy(context, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
