@@ -85,6 +85,11 @@ WebView::WebView(Handle<Object> opts) {
 		}
 	}
 
+	if (opts->Get(H("clearCache"))->BooleanValue() == TRUE) {
+		g_print("clear cache\n");
+		webkit_web_context_clear_cache(context);
+	}
+
 	webkit_web_context_set_process_model(context, WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
 	webkit_web_context_set_cache_model(context, cacheModel);
 	webkit_web_context_set_tls_errors_policy(context, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
@@ -153,6 +158,12 @@ WebView::WebView(Handle<Object> opts) {
 	g_signal_connect(view, "load-changed", G_CALLBACK(WebView::Change), this);
 	g_signal_connect(view, "script-dialog", G_CALLBACK(WebView::ScriptDialog), this);
 	g_signal_connect(view, "decide-policy", G_CALLBACK(WebView::DecidePolicy), this);
+}
+
+NAN_METHOD(WebView::ClearCache) {
+	Nan::HandleScope scope;
+	WebView* self = ObjectWrap::Unwrap<WebView>(info.This());
+	webkit_web_context_clear_cache(self->context);
 }
 
 NAN_METHOD(WebView::Stop) {
@@ -244,6 +255,7 @@ void WebView::Init(Handle<Object> exports, Handle<Object> module) {
 	Nan::SetPrototypeMethod(tpl, "runSync", WebView::RunSync);
 	Nan::SetPrototypeMethod(tpl, "png", WebView::Png);
 	Nan::SetPrototypeMethod(tpl, "pdf", WebView::Print);
+	Nan::SetPrototypeMethod(tpl, "clearCache", WebView::ClearCache);
 	Nan::SetPrototypeMethod(tpl, "stop", WebView::Stop);
 	Nan::SetPrototypeMethod(tpl, "destroy", WebView::Destroy);
 	Nan::SetPrototypeMethod(tpl, "inspect", WebView::Inspect);

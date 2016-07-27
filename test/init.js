@@ -19,5 +19,35 @@ describe("init method", function suite() {
 			});
 		});
 	});
+	it("should clear cache", function(done) {
+		this.timeout(10000);
+		var called = false;
+		var port;
+		var count = 0;
+		var server = require('http').createServer(function(req, res) {
+			if (req.path != '/') {
+				res.statusCode = 404;
+				res.end("Not Found");
+			} else {
+				res.statusCode = 200;
+				res.setHeader('Cache-Control: max-age=100');
+				count++;
+				res.end("stored text");
+			}
+		}).listen(function() {
+			port = server.address().port;
+			WebKit({cacheDir: "cache/test2"}).then(function(w) {
+				return w.load("http://localhost:" + port);
+			}).then(function() {
+				return w.load("http://localhost:" + port);
+			}).then(function() {
+				expect(count).to.be(1);
+				w.clearCache();
+				return w.load("http://localhost:" + port);
+			}).then(function() {
+				expect(count).to.be(2);
+			});
+		});
+	});
 });
 

@@ -321,7 +321,6 @@ init(opts, cb) options
   string, $user_cache_dir/node-webkitgtk  
   path to webkitgtk cache directory.  
   Changing cacheDir can fail silently if webkitgtk lib is already initialized.
-  The simplest way to clear the cache is to delete this directory.
 
 - cacheModel  
   string, defaults to browser.  
@@ -462,6 +461,10 @@ methods
   see parameters described above  
   *must be invoked before (pre)load*.  
   Callback receives (err, instance).
+
+* clearCache()  
+  Clear the cache of the current instance.  
+  Might affect others instances if they share the same cacheDir.
 
 * preload(uri, opts?, cb?)  
   load uri into webview  

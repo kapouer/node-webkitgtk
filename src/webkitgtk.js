@@ -909,6 +909,11 @@ WebKit.prototype.stop = function(cb) {
 	return pcb.ret;
 };
 
+WebKit.prototype.clearCache = function() {
+	if (!this.webview) throw new Exception("Cannot clear cache of non-initialized instance");
+	this.webview.clearCache();
+};
+
 WebKit.prototype.reset = function(cb) {
 	var pcb = promet(this, cb);
 	var p = Promise.resolve();

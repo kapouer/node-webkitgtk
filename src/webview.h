@@ -113,6 +113,7 @@ private:
 	static NAN_METHOD(RunSync);
 	static NAN_METHOD(Png);
 	static NAN_METHOD(Print);
+	static NAN_METHOD(ClearCache);
 	static NAN_METHOD(Stop);
 	static NAN_METHOD(Destroy);
 	static NAN_METHOD(Inspect);
