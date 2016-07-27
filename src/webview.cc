@@ -50,12 +50,12 @@ WebView::WebView(Handle<Object> opts) {
 	instances.insert(ObjMapPair(this->cstamp, this));
 
 	Nan::Utf8String* cacheDirStr = getOptStr(opts, "cacheDir");
-	const gchar* cacheDir;
 	if (cacheDirStr->length() == 0) {
 		cacheDir = g_build_filename(g_get_user_cache_dir(), "node-webkitgtk", NULL);
 	} else {
-		cacheDir = **cacheDirStr;
+		cacheDir = g_strdup(**cacheDirStr);
 	}
+	delete cacheDirStr;
 	#if WEBKIT_CHECK_VERSION(2,10,0)
 	WebKitWebsiteDataManager* dataManager = webkit_website_data_manager_new(
 		"base-cache-directory", cacheDir,
@@ -71,7 +71,6 @@ WebView::WebView(Handle<Object> opts) {
 		#endif
 	webkit_web_context_set_disk_cache_directory(context, cacheDir);
 	#endif
-	delete cacheDirStr;
 
 	Nan::Utf8String* cacheModelStr = getOptStr(opts, "cacheModel");
 	WebKitCacheModel cacheModel = WEBKIT_CACHE_MODEL_WEB_BROWSER;
@@ -194,6 +193,7 @@ void WebView::destroy() {
 	}
 
 	if (uri != NULL) g_free(uri);
+	if (cacheDir != NULL) g_free(cacheDir);
 
 	if (pngCallback != NULL) delete pngCallback;
 	if (pngFilename != NULL) delete pngFilename;

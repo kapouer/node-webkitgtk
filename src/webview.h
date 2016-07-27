@@ -72,6 +72,7 @@ private:
 	guint contextSignalId;
 
 	gchar* uri = NULL;
+	gchar* cacheDir = NULL;
 	void updateUri(const gchar*);
 	gulong idResourceResponse;
 	gulong idEventsHandler;
