@@ -49,7 +49,6 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			var tag = node.nodeName.toLowerCase();
 			var params = {
 				body: ["onload", null],
-				link: ["rel", ""],
 				script: ["type", "text/plain"]
 			}[tag];
 			if (!params) return;
