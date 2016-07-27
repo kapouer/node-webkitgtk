@@ -463,8 +463,9 @@ methods
   Callback receives (err, instance).
 
 * clearCache()  
-  Clear the cache of the current instance.  
-  Might affect others instances if they share the same cacheDir.
+  Clear cache of the current instance.  
+  Busy on-disk resources won't be cleared, so it's safer to call on an unloaded view.
+  Other running instances sharing the same cache may not be immediately affected.
 
 * preload(uri, opts?, cb)  
   load uri into webview  
