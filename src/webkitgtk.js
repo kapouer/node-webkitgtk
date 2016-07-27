@@ -1,3 +1,4 @@
+var debug = require('debug')('webkitgtk');
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var stream = require('stream');
@@ -9,7 +10,6 @@ var clientConsole = require('./client-console');
 var clientError = require('./client-error');
 var clientTracker = require('./client-tracker');
 var clientPromise = fs.readFileSync(require.resolve('../lib/client-promise'));
-var debug = require('debug')('webkitgtk');
 
 // available after init
 var debugStall;
