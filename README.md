@@ -32,7 +32,7 @@ usage
 
 The API has two styles:
 - with callbacks, all methods return current instance
-- without callbacks, all methods return promise.
+- without callbacks, all methods return promise
 
 For convenience, the returned promises have bound methods once, on, when.
 
@@ -453,7 +453,7 @@ methods
   creates an unitialized instance upon which init() must be called.  
   WebKit is also an EventEmitter.
 
-* WebKit(opts?, cb?)  
+* WebKit(opts?, cb)  
   Same as above.  
   If arguments are given, equals `new WebKit().init(opts, cb)`.
 
@@ -466,13 +466,13 @@ methods
   Clear the cache of the current instance.  
   Might affect others instances if they share the same cacheDir.
 
-* preload(uri, opts?, cb?)  
+* preload(uri, opts?, cb)  
   load uri into webview  
   scripts are not run, resources are not loaded.  
   These options are not effective: `cookies`, `script`, `allow`.  
   Callback receives (err, instance).
 
-* load(uri, opts?, cb?)  
+* load(uri, opts?, cb)  
   load uri into webview  
   see parameters described above.  
   Callback receives (err, instance).
@@ -504,7 +504,7 @@ methods
   The listener receives additional arguments as long as they're stringifyable.  
   Can be used to listen recurring events.
 
-* png(writableStream or filename, cb?)  
+* png(writableStream or filename, cb)  
   takes a png snapshot of the whole document right now.  
   If invoked with a filename, save the stream to file.  
   Tip: use custom css to cut portions of the document.
@@ -513,7 +513,7 @@ methods
   get the whole document html, prepended with its doctype, right now.  
   Callback receives (err, str).
 
-* pdf(filepath, opts?, cb?)  
+* pdf(filepath, opts?, cb)  
   print page to file right now  
   see parameters described above.
 
