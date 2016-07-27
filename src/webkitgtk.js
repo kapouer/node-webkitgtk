@@ -910,7 +910,7 @@ WebKit.prototype.stop = function(cb) {
 };
 
 WebKit.prototype.clearCache = function() {
-	if (!this.webview) throw new Exception("Cannot clear cache of non-initialized instance");
+	if (this.priv.state < INITIALIZED) throw errorLoad(this.priv.state);
 	this.webview.clearCache();
 };
 
