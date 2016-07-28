@@ -3,5 +3,8 @@ lib/*.node
 build/*
 node_modules/*
 test/shots/*
+cache/*
+webkit-bugs/*
+leaks/*
 navigator.json
 
