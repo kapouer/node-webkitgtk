@@ -33,14 +33,6 @@ var hasRunEvent = '(' + function(name, event) {
 	}
 }.toString() + ')("%name", "%event")';
 
-var clearCookiesScript = '(' + function() {
-	var cookies = (document.cookie || '').split(/ *; */);
-	cookies.forEach(function(cookie) {
-		var name = cookie.split('=').shift();
-		if (name) document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-	});
-}.toString() + ')();\n';
-
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
 		var inst = new WebKit();
@@ -564,20 +556,23 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	var cookies = opts.cookies;
 	var pcb = promet(this, cb);
 	var p = Promise.resolve();
+	var clearCookies = true;
 	if (cookies) {
 		debug('load cookies');
 		if (!Array.isArray(cookies)) cookies = [cookies];
-		var script = clearCookiesScript + cookies.map(function(cookie) {
+		var script = cookies.map(function(cookie) {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 		}).concat(['']).join(";\n");
 		if (!opts.content) { // blank load to be able to set cookies before real one
+			clearCookies = false;
 			p = p.then(function() {
 				var content = `<html><head>
 					<script type="text/javascript">${script}</script>
 					</head></html>`;
 				return new Promise(function(resolve, reject) {
 					this.webview.load(uri, priv.stamp, {
-						content: content
+						content: content,
+						clearCookies: true
 					}, function(err) {
 						if (err) reject(err);
 						else resolve();
@@ -592,7 +587,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		}
 	} else if (!opts.preload) {
 		if (!opts.script) opts.script = "";
-		opts.script = clearCookiesScript + opts.script;
+		opts.script = opts.script;
 	}
 	p.then(function() {
 		var deprecations = {
@@ -609,6 +604,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			opts[newkey] = opts[key];
 		}
 		if (!opts['default-charset']) opts['default-charset'] = "utf-8";
+		opts.clearCookies = clearCookies;
 		this.webview.load(uri, this.priv.stamp, opts, function(err, inst) {
 			priv.state = INITIALIZED;
 			pcb.cb(err, inst);

@@ -653,6 +653,10 @@ NAN_METHOD(WebView::Load) {
 
 	self->loadCallback = loadCb;
 
+	if (NanBooleanOptionValue(opts, H("clearCookies"), FALSE)) {
+		webkit_cookie_manager_delete_all_cookies(webkit_web_context_get_cookie_manager(self->context));
+	}
+
 	WebKitUserContentManager* contman = webkit_web_view_get_user_content_manager(self->view);
 
 	ViewClosure* vc = new ViewClosure(self, info[1]->IsString() ? **(new Nan::Utf8String(info[1])) : NULL);
