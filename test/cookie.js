@@ -52,7 +52,7 @@ describe("cookies option", function suite() {
 	});
 
 	it("should set Cookie HTTP header on first request", function(done) {
-		WebKit.load("http://localhost:" + port + "/test/one", {cookies:cookiestrOne + ";Path=/test/one"}, function(err, w) {
+		WebKit.load("http://localhost:" + port + "/test/one", {cookies:cookiestrOne + "; Path=/test/one"}, function(err, w) {
 			expect(err).to.not.be.ok();
 			expect(countOne).to.be(1);
 			done();
@@ -64,11 +64,11 @@ describe("cookies option", function suite() {
 		var cookiestr = "mycookie=myvalue";
 		var cookiestr2 = "mycookie=myvalue2";
 
-		WebKit.load("http://localhost:" + port + "/test/two", {cookies:cookiestrOne + ";Path=/test/two"}, function(err, w) {
+		WebKit.load("http://localhost:" + port + "/test/two", {cookies:cookiestrOne + "; Path=/test/two"}, function(err, w) {
 			expect(err).to.not.be.ok();
 			expect(countTwo).to.be(1);
 			w.unload(function() {
-				w.load("http://localhost:" + port + "/test/two", {cookies:cookiestrTwo + ";Path=/test/two"}, function(err) {
+				w.load("http://localhost:" + port + "/test/two", {cookies:cookiestrTwo + "; Path=/test/two"}, function(err) {
 					expect(err).to.not.be.ok();
 					expect(countTwo).to.be(2);
 					done();
@@ -78,7 +78,7 @@ describe("cookies option", function suite() {
 	});
 
 	it("should set Cookie HTTP header on xhr request", function(done) {
-		WebKit.load("http://localhost:" + port + "/test/xhr", {cookies:cookiestrOne + ";Path=/test/xhr"})
+		WebKit.load("http://localhost:" + port + "/test/xhr", {cookies:cookiestrOne + "; Path=/test/xhr"})
 		.once('idle', function() {
 			expect(hadXhr).to.be(true);
 			done();
@@ -97,7 +97,7 @@ describe("cookies option", function suite() {
 		function next() {
 			w.load("http://localhost:" + port + "/test/content", {
 				content: content,
-				cookies:cookiestrOne + ";Path=/test/content"
+				cookies:cookiestrOne + "; Path=/test/content"
 			}).once('idle', function() {
 				expect(hadScript).to.be(true);
 				done();
