@@ -44,7 +44,7 @@
   "scripts": {
     "install": "make || exit 0",
     "prepublish": "browserify -r promise/lib/es6-extensions -s Promise > lib/client-promise.js ",
-    "test": "mocha -R spec"
+    "test": "make check"
   },
   "repository": "git@github.com:kapouer/node-webkitgtk.git",
   "author": "Jérémy Lal <kapouer@melix.org>",

@@ -12,6 +12,6 @@ clean:
 	rm -f test/shots/*
 
 check: lib
-	mocha --reporter=progress
+	mocha -R spec
 
 .PHONY: lib
