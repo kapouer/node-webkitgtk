@@ -89,11 +89,19 @@ WebKit.prototype.init = function(opts, cb) {
 	if (priv.state >= INITIALIZING) return pcb.cb(new Error("init must not be called twice"), this);
 	priv.state = INITIALIZING;
 
-	if (opts.offscreen == null) opts.offscreen = true;
 	if (opts.debug) {
 		priv.debug = true;
 		opts.offscreen = false;
 		opts.inspector = true;
+	}
+
+	if (opts.offscreen == null) opts.offscreen = true;
+
+	if (opts.offscreen) {
+		// as of webkitgtk version 2.14,
+		// compositing mode has huge performance impact on initialization,
+		// and it is useless in offscreen mode
+		process.env.WEBKIT_DISABLE_COMPOSITING_MODE = "1";
 	}
 
 	debug('init');
