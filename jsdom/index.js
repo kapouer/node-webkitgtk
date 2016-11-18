@@ -4,6 +4,7 @@ var idlUtils = require("jsdom/lib/jsdom/living/generated/utils");
 var DocumentFeatures = require('jsdom/lib/jsdom/browser/documentfeatures');
 var vm = require("vm");
 var httpCodes = require('http').STATUS_CODES;
+var URL = require('url');
 
 var request = function() { // lazy loading request
 	var request;
@@ -30,6 +31,7 @@ WebKit.prototype.binding = function(opts, cfg, cb) {
 WebKit.prototype.rawload = function(uri, opts, cb) {
 	var pcb = WebKit.promet(this, cb);
 	var p = Promise.resolve();
+	uri = URL.format(URL.parse(uri));
 	var jsdomOpts = {
 		resourceLoader: resourceLoader.bind(this),
 		features: {}
