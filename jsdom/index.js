@@ -65,12 +65,12 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		var windowImpl;
 		if (opts.preload) {
 			jsdomOpts.features.ProcessExternalResources = ['script'];
-			DocumentFeatures.applyDocumentFeatures(window.document, jsdomOpts.features);
 			var docImpl = idlUtils.implForWrapper(window.document);
+			DocumentFeatures.applyDocumentFeatures(docImpl, jsdomOpts.features);
 			windowImpl = docImpl._global;
 			delete docImpl._global;
 			jsdomOpts.features.ProcessExternalResources = [];
-			DocumentFeatures.applyDocumentFeatures(window.document, jsdomOpts.features);
+			DocumentFeatures.applyDocumentFeatures(docImpl, jsdomOpts.features);
 		}
 
 		if (!window.run) {
