@@ -5,6 +5,7 @@ var DocumentFeatures = require('jsdom/lib/jsdom/browser/documentfeatures');
 var vm = require("vm");
 var httpCodes = require('http').STATUS_CODES;
 var URL = require('url');
+var AuthRequest = require('./auth-request');
 
 var request = function() { // lazy loading request
 	var request;
@@ -227,7 +228,12 @@ function resourceLoader(resource, cb) {
 	}
 	var req = request()(reqOpts, function(err, res, body) {
 		var status = res && res.statusCode || 0;
-		if (!err && status != 200) err = new HTTPError(status);
+		if (!err && status != 200) {
+			err = new HTTPError(status);
+			if (status == 401) {
+
+			}
+		}
 		var headers = res && res.headers || {};
 		var uheaders = {};
 		for (var name in headers) {
@@ -255,6 +261,14 @@ function resourceLoader(resource, cb) {
 		};
 		priv.cfg.receiveDataListener(stamp, res, chunk ? chunk.length : 0);
 	}.bind(this));
+	var authResponse = req._auth.onResponse;
+	var self = this;
+	req._auth.onResponse = function(response) {
+		if (this.sentAuth) return null;
+		self.emit('authenticate', new AuthRequest(req, response));
+		if (!this.hasAuth) return null;
+		return authResponse.call(this, response);
+	}.bind(req._auth);
 	return req;
 }
 
