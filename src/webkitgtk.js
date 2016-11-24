@@ -915,7 +915,7 @@ WebKit.prototype.stop = function(cb) {
 
 WebKit.prototype.clearCache = function() {
 	if (this.priv.state < INITIALIZED) throw errorLoad(this.priv.state);
-	this.webview.clearCache();
+	this.webview && this.webview.clearCache();
 };
 
 WebKit.prototype.reset = function(cb) {
