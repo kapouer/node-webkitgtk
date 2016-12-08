@@ -1,7 +1,7 @@
 {
   "name": "webkitgtk",
   "version": "4.4.4",
-  "description": "Drive webkitgtk from Node.js",
+  "description": "webkitgtk addon with powerful Node.js API",
   "keywords": [
     "webkit",
     "binding",
