@@ -17,13 +17,18 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 
 	var intervals = {len: 0, stall: 0, inc: 1};
 	var timeouts = {len: 0, stall: 0, inc: 1};
+	var immediates = {len: 0, inc: 1};
 	var frames = {len: 0, stall: 0, ignore: !stallFrame};
 	var requests = {len: 0, stall: 0};
 
 	if (preload) disableExternalResources();
 
+	// force polyfill to kick in
+	delete window.Promise;
+
 	var w = {};
-	['setTimeout', 'clearTimeout',
+	['setImmediate', 'clearImmediate',
+	'setTimeout', 'clearTimeout',
 	'setInterval', 'clearInterval',
 	'XMLHttpRequest', 'WebSocket',
 	'requestAnimationFrame', 'cancelAnimationFrame'].forEach(function(meth) {
@@ -123,6 +128,46 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		if (!requests[uri]) requests[uri] = {count: 0};
 		requests[uri].stall = true;
 	}
+
+	function doneImmediate(id) {
+		var t = id != null && immediates[id];
+		if (t) {
+			delete immediates[id];
+			immediates.len--;
+			if (immediates.len == 0) {
+				check('immediate');
+			}
+		} else {
+			t = id;
+		}
+		return t;
+	}
+	window.setImmediate = function setImmediate(fn) {
+		immediates.len++;
+		var obj = {
+			fn: fn
+		};
+		var fnobj = function(obj) {
+			var err;
+			try {
+				obj.fn.apply(null, Array.from(arguments).slice(1));
+			} catch (e) {
+				err = e;
+			}
+			doneImmediate(obj.id);
+			if (err) throw err; // rethrow
+		}.bind(null, obj);
+		var t = w.setImmediate(fnobj);
+		var id = ++immediates.inc;
+		immediates[id] = t;
+		obj.id = id;
+		return id;
+	};
+
+	window.clearImmediate = function(id) {
+		var t = doneImmediate(id);
+		return w.clearImmediate(t);
+	};
 
 	function checkTimeouts() {
 		delete timeouts.to;
@@ -347,6 +392,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 
 	function checkNow(from, url) {
 		var info = {
+			immediates: immediates.len == 0,
 			timeouts: timeouts.len <= timeouts.stall,
 			intervals: intervals.len <= intervals.stall || intervals.ignore,
 			frames: frames.len <= frames.stall || frames.ignore,
@@ -362,7 +408,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		}
 		if (lastEvent <= lastRunEvent) {
 			if (lastEvent == EV.load) {
-				if (info.timeouts && info.intervals && info.frames && info.requests) {
+				if (info.immediates && info.timeouts && info.intervals && info.frames && info.requests) {
 					lastEvent += 1;
 					emit("idle", from, url, info);
 				}

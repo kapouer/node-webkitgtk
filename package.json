@@ -19,7 +19,8 @@
     "dashdash": "^1.10.1",
     "debug": "^2.2.0",
     "nan": "^2.0.5",
-    "promise": "^7.1.1",
+    "promise-polyfill": "^6.0.2",
+    "setimmediate": "^1.0.5",
     "tosource": "^1.0.0"
   },
   "engines": {
@@ -32,7 +33,6 @@
     "request": "^2.60.0"
   },
   "devDependencies": {
-    "browserify": "^13.0.0",
     "engine.io": "^1.4.2",
     "engine.io-client": "^1.4.2",
     "expect.js": "^0.3.1",
@@ -43,7 +43,6 @@
   },
   "scripts": {
     "install": "make || exit 0",
-    "prepublish": "browserify -r promise/lib/es6-extensions -s Promise > lib/client-promise.js ",
     "test": "make check"
   },
   "repository": "git@github.com:kapouer/node-webkitgtk.git",
