@@ -1,6 +1,17 @@
 module.exports = function consoleEmitter(emit) {
 	if (!window.console) return;
-	Object.keys(console).forEach(function(meth) {
+	var sharedConsoleMethods = [
+		'assert',
+		'dir',
+		'error',
+		'info',
+		'log',
+		'time',
+		'timeEnd',
+		'warn'
+	];
+
+	sharedConsoleMethods.forEach(function(meth) {
 		window.console[meth] = function() {
 			var args = ['console', meth].concat(Array.from(arguments));
 			emit.apply(null, args);
