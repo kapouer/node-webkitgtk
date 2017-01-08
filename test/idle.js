@@ -3,6 +3,10 @@ var expect = require('expect.js');
 var fs = require('fs');
 
 describe("idle event", function suite() {
+	it("should run window-page tests in a loop while being very busy", function(done) {
+		expect(true).to.be(false);
+		done();
+	});
 	it("should wait xhr requests called in chain, even with a zero timeout delay", function(done) {
 		this.timeout(5000);
 		var hasXHR1 = false;
