@@ -10,7 +10,6 @@ var clientConsole = require('./client-console');
 var clientError = require('./client-error');
 var clientTracker = require('./client-tracker');
 var clientPromise = fs.readFileSync(require.resolve('promise-polyfill'));
-var clientSetImmediate = fs.readFileSync(require.resolve('setimmediate'));
 
 // available after init
 var debugStall;
@@ -785,7 +784,6 @@ function load(uri, opts, cb) {
 
 	if (!priv.jsdom) scripts.push(clientError);
 	if (opts.console && !priv.jsdom) scripts.push(clientConsole);
-	scripts.push(clientSetImmediate);
 	scripts.push({
 		fn: clientTracker,
 		args: [
