@@ -3,9 +3,66 @@ var expect = require('expect.js');
 var fs = require('fs');
 
 describe("idle event", function suite() {
-	it("should run window-page tests in a loop while being very busy", function(done) {
-		expect(true).to.be(false);
-		done();
+	it("should chain lots of promises on client while doing xhr and idle after end of promises", function(done) {
+		var hasXHR = false;
+		var server = require('http').createServer(function(req, res) {
+			if (req.url == "/xhr") {
+				res.statusCode = 200;
+				hasXHR = true;
+				res.setHeader('Content-Type', 'application/json');
+				setTimeout(function() {
+					res.end(JSON.stringify({
+						test: 'xhr'
+					}));
+				}, 100);
+			} else {
+				res.statusCode = 404;
+				res.end("Not Found");
+			}
+		}).listen(function() {
+			WebKit.load("http://localhost:" + server.address().port, {
+				console: true,
+				content: `<!DOCTYPE html>
+				<html><head><script type="text/javascript">
+				function getJson(url, cb) {
+					var xhr = new XMLHttpRequest();
+					xhr.open("GET", url, true);
+					xhr.setRequestHeader("Accept", "application/json; q=1.0");
+
+					xhr.onreadystatechange = function() {
+						if (this.readyState != this.DONE) return;
+						cb(null, JSON.parse(this.response));
+					};
+					xhr.send();
+				}
+				getJson('/xhr', function(err, data) {
+					document.querySelector('#xhr').innerHTML = data.test;
+				});
+				var n = 100;
+				var p = Promise.resolve();
+				for (var i=0; i < n; i++) {
+					p = p.then(function() {
+						var d = document.createElement("p");
+						d.innerHTML = "toto";
+						document.body.appendChild(d);
+					});
+				}
+				p.then(function() {
+					document.querySelector('#xhr').innerHTML += i;
+				});
+				</script></head><body>
+					<div id="xhr"></div>
+				</body></html>`
+			}, function(err) {
+				expect(err).to.be(null);
+			})
+			.once('idle', function() {
+				expect(hasXHR).to.be.ok();
+				this.html().then(function(str) {
+					expect(str.indexOf('<div id="xhr">xhr100</div>')).to.be.greaterThan(0);
+				}).then(done).catch(done);
+			});
+		});
 	});
 	it("should wait xhr requests called in chain, even with a zero timeout delay", function(done) {
 		this.timeout(5000);
