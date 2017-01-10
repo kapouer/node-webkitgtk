@@ -269,3 +269,10 @@ Do not catch errors from thenables added in when().
 - cacheModel option to choose between cache models. Defaults to "web", a change
 w.r.t. previous versions where it was "none".
 - reset(cb) allows one to do a quicker .load() calls on same instance
+
+
+4.4.7
+-----
+
+- not a breaking change, but worth knowing: idle event now tracks loading of
+script[src], link[href] tags that are inserted by javascript.
