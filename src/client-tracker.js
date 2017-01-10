@@ -20,6 +20,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	var immediates = {len: 0, inc: 1};
 	var frames = {len: 0, stall: 0, ignore: !stallFrame};
 	var requests = {len: 0, stall: 0};
+	var tracks = {len: 0, stall: 0};
 
 	if (preload) disableExternalResources();
 	else trackExternalResources();
@@ -112,12 +113,13 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	}
 
 	function trackNode(node) {
-		if (!node.matches('script[src],link[href]')) return;
+		if (!node.matches('script[src],link[rel="stylesheet"][href]')) return;
 		var uri = node.src || node.href;
 		if (!uri || uri.slice(0, 5) == "data:") return;
-		requests.len++;
+		tracks.len++;
 		function done() {
-			requests.len--;
+			tracks.len--;
+			check('tracks');
 			node.removeEventListener('load', done);
 			node.removeEventListener('error', done);
 		}
@@ -440,6 +442,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			intervals: intervals.len <= intervals.stall || intervals.ignore,
 			frames: frames.len <= frames.stall || frames.ignore,
 			requests: requests.len <= requests.stall,
+			tracks: tracks.len <= tracks.stall,
 			lastEvent: lastEvent,
 			lastRunEvent: lastRunEvent
 		};
@@ -451,7 +454,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		}
 		if (lastEvent <= lastRunEvent) {
 			if (lastEvent == EV.load) {
-				if (info.immediates && info.timeouts && info.intervals && info.frames && info.requests) {
+				if (info.tracks && info.immediates && info.timeouts && info.intervals && info.frames && info.requests) {
 					lastEvent += 1;
 					closeObserver();
 					emit("idle", from, url, info);
