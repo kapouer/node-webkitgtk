@@ -863,6 +863,9 @@ function prepareFilters(cstamp, filters) {
 				});
 				if (!msg.cancel) {
 					delete msg.cancel;
+				} else {
+					var trackFunc = window['cancel_' + cstamp];
+					if (trackFunc) trackFunc(uri);
 				}
 				if (!msg.ignore) {
 					delete msg.ignore;

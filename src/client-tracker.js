@@ -48,6 +48,8 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 
 	window['ignore_' + cstamp] = ignoreListener;
 
+	window['cancel_' + cstamp] = cancelListener;
+
 	if (document.readyState != 'loading') readyListener();
 	else document.addEventListener('DOMContentLoaded', readyListener, false);
 
@@ -112,19 +114,65 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		observer = null;
 	}
 
+	function ignoreListener(uri) {
+		if (!uri || uri.slice(0, 5) == "data:") return;
+		var req = requests[uri];
+		if (!req) req = requests[uri] = {count: 0};
+		req.stall = true;
+		var tra = tracks[uri];
+		if (!tra) tra = tracks[uri] = {count: 0};
+		tra.ignore = true;
+	}
+
+	function cancelListener(uri) {
+		if (!uri || uri.slice(0, 5) == "data:") return;
+		var obj = tracks[uri];
+		if (!obj) obj = tracks[uri] = {count:0};
+		if (obj.cancel) return;
+		obj.cancel = true;
+		var count = obj.count;
+		tracks.stall += count;
+		obj.count = 0;
+		if (tracks.len <= tracks.stall) check('tracks');
+	}
+
+	function trackNodeDone(e) {
+		var uri = this.src || this.href;
+		if (!uri) {
+			console.error("trackNodeDone called on a node without uri");
+			return;
+		}
+		var obj = tracks[uri];
+		if (!obj) {
+			console.error("trackNodeDone called on untracked uri", uri);
+			return;
+		}
+		if (obj.ignore) return;
+		if (!obj.cancel) {
+			tracks.len--;
+			obj.count--;
+		}
+		if (tracks.len <= tracks.stall) check('tracks');
+		this.removeEventListener('load', trackNodeDone);
+		this.removeEventListener('error', trackNodeDone);
+	}
+
 	function trackNode(node) {
 		if (!node.matches('script[src],link[rel="stylesheet"][href]')) return;
+		if (node.nodeName == "SCRIPT" && node.type && node.type != "text/javascript") return;
 		var uri = node.src || node.href;
 		if (!uri || uri.slice(0, 5) == "data:") return;
-		tracks.len++;
-		function done() {
-			tracks.len--;
-			check('tracks');
-			node.removeEventListener('load', done);
-			node.removeEventListener('error', done);
+		var obj = tracks[uri];
+		if (!obj) obj = tracks[uri] = {count: 0};
+		if (obj.cancel) {
+			node.dispatchEvent(new CustomEvent('error', {bubbles: false}));
+			return;
 		}
-		node.addEventListener('load', done);
-		node.addEventListener('error', done);
+		if (obj.ignore) return;
+		tracks.len++;
+		obj.count++;
+		node.addEventListener('load', trackNodeDone);
+		node.addEventListener('error', trackNodeDone);
 	}
 
 	function loadListener() {
@@ -166,12 +214,6 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 
 	function absolute(url) {
 		return (new URL(url, document.location)).href;
-	}
-
-	function ignoreListener(uri) {
-		if (!uri) return;
-		if (!requests[uri]) requests[uri] = {count: 0};
-		requests[uri].stall = true;
 	}
 
 	function doneImmediate(id) {
