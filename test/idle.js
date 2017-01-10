@@ -226,4 +226,81 @@ describe("idle event", function suite() {
 		});
 	});
 
+	it("should wait script node to load then some other script node", function(done) {
+		this.timeout(5000);
+		var hasJS1 = false;
+		var hasJS2 = false;
+		var server = require('http').createServer(function(req, res) {
+			if (req.url == "/one.js") {
+				res.statusCode = 200;
+				hasJS1 = true;
+				res.setHeader('Content-Type', 'text/javascript');
+				setTimeout(function() {
+					res.end("window.hasJS1 = true;");
+				}, 300);
+			} else if (req.url == "/two.js") {
+				res.statusCode = 200;
+				hasJS2 = true;
+				res.setHeader('Content-Type', 'text/javascript');
+				setTimeout(function() {
+					res.end("window.hasJS2 = true;");
+				}, 300);
+			} else {
+				res.statusCode = 404;
+				res.end("Not Found");
+			}
+		}).listen(function() {
+			WebKit.load("http://localhost:" + server.address().port, {
+				console: true,
+				content: `<!DOCTYPE html>
+				<html><head><script type="text/javascript">
+				function readyNode(node) {
+					return new Promise(function(resolve, reject) {
+						function done() {
+							node.removeEventListener('load', done);
+							node.removeEventListener('error', done);
+							resolve();
+						}
+						node.addEventListener('load', done);
+						node.addEventListener('error', done);
+					});
+				}
+				function loadScript(url) {
+					var one = document.createElement('script');
+					one.src = url;
+					document.head.appendChild(one);
+					return readyNode(one);
+				}
+				window.onload = function() {
+					loadScript('/one.js').then(function() {
+						loadScript('/two.js').then(function() {
+							document.body.innerHTML = "Success ? " + window.hasJS1 + "," + window.hasJS2;
+						});
+					});
+					readyNode(one).then(function() {
+						var one = document.createElement('script');
+						one.src = '/one.js';
+						document.head.appendChild(one);
+						readyNode()
+					});
+				};
+				</script></head><body>
+				</body></html>`
+			}, function(err) {
+				expect(err).to.be(null);
+			})
+			.once('idle', function() {
+				this.run(function(done) {
+					done(null, document.body.innerHTML);
+				}, function(err, inner) {
+					expect(inner).to.be('Success ? true,true');
+					server.close();
+					done();
+				});
+				expect(hasJS1).to.be.ok();
+				expect(hasJS2).to.be.ok();
+			});
+		});
+	});
+
 });
