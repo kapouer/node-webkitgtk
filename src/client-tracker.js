@@ -429,8 +429,12 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		check('xhr clean');
 	}
 
+	var scheduledCheck = false;
 	function check(from, url) {
+		if (scheduledCheck) return;
+		scheduledCheck = true;
 		w.setTimeout(function() {
+			scheduledCheck = false;
 			checkNow(from, url);
 		});
 	}
