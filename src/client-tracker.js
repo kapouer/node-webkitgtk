@@ -22,6 +22,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	var requests = {len: 0, stall: 0};
 
 	if (preload) disableExternalResources();
+	else trackExternalResources();
 
 	// force polyfill to kick in
 	delete window.Promise;
@@ -85,6 +86,45 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		});
 	}
 
+	function trackExternalResources() {
+		observer = new MutationObserver(function(mutations) {
+			var node, list;
+			for (var m=0; m < mutations.length; m++) {
+				list = mutations[m].addedNodes;
+				if (!list) continue;
+				for (var i=0; i < list.length; i++) {
+					node = list[i];
+					if (node.nodeType != 1) continue;
+					trackNode(node);
+				}
+			}
+		});
+		observer.observe(document.documentElement, {
+			childList: true,
+			subtree: true
+		});
+	}
+
+	function closeObserver() {
+		if (!observer) return;
+		observer.disconnect();
+		observer = null;
+	}
+
+	function trackNode(node) {
+		if (!node.matches('script[src],link[href]')) return;
+		var uri = node.src || node.href;
+		if (!uri || uri.slice(0, 5) == "data:") return;
+		requests.len++;
+		function done() {
+			requests.len--;
+			node.removeEventListener('load', done);
+			node.removeEventListener('error', done);
+		}
+		node.addEventListener('load', done);
+		node.addEventListener('error', done);
+	}
+
 	function loadListener() {
 		if (hasLoaded) return;
 		window.removeEventListener('load', loadListener, false);
@@ -102,7 +142,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		if (lastEvent != EV.init) return;
 
 		if (preloadList.length) {
-			observer.disconnect();
+			closeObserver();
 			w.setTimeout(function() {
 				preloadList.forEach(function(obj) {
 					if (obj.val === undefined) obj.node.removeAttribute(obj.att);
@@ -413,6 +453,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			if (lastEvent == EV.load) {
 				if (info.immediates && info.timeouts && info.intervals && info.frames && info.requests) {
 					lastEvent += 1;
+					closeObserver();
 					emit("idle", from, url, info);
 				}
 			} else if (lastEvent == EV.idle) {
