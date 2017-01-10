@@ -2,6 +2,8 @@ language: node_js
 node_js:
   - "6"
 sudo: false
+notifications:
+  email: false
 env:
   - CXX=g++-4.8
 addons:
