@@ -9,16 +9,16 @@ var rimraf = require('rimraf');
 
 describe("init method", function suite() {
 	before(function(done) {
-		rimraf(Path.join(__dirname, '..', 'cache/'), done);
+		rimraf(Path.join(__dirname, '..', 'cache/test?'), done);
 	});
 	it("should initialize cacheDir with call to init", function(done) {
 		this.timeout(10000);
 		var called = false;
-		WebKit({cacheDir: "cache/test"}, function(err, w) {
+		WebKit({cacheDir: "cache/test1"}, function(err, w) {
 			expect(err).to.not.be.ok();
 			called = true;
 			w.load('http://google.com', function(err) {
-				fs.exists("./cache/test", function(yes) {
+				fs.exists("./cache/test1", function(yes) {
 					expect(yes).to.be.ok();
 					done();
 				});
