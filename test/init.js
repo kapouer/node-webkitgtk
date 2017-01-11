@@ -63,7 +63,7 @@ describe("init method", function suite() {
 	});
 	it("should clear cache for next instance", function(done) {
 		var called = false;
-		this.timeout(15000);
+		this.timeout(60000);
 		var port;
 		var count = 0;
 		var bufSize = 1600000;
