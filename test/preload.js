@@ -26,6 +26,14 @@ describe("preload method", function suite() {
 		}).listen(function() {
 			WebKit(function(err, w) {
 				w.preload("http://localhost:" + server.address().port, {console:true})
+				.when('ready', function(cb) {
+					this.run(function(done) {
+						var script = document.createElement('script');
+						script.textContent = 'document.body.innerHTML = "blah";';
+						document.head.appendChild(script);
+						done();
+					}, cb);
+				})
 				.once('load', function() { this.html(function(err, str) {
 					expect(str).to.be(doc);
 					setTimeout(function() {
