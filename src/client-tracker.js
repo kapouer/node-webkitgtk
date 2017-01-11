@@ -158,8 +158,12 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	}
 
 	function trackNode(node) {
-		if (!node.matches('script[src],link[rel="stylesheet"][href]')) return;
+		// do not track when not supported
+		if (node.nodeName == "LINK" && node.rel == "import" && !node.import) return;
+		// this will never load something
 		if (node.nodeName == "SCRIPT" && node.type && node.type != "text/javascript") return;
+		// need some src, href
+		if (!node.matches('script[src],link[rel="stylesheet"][href]')) return;
 		var uri = node.src || node.href;
 		if (!uri || uri.slice(0, 5) == "data:") return;
 		var obj = tracks[uri];
