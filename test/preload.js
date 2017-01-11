@@ -29,12 +29,51 @@ describe("preload method", function suite() {
 				.when('ready', function(cb) {
 					this.run(function(done) {
 						var script = document.createElement('script');
-						script.textContent = 'document.body.innerHTML = "blah";';
+						script.textContent = 'document.body.innerHTML += "blah";';
 						document.head.appendChild(script);
+						script.remove();
 						done();
 					}, cb);
 				})
 				.once('load', function() { this.html(function(err, str) {
+					expect(str.indexOf('blah</body>')).to.be.greaterThan(0);
+					str = str.replace('blah</body>', '</body>');
+					expect(str).to.be(doc);
+					setTimeout(function() {
+						server.close();
+						done();
+					}, 100);
+				});});
+			});
+		});
+	});
+
+	it("cannot prevent inserted inline script (using .run()) from being run", function(done) {
+		var doc = '<html><head></head><body></body></html>';
+		var server = require('http').createServer(function(req, res) {
+			if (req.url == "/") {
+				res.statusCode = 200;
+				res.end(doc);
+			} else {
+				expect("no 404").to.be("should happen");
+				res.statusCode = 404;
+				res.end();
+			}
+		}).listen(function() {
+			WebKit(function(err, w) {
+				w.preload("http://localhost:" + server.address().port, {console:true})
+				.when('ready', function(cb) {
+					this.run(function(done) {
+						var script = document.createElement('script');
+						script.textContent = 'document.body.innerHTML = "blah";';
+						document.head.appendChild(script);
+						script.remove();
+						done();
+					}, cb);
+				})
+				.once('load', function() { this.html(function(err, str) {
+					expect(str.indexOf('blah</body>')).to.be.greaterThan(0);
+					str = str.replace('blah</body>', '</body>');
 					expect(str).to.be(doc);
 					setTimeout(function() {
 						server.close();
