@@ -63,7 +63,7 @@ describe("request listener", function suite() {
 	});
 
 	it("should filter requests by regexp and let the main request go", function(done) {
-		this.timeout(5000);
+		this.timeout(10000);
 		var onlyjs = /\.js/;
 		var hadmain = false;
 		var hadjs = false;
