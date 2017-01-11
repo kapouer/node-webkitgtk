@@ -469,7 +469,7 @@ methods
 
 * preload(uri, opts?, cb)  
   load uri into webview  
-  scripts are not run, resources are not loaded.  
+  initial scripts are not run, resources are not loaded.  
   These options are not effective: `cookies`, `script`, `allow`.  
   Callback receives (err, instance).
 
