@@ -806,7 +806,6 @@ function load(uri, opts, cb) {
 	}
 
 	opts.script = scripts.map(function(fn) {
-		if (Buffer.isBuffer(fn)) fn = fn.toString();
 		return prepareRun(fn.fn || fn, null, fn.args || null, priv).script;
 	}).join(';\n');
 
