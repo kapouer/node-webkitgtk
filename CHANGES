@@ -1,5 +1,8 @@
-Breaking changes
-================
+Noteworthy changes
+==================
+
+Breaking changes are usually introduced in a major version bump,
+new features are introduced in minor version bumps.
 
 1.2.0
 -----
@@ -276,3 +279,10 @@ w.r.t. previous versions where it was "none".
 
 - not a breaking change, but worth knowing: idle event now tracks loading of
 script[src], link[href] tags that are inserted by javascript.
+
+
+4.5.0
+-----
+
+- Feature: settings.script now accepts plain js code (it used to accept only
+  statements returning a value). This is useful to inject custom libs.
