@@ -1113,15 +1113,20 @@ function prepareRun(script, ticket, args, priv) {
 
 	var arity = 0;
 	var isfunction = false;
+	var isUserScript = false;
 	if (Buffer.isBuffer(script)) script = script.toString();
 	if (typeof script == "function") {
 		arity = script.length;
 		isfunction = true;
 	} else if (typeof script == "string") {
-		var match = /^\s*function(\s+\w+)?\s*\(((?:\s*\w+\s*,)*(?:\s*\w+\s*))\)/.exec(script);
-		if (match && match.length == 3) {
-			isfunction = true;
-			arity = match[2].split(',').length;
+		if (ticket) {
+			var match = /^\s*function(\s+\w+)?\s*\(((?:\s*\w+\s*,)*(?:\s*\w+\s*))\)/.exec(script);
+			if (match && match.length == 3) {
+				isfunction = true;
+				arity = match[2].split(',').length;
+			}
+		} else {
+			isUserScript = true;
 		}
 	}
 	var async;
@@ -1144,7 +1149,9 @@ function prepareRun(script, ticket, args, priv) {
 		sync: !async,
 		ticket: ticket
 	};
-	if (!async) {
+	if (isUserScript) {
+		obj.script = script;
+	} else if (!async) {
 		if (isfunction) script = '(' + script + ')(' + args.join(', ') + ')';
 		else script = '(function() { return ' + script + '; })()';
 		var wrapSync = function() {
