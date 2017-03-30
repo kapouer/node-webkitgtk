@@ -101,7 +101,7 @@ WebView::WebView(Handle<Object> opts) {
 
 	Nan::Utf8String* wePathStr = getOptStr(opts, "webextension");
 	if (wePathStr->length() > 0) {
-		webkit_web_context_set_web_extensions_directory(context, **wePathStr);
+		extensionsDirectory = g_strdup(**wePathStr);
 		this->contextSignalId = g_signal_connect(
 			context,
 			"initialize-web-extensions",
@@ -194,6 +194,7 @@ void WebView::destroy() {
 
 	if (uri != NULL) g_free(uri);
 	if (cacheDir != NULL) g_free(cacheDir);
+	if (extensionsDirectory != NULL) g_free(extensionsDirectory);
 
 	if (pngCallback != NULL) delete pngCallback;
 	if (pngFilename != NULL) delete pngFilename;
@@ -317,6 +318,7 @@ void WebView::InitExtensions(WebKitWebContext* context, gpointer data) {
 		g_signal_handler_disconnect(context, self->contextSignalId);
 		self->contextSignalId = 0;
 	}
+	webkit_web_context_set_web_extensions_directory(context, self->extensionsDirectory);
 	GVariant* userData = g_variant_new("(s)", self->cstamp);
 	webkit_web_context_set_web_extensions_initialization_user_data(context, userData);
 }

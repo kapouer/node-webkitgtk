@@ -73,6 +73,7 @@ private:
 
 	gchar* uri = NULL;
 	gchar* cacheDir = NULL;
+	gchar* extensionsDirectory = NULL;
 	void updateUri(const gchar*);
 	gulong idResourceResponse;
 	gulong idEventsHandler;
