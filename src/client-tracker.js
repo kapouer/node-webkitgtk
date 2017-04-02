@@ -163,7 +163,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		// this will never load something
 		if (node.nodeName == "SCRIPT" && node.type && node.type != "text/javascript") return;
 		// need some src, href
-		if (!node.matches('script[src],link[rel="stylesheet"][href]')) return;
+		if (!node.matches('script[src],link[rel="stylesheet"][href],link[rel="import"][href]')) return;
 		var uri = node.src || node.href;
 		if (!uri || uri.slice(0, 5) == "data:") return;
 		var obj = tracks[uri];
