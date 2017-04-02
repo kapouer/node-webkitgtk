@@ -7,4 +7,5 @@ cache/*
 webkit-bugs/*
 leaks/*
 navigator.json
-
+tmp/*
+test/*
