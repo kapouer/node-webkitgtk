@@ -159,7 +159,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 
 	function trackNode(node) {
 		// do not track when not supported
-		if (node.nodeName == "LINK" && node.rel == "import" && !node.import) return;
+		if (node.nodeName == "LINK" && node.rel == "import" && (!node.import && !window.HTMLImports)) return;
 		// this will never load something
 		if (node.nodeName == "SCRIPT" && node.type && node.type != "text/javascript") return;
 		// need some src, href
