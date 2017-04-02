@@ -774,6 +774,9 @@ function load(uri, opts, cb) {
 		});
 	}
 	var scripts = [];
+	if (!priv.jsdom) scripts.push(clientError);
+	if (opts.console && !priv.jsdom) scripts.push(clientConsole);
+
 	var filters = opts.filters || [];
 	if (opts.filter) filters.push(opts.filter);
 	if (opts.allow) filters.push([allowFilter, opts.allow]);
@@ -782,8 +785,6 @@ function load(uri, opts, cb) {
 	if (Buffer.isBuffer(opts.content)) opts.content = opts.content.toString();
 	if (Buffer.isBuffer(opts.style)) opts.style = opts.style.toString();
 
-	if (!priv.jsdom) scripts.push(clientError);
-	if (opts.console && !priv.jsdom) scripts.push(clientConsole);
 	scripts.push({
 		fn: clientTracker,
 		args: [
