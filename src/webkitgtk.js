@@ -1151,7 +1151,7 @@ function prepareRun(script, ticket, args, priv) {
 		ticket: ticket
 	};
 	if (isUserScript) {
-		obj.script = script;
+		obj.script = '(function() {\n' + script + '})();';
 	} else if (!async) {
 		if (isfunction) script = '(' + script + ')(' + args.join(', ') + ')';
 		else script = '(function() { return ' + script + '; })()';
