@@ -105,7 +105,7 @@ NAN_GETTER(WebResponse::get_prop) {
 		if (self->response == NULL) {
 			info.GetReturnValue().Set(Nan::Null());
 		} else {
-			Local<Object> obj = Nan::New<FunctionTemplate>(GVariantProxy::constructor)->GetFunction()->NewInstance();
+			Local<Object> obj = Nan::NewInstance(Nan::GetFunction(Nan::New(GVariantProxy::constructor)).ToLocalChecked()).ToLocalChecked();
 			GVariantProxy* prox = node::ObjectWrap::Unwrap<GVariantProxy>(obj);
 			prox->init(soup_headers_to_gvariant_dict(webkit_uri_response_get_http_headers(self->response)));
 			info.GetReturnValue().Set(obj);
