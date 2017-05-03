@@ -1007,6 +1007,7 @@ NAN_METHOD(WebView::Print) {
 		defaultMargin = marginsVal->NumberValue();
 	} else if (marginsVal->IsObject()) {
 		marginsObj = marginsVal->ToObject();
+		marginUnit = getUnit(**getOptStr(marginsObj, "unit"));
 	}
 	gtk_page_setup_set_left_margin(setup,
 		NanUInt32OptionValue(marginsObj, H("left"), defaultMargin),

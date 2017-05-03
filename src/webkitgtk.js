@@ -1290,6 +1290,21 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 };
 
 function pdf(filepath, opts, cb) {
+	var margins = opts.margins;
+	var unit;
+	if (margins == null) margins = 0;
+	if (typeof margins == "string" || typeof margins == "number") {
+		var num = parseInt(margins);
+		margins = {
+			top: num,
+			left: num,
+			bottom: num,
+			right: num,
+			unit: margins.toString().slice(num.toString().length)
+		};
+	}
+	opts.margins = margins;
+
 	this.webview.pdf("file://" + path.resolve(filepath), opts, function(err) {
 		cb(err);
 	}.bind(this));

@@ -358,7 +358,10 @@ pdf() options
   height : number, default 0  
 
 - margins (number)  
-  in units of points, default implied by paper size
+  sets all margins in "pt" units, default 0
+
+- margins (string)  
+  sets all margins in given units, default 0 and "pt"
 
 - margins (object)  
   unit : string, mm|in|pt, default "pt"  
