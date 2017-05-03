@@ -1022,18 +1022,17 @@ NAN_METHOD(WebView::Print) {
 		NanUInt32OptionValue(marginsObj, H("bottom"), defaultMargin),
 		marginUnit);
 
+	GtkPageOrientation orientation = GTK_PAGE_ORIENTATION_PORTRAIT;
+	Nan::Utf8String* orientationStr = getOptStr(opts, "orientation");
+	if (g_strcmp0(**orientationStr, "landscape") == 0) {
+		orientation = GTK_PAGE_ORIENTATION_LANDSCAPE;
+	}
+	gtk_page_setup_set_orientation(setup, orientation);
+
 	webkit_print_operation_set_page_setup(op, setup);
 
 	// settings
 	GtkPrintSettings* settings = gtk_print_settings_new();
-	GtkPageOrientation orientation = GTK_PAGE_ORIENTATION_PORTRAIT;
-
-	Nan::Utf8String* orientationStr = getOptStr(opts, "orientation");
-
-	if (g_strcmp0(**orientationStr, "landscape") == 0) {
-		orientation = GTK_PAGE_ORIENTATION_LANDSCAPE;
-	}
-	gtk_print_settings_set_orientation(settings, orientation);
 	gtk_print_settings_set_quality(settings, GTK_PRINT_QUALITY_HIGH);
 
 	char* printer = NULL;
