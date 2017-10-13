@@ -105,39 +105,120 @@ describe("cookies option", function suite() {
 		}
 	});
 
+	WebKit.prototype.runThen = function(parm) {
+		var self = this;
+		return new Promise(function(resolve, reject) {
+			self.run(parm, function(err, res) {
+				if (err) reject(err);
+				else resolve(res);
+			});
+		});
+	};
+	WebKit.loadThen = function(uri, opts) {
+		return new Promise(function(resolve, reject) {
+			WebKit.load(uri, opts, function(err, inst) {
+				if (err) reject(err);
+				else resolve(inst);
+			});
+		});
+	};
+	WebKit.prototype.loadThen = function(uri, opts) {
+		var self = this;
+		return new Promise(function(resolve, reject) {
+			self.load(uri, opts, function(err, inst) {
+				if (err) reject(err);
+				else resolve(inst);
+			});
+		});
+	};
+
 	it("should set same cookie in two views and not interfere", function() {
-		return Promise.all([WebKit.load('http://localhost/test', {
-			content: '<html><body>A</body></html>'
-		}), WebKit.load('http://localhost/test', {
+		return Promise.all([WebKit.loadThen('http://localhost/test', {
+			content:'<html><body>A</body></html>'
+		}), WebKit.loadThen('http://localhost/test', {
 			content: '<html><body>B</body></html>'
 		})]).then(function(all) {
 			var ia = all[0];
 			var ib = all[1];
-			return ia.run(function() {
+			return ia.runThen(function() {
 				document.cookie = "cn=1234";
 			}).then(function() {
-				return ib.run(function(done) {
+				return ib.runThen(function(done) {
 					done(null, document.cookie);
 					document.cookie = "cn=4567";
 				});
 			}).then(function(cookie) {
 				expect(cookie).to.not.be.ok();
-				return ia.run(function(done) {
+				return ia.runThen(function(done) {
 					done(null, document.cookie);
 					document.cookie = "cn=12345";
 				});
 			}).then(function(cookie) {
 				expect(cookie).to.be("cn=1234");
-				return ib.run(function(done) {
+				return ib.runThen(function(done) {
 					done(null, document.cookie);
 				});
 			}).then(function(cookie) {
 				expect(cookie).to.be("cn=4567");
-				return ia.run(function(done) {
+				return ia.runThen(function(done) {
 					done(null, document.cookie);
 				});
 			}).then(function(cookie) {
 				expect(cookie).to.be("cn=12345");
+			});
+		});
+	});
+
+	it("should clear cookies when setting them on a view", function() {
+		return WebKit.loadThen('http://localhost/test', {
+			content: '<html><body>A</body></html>',
+			cookies: 'cn=one'
+		}).then(function(view) {
+			return view.runThen(function(done) {
+				done(null, document.cookie);
+			}).then(function(cookie) {
+				expect(cookie).to.be("cn=one");
+				return view.loadThen('http://localhost/test', {
+					content: '<html><body>A</body></html>',
+					cookies: 'cp=two'
+				}).then(function() {
+					return view.runThen(function(done) {
+						done(null, document.cookie);
+					});
+				});
+			}).then(function(cookie) {
+				expect(cookie).to.be("cp=two");
+				return view.loadThen('http://localhost/test', {
+					content: '<html><body>A</body></html>'
+				}).then(function() {
+					return view.runThen(function(done) {
+						done(null, document.cookie);
+					});
+				}).then(function(cookie) {
+					expect(cookie).to.not.be.ok();
+				});
+			})
+		});
+	});
+	it("should clear cookies even from a subpath", function() {
+		return WebKit.loadThen('http://localhost/test', {
+			content: '<html><body>A</body></html>',
+			cookies: 'cn=one'
+		}).then(function(view) {
+			return view.runThen(function(done) {
+				done(null, document.cookie);
+			}).then(function(cookie) {
+				expect(cookie).to.be("cn=one");
+				return view.loadThen('http://localhost/test/two', {
+					content: '<html><body>A</body></html>',
+					cookies: 'cp=two'
+				}).then(function() {
+					return view.runThen(function(done) {
+						done(null, document.cookie);
+					});
+				});
+			}).then(function(cookie) {
+				expect(cookie).to.be("cp=two");
 			});
 		});
 	});
