@@ -30,14 +30,6 @@ var hasRunEvent = '(' + function(name, event) {
 	}
 }.toString() + ')("%name", "%event")';
 
-var clearCookiesScript = '(' + function() {
-	var cookies = (document.cookie || '').split(/ *; */);
-	cookies.forEach(function(cookie) {
-		var name = cookie.split('=').shift();
-		if (name) document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-	});
-}.toString() + ')();\n';
-
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
 		var inst = new WebKit();
@@ -536,13 +528,16 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	var priv = this.priv;
 	priv.state = LOADING;
 	var cookies = opts.cookies;
+	var clearCookies = true;
 	if (cookies) {
 		debug('load cookies');
 		if (!Array.isArray(cookies)) cookies = [cookies];
-		var script = clearCookiesScript + cookies.map(function(cookie) {
+		var script = cookies.map(function(cookie) {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 		}).join(';\n');
+		clearCookies = false;
 		this.webview.load(uri, priv.stamp, {
+			clearCookies: true,
 			content: "<html><head><script type='text/javascript'>%SCRIPT</script></head><body></body></html>"
 				.replace('%SCRIPT', script)
 		}, function(err) {
@@ -550,10 +545,6 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			next.call(this, err);
 		}.bind(this));
 	} else {
-		if (!opts.preload) {
-			if (!opts.script) opts.script = "";
-			opts.script = clearCookiesScript + opts.script;
-		}
 		next.call(this);
 	}
 	function next(err) {
@@ -573,6 +564,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		}
 		if (!opts['default-charset']) opts['default-charset'] = "utf-8";
 		if (opts.content != null && !opts.content || !uri) opts.content = "<html></html>";
+		opts.clearCookies = clearCookies;
 		this.webview.load(uri, this.priv.stamp, opts, function(err, inst) {
 			priv.state = INITIALIZED;
 			cb(err, inst);
