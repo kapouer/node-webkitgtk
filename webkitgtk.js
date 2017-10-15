@@ -734,7 +734,6 @@ function load(uri, opts, cb) {
 		fn: stateTracker,
 		args: [
 			opts.preload && !priv.jsdom,
-			opts.charset || opts['default-charset'] || "utf-8",
 			priv.cstamp,
 			priv.stall,
 			opts.stallTimeout != null ? opts.stallTimeout : 100,
@@ -1297,7 +1296,7 @@ function consoleEmitter(emit) {
 	});
 }
 
-function stateTracker(preload, charset, cstamp,
+function stateTracker(preload, cstamp,
 stallXhr, stallTimeout, stallInterval, stallFrame,
 emit) {
 	var EV = {
@@ -1335,8 +1334,6 @@ emit) {
 			check('lastrun' + event);
 		}
 	};
-
-	document.charset = charset;
 
 	window['ignore_' + cstamp] = ignoreListener;
 
