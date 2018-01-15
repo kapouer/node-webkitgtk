@@ -35,7 +35,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	['setImmediate', 'clearImmediate',
 	'setTimeout', 'clearTimeout',
 	'setInterval', 'clearInterval',
-	'XMLHttpRequest', 'WebSocket',
+	'XMLHttpRequest', 'WebSocket', 'fetch',
 	'requestAnimationFrame', 'cancelAnimationFrame'].forEach(function(meth) {
 		if (window[meth]) w[meth] = window[meth].bind(window);
 	});
@@ -400,6 +400,37 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		ws.addEventListener('close', uncheckws);
 		return ws;
 	};
+
+	if (w.fetch) window.fetch = function(url, obj) {
+		requests.len++;
+		var req = {
+			done: false
+		};
+		req.timeout = w.setTimeout(function() {
+			cleanFetch(req);
+		}, stallXhr);
+
+		return w.fetch(url, obj).catch(function(ex) {
+			cleanFetch(req);
+			throw ex;
+		}).then(function(res) {
+			cleanFetch(req);
+			return res;
+		});
+	};
+	function cleanFetch(req) {
+		if (req.timeout) {
+			requests.stall++;
+			req.done = true;
+			clearTimeout(req.timeout);
+			delete req.timeout;
+		}
+		if (!req.done) {
+			req.done = true;
+			requests.len--;
+		}
+		check('fetch clean');
+	}
 
 	var wopen = window.XMLHttpRequest.prototype.open;
 	window.XMLHttpRequest.prototype.open = function(method, url, async) {

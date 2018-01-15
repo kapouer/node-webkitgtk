@@ -130,13 +130,56 @@ describe("request listener", function suite() {
 
 	it("should ignore stalled requests", function(done) {
 		this.timeout(6000);
-		var doc = '<html><head>\
-		<script type="text/javascript">var xhr = new XMLHttpRequest();\
-			xhr.open("GET", "/test", true);\
-			xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");\
-			xhr.send();\
-		</script>\
-		</head><body>move along</body></html>';
+		var doc = `<html><head>
+		<script type="text/javascript">
+			var xhr = new XMLHttpRequest();
+			xhr.open("GET", "/test", true);
+			xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+			xhr.addEventListener("load", function() {
+				document.body.innerHTML = 'tata';
+			});
+			xhr.send();
+		</script>
+		</head><body>move along</body></html>`;
+		var server = require('http').createServer(function(req, res) {
+			if (req.url == "/") {
+				res.statusCode = 200;
+				res.end(doc);
+			} else if (req.url == "/test") {
+				res.statusCode = 200;
+				setTimeout(function() {
+					res.end('{"hello": "tata"}');
+				}, 2000);
+			} else {
+				expect("no 404").to.be("should happen");
+				res.statusCode = 404;
+				res.end();
+			}
+		}).listen(function() {
+			WebKit(function(err, w) {
+				w.load("http://localhost:" + server.address().port, {console:true, stall: 1000})
+				.once('idle', function() {
+					this.html(function(err, str) {
+						expect(str).to.be(doc);
+						setTimeout(function() {
+							server.close();
+							done();
+						}, 100);
+					});
+				});
+			});
+		});
+	});
+
+	it("should ignore stalled fetch requests", function(done) {
+		this.timeout(6000);
+		var doc = `<html><head>
+		<script type="text/javascript">
+			fetch("/test").then(function() {
+				document.body.innerHTML = "tata";
+			});
+		</script>
+		</head><body>move along</body></html>`;
 		var server = require('http').createServer(function(req, res) {
 			if (req.url == "/") {
 				res.statusCode = 200;
