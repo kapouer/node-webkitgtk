@@ -292,3 +292,14 @@ script[src], link[href] tags that are inserted by javascript.
 
 - margins can now be a string with units (feature)
 - setting orientation works again
+
+4.7.0
+-----
+
+- support "fetch" for idle event
+
+4.8.0
+-----
+
+- add "resizing" option to allow window resizeTo/moveTo/resizeBy/moveBy
+
