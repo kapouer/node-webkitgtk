@@ -36,6 +36,7 @@ WebView::WebView(Handle<Object> opts) {
 	this->closeCallback = getCb(opts, "closedListener");
 
 	this->offscreen = opts->Get(H("offscreen"))->BooleanValue();
+	this->resizing = opts->Get(H("resizing"))->BooleanValue();
 	bool hasInspector = opts->Get(H("inspector"))->BooleanValue();
 
 	Nan::AdjustExternalMemory(400000);
@@ -740,6 +741,7 @@ NAN_METHOD(WebView::Load) {
 
 void WebView::GeometryChanged(WebKitWindowProperties* properties, GParamSpec* pspec, gpointer data) {
 	WebView* self = (WebView*)data;
+	if (self->resizing == FALSE) return;
 	GdkRectangle geometry;
 	webkit_window_properties_get_geometry(properties, &geometry);
 	if (geometry.x >= 0 && geometry.y >= 0) {

@@ -83,6 +83,7 @@ private:
 	int authRetryCount;
 	bool allowDialogs;
 	bool offscreen;
+	bool resizing;
 	bool transparencySupport;
 
 	bool userContent;

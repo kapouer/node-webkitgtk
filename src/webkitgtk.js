@@ -117,6 +117,7 @@ WebKit.prototype.init = function(opts, cb) {
 		cacheDir: opts.cacheDir,
 		cacheModel: opts.cacheModel,
 		offscreen: opts.offscreen,
+		resizing: opts.resizing,
 		inspector: opts.inspector
 	}, function(err) {
 		priv.state = INITIALIZED;

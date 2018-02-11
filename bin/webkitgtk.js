@@ -45,6 +45,11 @@ var parser = dash.createParser({options: [
 		help: 'Show window'
 	},
 	{
+		names: ['resizing'],
+		type: 'bool',
+		help: 'Allow resizing'
+	},
+	{
 		names: ['width'],
 		type: 'integer',
 		help: 'Window width'
@@ -150,6 +155,7 @@ var render = !!(opts.show || opts.pdf || opts.png);
 var loadOpts = {
 	content: opts.location ? "<html></html>" : undefined,
 	offscreen: !opts.show,
+	resizing: opts.resizing,
 	filter: !render && function() {
 		if (/\.css(\?.*)?$/.test(this.uri)) this.cancel = true;
 	},
