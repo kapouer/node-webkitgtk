@@ -56,6 +56,7 @@ public:
 	static void RunSyncFinished(GObject*, GAsyncResult*, gpointer);
 	static void PrintFinished(WebKitPrintOperation*, gpointer);
 	static void PrintFailed(WebKitPrintOperation*, gpointer, gpointer);
+	static void GeometryChanged(WebKitWindowProperties*, GParamSpec*, gpointer);
 
 	static void handleEventMessage(WebKitUserContentManager*, WebKitJavascriptResult*, gpointer);
 

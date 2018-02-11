@@ -152,6 +152,9 @@ WebView::WebView(Handle<Object> opts) {
 	g_signal_connect(view, "load-changed", G_CALLBACK(WebView::Change), this);
 	g_signal_connect(view, "script-dialog", G_CALLBACK(WebView::ScriptDialog), this);
 	g_signal_connect(view, "decide-policy", G_CALLBACK(WebView::DecidePolicy), this);
+
+	WebKitWindowProperties* winprops = webkit_web_view_get_window_properties(view);
+	g_signal_connect(winprops, "notify::geometry", G_CALLBACK(WebView::GeometryChanged), this);
 }
 
 NAN_METHOD(WebView::ClearCache) {
@@ -733,6 +736,19 @@ NAN_METHOD(WebView::Load) {
 	}
 	delete content;
 	return;
+}
+
+void WebView::GeometryChanged(WebKitWindowProperties* properties, GParamSpec* pspec, gpointer data) {
+	WebView* self = (WebView*)data;
+	GdkRectangle geometry;
+	webkit_window_properties_get_geometry(properties, &geometry);
+	if (geometry.x >= 0 && geometry.y >= 0) {
+		gtk_window_move(GTK_WINDOW(self->window), geometry.x, geometry.y);
+	}
+
+	if (geometry.width > 0 && geometry.height > 0) {
+		gtk_window_resize(GTK_WINDOW(self->window), geometry.width, geometry.height);
+	}
 }
 
 void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) {
