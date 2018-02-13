@@ -292,7 +292,7 @@ gboolean WebView::Authenticate(WebKitWebView* view, WebKitAuthenticationRequest*
 		// return TRUE;
 	// }
 	Nan::HandleScope scope;
-	Local<Object> obj = Nan::New<FunctionTemplate>(WebAuthRequest::constructor)->GetFunction()->NewInstance();
+	Local<Object> obj = Nan::NewInstance(Nan::GetFunction(Nan::New(WebAuthRequest::constructor)).ToLocalChecked()).ToLocalChecked();
 	WebAuthRequest* selfAuthRequest = node::ObjectWrap::Unwrap<WebAuthRequest>(obj);
 	selfAuthRequest->init(request);
 
@@ -386,7 +386,7 @@ void WebView::ResourceReceiveData(WebKitWebResource* resource, guint64 length, g
 	WebView* self = (WebView*)(vc->view);
 	WebKitURIResponse* response = webkit_web_resource_get_response(resource);
 	Nan::HandleScope scope;
-	Local<Object> obj = Nan::New<FunctionTemplate>(WebResponse::constructor)->GetFunction()->NewInstance();
+	Local<Object> obj = Nan::NewInstance(Nan::GetFunction(Nan::New(WebResponse::constructor)).ToLocalChecked()).ToLocalChecked();
 	WebResponse* selfResponse = node::ObjectWrap::Unwrap<WebResponse>(obj);
 	selfResponse->init(resource, response);
 
@@ -406,7 +406,7 @@ void WebView::ResourceResponse(WebKitWebResource* resource, gpointer data) {
 	WebView* self = (WebView*)(vc->view);
 	WebKitURIResponse* response = webkit_web_resource_get_response(resource);
 	Nan::HandleScope scope;
-	Local<Object> obj = Nan::New<FunctionTemplate>(WebResponse::constructor)->GetFunction()->NewInstance();
+	Local<Object> obj = Nan::NewInstance(Nan::GetFunction(Nan::New(WebResponse::constructor)).ToLocalChecked()).ToLocalChecked();
 	WebResponse* selfResponse = node::ObjectWrap::Unwrap<WebResponse>(obj);
 	selfResponse->init(resource, response);
 	int argc = 2;

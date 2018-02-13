@@ -22,13 +22,6 @@ void GVariantProxy::init(GVariant* var) {
 	dict = g_variant_dict_new(variant);
 }
 
-static bool PropertyNamedAccessCheck(Local<Object>, Local<Value>, AccessType, Local<Value>) {
-	return true;
-}
-static bool PropertyIndexedAccessCheck(Local<Object>, uint32_t, AccessType, Local<Value>) {
-	return false;
-}
-
 static NAN_PROPERTY_GETTER(GetNamedProperty) {
 	Nan::HandleScope scope;
 	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(info.Holder());
@@ -114,10 +107,6 @@ void GVariantProxy::Init(Handle<Object> target) {
 		QueryNamedProperty,
 		DeleteNamedProperty,
 		EnumerateNamedProperties
-	);
-	otmpl->SetAccessCheckCallbacks(
-		PropertyNamedAccessCheck,
-		PropertyIndexedAccessCheck
 	);
 	tpl->SetClassName(Nan::New("GVariantProxy").ToLocalChecked());
 	target->Set(Nan::New("GVariantProxy").ToLocalChecked(), tpl->GetFunction());
