@@ -26,31 +26,45 @@ describe("init method", function suite() {
 		});
 	});
 	it("should clear cache", function(done) {
+		this.timeout(15000);
 		var called = false;
 		var port;
 		var count = 0;
 		var server = require('http').createServer(function(req, res) {
-			if (req.url != '/') {
+			if (req.url == '/index.html') {
+				res.statusCode = 200;
+				res.setHeader('Content-Type', 'text/html');
+				res.setHeader('Cache-Control', 'public, max-age=100000');
+				res.setHeader('Last-Modified', (new Date()).toUTCString());
+				res.setHeader('Expires', (new Date(Date.now() + 100000000)).toUTCString());
+				res.end("<!doctype html><html><head><script src='test.js'></script></head></html>");
+			} else if (req.url == "/test.js") {
+				res.setHeader('Content-Type', 'text/javascript');
+				res.setHeader('Cache-Control', 'public, max-age=100000');
+				res.setHeader('Last-Modified', (new Date()).toUTCString());
+				res.setHeader('Expires', (new Date(Date.now() + 100000000)).toUTCString());
+				res.end('console.log("me");');
+				count++;
+			} else {
 				res.statusCode = 404;
 				res.end("Not Found");
-			} else {
-				res.statusCode = 200;
-				res.setHeader('Cache-Control', 'public, max-age=100');
-				count++;
-				res.end("stored text");
 			}
 		}).listen(function() {
-			port = server.address().port;
+			var url = `http://localhost:${server.address().port}/index.html`;
 			var w;
-			WebKit({cacheDir: "cache/test2"}).then(function(inst) {
+			WebKit({cacheDir: 'cache2'}).then(function(inst) {
 				w = inst;
-				return w.load("http://localhost:" + port);
+				return w.load(url).when('idle');
 			}).then(function() {
-				return w.load("http://localhost:" + port);
+				return w.load(url).when('idle');
 			}).then(function() {
 				expect(count).to.be(1);
 				w.clearCache();
-				return w.load("http://localhost:" + port);
+				return new Promise(function(resolve) {
+					setTimeout(resolve, 100);
+				});
+			}).then(function() {
+				return w.load(url).when('idle');
 			}).then(function() {
 				expect(count).to.be(2);
 				done();
