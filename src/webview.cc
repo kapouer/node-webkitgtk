@@ -738,7 +738,6 @@ NAN_METHOD(WebView::Load) {
 		webkit_web_view_load_uri(self->view, self->uri);
 	}
 	delete content;
-	return;
 }
 
 void WebView::GeometryChanged(WebKitWindowProperties* properties, GParamSpec* pspec, gpointer data) {
