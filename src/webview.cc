@@ -123,6 +123,9 @@ WebView::WebView(Handle<Object> opts) {
 	if (!this->offscreen) {
 		window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	} else {
+		#if WEBKIT_CHECK_VERSION(2,16,0)
+		g_object_set(G_OBJECT(settings), "hardware-acceleration-policy", WEBKIT_HARDWARE_ACCELERATION_POLICY_NEVER, NULL);
+		#endif
 		window = gtk_offscreen_window_new();
 	}
 
