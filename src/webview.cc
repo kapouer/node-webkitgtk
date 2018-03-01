@@ -118,6 +118,8 @@ WebView::WebView(Handle<Object> opts) {
 		NULL
 	));
 
+	WebKitSettings* settings = webkit_web_view_get_settings(view);
+
 	if (!this->offscreen) {
 		window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	} else {
@@ -141,11 +143,11 @@ WebView::WebView(Handle<Object> opts) {
 	gtk_widget_show_all(window);
 
 	if (hasInspector) {
-		g_object_set(G_OBJECT(webkit_web_view_get_settings(view)), "enable-developer-extras", TRUE, NULL);
+		g_object_set(G_OBJECT(settings), "enable-developer-extras", TRUE, NULL);
 		inspector = webkit_web_view_get_inspector(view);
 		g_signal_connect(inspector, "closed", G_CALLBACK(WebView::InspectorClosed), this);
 	} else {
-		g_object_set(G_OBJECT(webkit_web_view_get_settings(view)), "enable-developer-extras", FALSE, NULL);
+		g_object_set(G_OBJECT(settings), "enable-developer-extras", FALSE, NULL);
 	}
 
 	g_signal_connect(view, "authenticate", G_CALLBACK(WebView::Authenticate), this);
