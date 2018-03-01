@@ -52,7 +52,7 @@ describe("init method", function suite() {
 		}).listen(function() {
 			var url = `http://localhost:${server.address().port}/index.html`;
 			var w;
-			WebKit({cacheDir: 'cache2'}).then(function(inst) {
+			WebKit({cacheDir: "cache/test2"}).then(function(inst) {
 				w = inst;
 				return w.load(url).when('idle');
 			}).then(function() {
