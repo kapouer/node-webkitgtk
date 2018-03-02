@@ -158,12 +158,15 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	}
 
 	function trackNode(node) {
-		// do not track when not supported
-		if (node.nodeName == "LINK" && node.rel == "import" && (!node.import && !window.HTMLImports)) return;
-		// this will never load something
-		if (node.nodeName == "SCRIPT" && node.type && node.type != "text/javascript") return;
-		// need some src, href
-		if (!node.matches('script[src],link[rel="stylesheet"][href],link[rel="import"][href]')) return;
+		if (node.nodeName == "LINK") {
+			if (!node.href || node.rel != "import" && node.rel != "stylesheet") return;
+			// do not track when not supported
+			if (node.rel == "import" && !node.import && !window.HTMLImports) return;
+		} else if (node.nodeName == "SCRIPT") {
+			if (!node.src || node.type && node.type != "text/javascript") return;
+		} else {
+			return;
+		}
 		var uri = node.src || node.href;
 		if (!uri || uri.slice(0, 5) == "data:") return;
 		var obj = tracks[uri];
