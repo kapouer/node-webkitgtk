@@ -83,7 +83,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 				}
 			}
 		});
-		observer.observe(document, {
+		observer.observe(document.documentElement, {
 			childList: true,
 			subtree: true
 		});
@@ -102,7 +102,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 				}
 			}
 		});
-		observer.observe(document, {
+		observer.observe(document.documentElement, {
 			childList: true,
 			subtree: true
 		});
