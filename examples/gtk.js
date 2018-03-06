@@ -1,15 +1,16 @@
 var W = require('../')
-W.load('http://granze.github.io/flip-clock/components/flip-clock/demo/', {
+W.load('https://deepu.js.org/angular-clock/', {
 	offscreen: false,
+	resizing: true,
 	transparent: true,
 	decorated: false,
 	style: 'html,body {background-color:transparent !important;opacity:0.8}',
-	width: 600,
-	height: 200
+	width: 400,
+	height: 600
 })
 .once('ready', function() {
 	this.run(function() {
-		var f = document.querySelector('flip-clock');
+		var f = document.querySelector('ds-widget-clock');
 		document.body.innerHTML = "";
 		document.body.appendChild(f);
 	});
