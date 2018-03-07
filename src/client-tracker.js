@@ -407,6 +407,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			done: false
 		};
 		req.timeout = w.setTimeout(function() {
+			req.stalled = true;
 			cleanFetch(req);
 		}, stallXhr);
 
@@ -422,10 +423,12 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	};
 	function cleanFetch(req) {
 		if (req.timeout) {
-			requests.stall++;
-			req.done = true;
 			clearTimeout(req.timeout);
 			delete req.timeout;
+		}
+		if (req.stalled) {
+			requests.stall++;
+			req.done = true;
 		}
 		if (!req.done) {
 			req.done = true;
