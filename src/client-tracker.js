@@ -32,7 +32,6 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	if (!window.setImmediate) window.setImmediate = window.setTimeout;
 	if (!window.clearImmediate) window.clearImmediate = window.clearTimeout;
 
-
 	var w = {};
 	['setImmediate', 'clearImmediate',
 	'setTimeout', 'clearTimeout',
@@ -415,7 +414,9 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			cleanFetch(req);
 		}, stallXhr);
 
-		return w.fetch(url, obj).catch(function(ex) {
+		return Promise.resolve().then(function() {
+			return w.fetch(url, obj);
+		}).catch(function(ex) {
 			cleanFetch(req);
 			throw ex;
 		}).then(function(res) {
