@@ -27,9 +27,9 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 
 	// force polyfill to kick in
 	delete window.Promise;
+	if (!window.setImmediate) window.setImmediate = window.setTimeout;
+	if (!window.clearImmediate) window.clearImmediate = window.clearTimeout;
 
-	window.setImmediate = window.setTimeout;
-	window.clearImmediate = window.clearTimeout;
 
 	var w = {};
 	['setImmediate', 'clearImmediate',
