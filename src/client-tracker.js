@@ -410,14 +410,14 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			cleanFetch(req);
 		}, stallXhr);
 
-		return Promise.resolve().then(function() {
-			return w.fetch(url, obj);
-		}).catch(function(ex) {
-			cleanFetch(req);
-			throw ex;
-		}).then(function(res) {
-			cleanFetch(req);
-			return res;
+		return new Promise(function(resolve, reject) {
+			w.fetch(url, obj).catch(function(ex) {
+				cleanFetch(req);
+				reject(ex);
+			}).then(function(res) {
+				cleanFetch(req);
+				resolve(res);
+			});
 		});
 	};
 	function cleanFetch(req) {
