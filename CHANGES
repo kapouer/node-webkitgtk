@@ -303,3 +303,11 @@ script[src], link[href] tags that are inserted by javascript.
 
 - add "resizing" option to allow window resizeTo/moveTo/resizeBy/moveBy
 
+
+4.8.3
+-----
+
+- make fetch() return polyfilled promise instance instead of internal one,
+in some high load scenarios this avoids missing end of promise chain.
+- fix a segfault by cleaning up GeometryChanged event listener on destroy
+
