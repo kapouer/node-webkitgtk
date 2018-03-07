@@ -42,6 +42,7 @@ WebView::WebView(Handle<Object> opts) {
 	Nan::AdjustExternalMemory(400000);
 
 	state = 0;
+	idGeometryChangedHandler = 0;
 	idResourceResponse = 0;
 	idEventsHandler = 0;
 
@@ -160,7 +161,7 @@ WebView::WebView(Handle<Object> opts) {
 	g_signal_connect(view, "decide-policy", G_CALLBACK(WebView::DecidePolicy), this);
 
 	WebKitWindowProperties* winprops = webkit_web_view_get_window_properties(view);
-	g_signal_connect(winprops, "notify::geometry", G_CALLBACK(WebView::GeometryChanged), this);
+	idGeometryChangedHandler = g_signal_connect(winprops, "notify::geometry", G_CALLBACK(WebView::GeometryChanged), this);
 }
 
 NAN_METHOD(WebView::ClearCache) {
@@ -190,6 +191,10 @@ NAN_METHOD(WebView::Destroy) {
 void WebView::destroy() {
 	if (view == NULL) return;
 	unloaded();
+	if (idGeometryChangedHandler > 0) {
+		g_signal_handler_disconnect(webkit_web_view_get_window_properties(view), idGeometryChangedHandler);
+		idGeometryChangedHandler = 0;
+	}
 	if (context != NULL) {
 		g_object_unref(context);
 		context = NULL;

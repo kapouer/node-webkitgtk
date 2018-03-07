@@ -76,6 +76,7 @@ private:
 	gchar* cacheDir = NULL;
 	gchar* extensionsDirectory = NULL;
 	void updateUri(const gchar*);
+	gulong idGeometryChangedHandler;
 	gulong idResourceResponse;
 	gulong idEventsHandler;
 
