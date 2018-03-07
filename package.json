@@ -19,7 +19,7 @@
     "dashdash": "^1.10.1",
     "debug": "^2.2.0",
     "nan": "^2.0.5",
-    "promise-polyfill": "^6.0.2",
+    "promise-polyfill": "^6.1.0",
     "tosource": "^1.0.0"
   },
   "engines": {
