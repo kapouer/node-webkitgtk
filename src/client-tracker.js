@@ -401,10 +401,13 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		return ws;
 	};
 
+	var immediateJump = false;
+
 	if (w.fetch) window.fetch = function(url, obj) {
 		requests.len++;
 		var req = {
-			done: false
+			done: false,
+			url: url
 		};
 		req.timeout = w.setTimeout(function() {
 			req.stalled = true;
@@ -412,12 +415,13 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		}, stallXhr);
 
 		return new Promise(function(resolve, reject) {
+			immediates.len++;
 			w.fetch(url, obj).catch(function(ex) {
-				cleanFetch(req);
 				reject(ex);
-			}).then(function(res) {
 				cleanFetch(req);
+			}).then(function(res) {
 				resolve(res);
+				cleanFetch(req);
 			});
 		});
 	};
@@ -434,7 +438,8 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			req.done = true;
 			requests.len--;
 		}
-		check('fetch clean');
+		check('fetch');
+		immediateJump = true;
 	}
 
 	var wopen = window.XMLHttpRequest.prototype.open;
@@ -518,6 +523,10 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		w.setTimeout(function() {
 			scheduledCheck = false;
 			checkNow(from, url);
+			if (immediateJump) {
+				immediates.len--;
+				immediateJump = false;
+			}
 		});
 	}
 
