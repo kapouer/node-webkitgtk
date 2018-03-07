@@ -25,10 +25,6 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	if (preload) disableExternalResources();
 	else trackExternalResources();
 
-	// force polyfill to kick in, because there is no way, by overriding Promise methods,
-	// to know when a promise is done
-	delete window.Promise;
-
 	if (!window.setImmediate) window.setImmediate = window.setTimeout;
 	if (!window.clearImmediate) window.clearImmediate = window.clearTimeout;
 

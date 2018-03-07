@@ -797,6 +797,8 @@ function load(uri, opts, cb) {
 			opts.stallFrame != null ? opts.stallFrame : 1000
 		]
 	});
+	// needed to track end of promises
+	scripts.push("delete window.Promise;");
 	scripts.push(clientPromise);
 	if (opts.script) {
 		scripts.push(opts.script);
