@@ -440,6 +440,10 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		}
 		check('fetch');
 		immediateJumps++;
+		w.setTimeout(function() {
+			immediates.len--;
+			immediateJumps--;
+		});
 	}
 
 	var wopen = window.XMLHttpRequest.prototype.open;
@@ -523,10 +527,6 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		w.setTimeout(function() {
 			scheduledCheck = false;
 			checkNow(from, url);
-			if (immediateJumps > 0) {
-				immediates.len--;
-				immediateJumps--;
-			}
 		});
 	}
 
