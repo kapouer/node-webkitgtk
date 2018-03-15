@@ -401,7 +401,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		return ws;
 	};
 
-	var immediateJump = false;
+	var immediateJumps = 0;
 
 	if (w.fetch) window.fetch = function(url, obj) {
 		requests.len++;
@@ -439,7 +439,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			requests.len--;
 		}
 		check('fetch');
-		immediateJump = true;
+		immediateJumps++;
 	}
 
 	var wopen = window.XMLHttpRequest.prototype.open;
@@ -523,9 +523,9 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		w.setTimeout(function() {
 			scheduledCheck = false;
 			checkNow(from, url);
-			if (immediateJump) {
+			if (immediateJumps > 0) {
 				immediates.len--;
-				immediateJump = false;
+				immediateJumps--;
 			}
 		});
 	}
