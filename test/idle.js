@@ -304,9 +304,10 @@ describe("idle event", function suite() {
 	});
 
 	it("should wait fetch requests called in chain, even with a zero timeout delay", function(done) {
-		this.timeout(5000);
+		this.timeout(6000);
 		var hasXHR1 = false;
 		var hasXHR2 = false;
+		var hasXHR3 = false;
 		var server = require('http').createServer(function(req, res) {
 			if (req.url == "/xhr1") {
 				res.statusCode = 200;
@@ -324,6 +325,15 @@ describe("idle event", function suite() {
 				setTimeout(function() {
 					res.end(JSON.stringify({
 						test: 'xhr2'
+					}));
+				}, 100);
+			} else if (req.url == "/xhr3") {
+				res.statusCode = 500;
+				hasXHR3 = true;
+				res.setHeader('Content-Type', 'application/json');
+				setTimeout(function() {
+					res.end(JSON.stringify({
+						test: 'xhr3'
 					}));
 				}, 100);
 			} else {
@@ -349,10 +359,14 @@ describe("idle event", function suite() {
 							document.querySelector('#xhr2').innerHTML = data.test;
 						});
 					}, 0);
+					fetch('/xhr3').then(function(res) {
+						document.querySelector('#xhr3').innerHTML = "error" + res.status;
+					});
 				});
 				</script></head><body>
 					<div id="xhr1"></div>
 					<div id="xhr2"></div>
+					<div id="xhr3"></div>
 				</body></html>`
 			}, function(err) {
 				expect(err).to.be(null);
@@ -361,16 +375,65 @@ describe("idle event", function suite() {
 				this.run(function(done) {
 					done(null,
 						document.querySelector('#xhr1').innerHTML,
-						document.querySelector('#xhr2').innerHTML
+						document.querySelector('#xhr2').innerHTML,
+						document.querySelector('#xhr3').innerHTML
 					);
-				}, function(err, xhr1, xhr2) {
+				}, function(err, xhr1, xhr2, xhr3) {
 					expect(xhr1).to.be('xhr1');
 					expect(xhr2).to.be('xhr2');
+					expect(xhr3).to.be('error500');
 					server.close();
 					done();
 				});
 				expect(hasXHR1).to.be.ok();
 				expect(hasXHR2).to.be.ok();
+				expect(hasXHR3).to.be.ok();
+			});
+		});
+	});
+
+	it("should wait fetch requests called in parallel", function(done) {
+		this.timeout(1000);
+		var server = require('http').createServer(function(req, res) {
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');
+			res.end(JSON.stringify({
+				path: req.url
+			}));
+		}).listen(function() {
+			WebKit.load("http://localhost:" + server.address().port, {
+				console: true,
+				content: `<!DOCTYPE html>
+				<html><head><script type="text/javascript">
+				Promise.all([
+					fetch('/test1'),
+					fetch('/test2'),
+					fetch('/test3'),
+					fetch('/test4'),
+					fetch('/test5'),
+					fetch('/test6')
+				]).then(function(arr) {
+					return Promise.all(arr.map(res => res.json()));
+				}).then(function(objs) {
+					var paths = objs.map(x => x.path);
+					document.getElementById('results').innerText = paths.join(',');
+				});
+				</script></head><body>
+					<div id="results"></div>
+				</body></html>`
+			}, function(err) {
+				expect(err).to.be(null);
+			})
+			.once('idle', function() {
+				this.run(function(done) {
+					done(null,
+						document.querySelector('#results').innerHTML
+					);
+				}, function(err, list) {
+					expect(list).to.be('/test1,/test2,/test3,/test4,/test5,/test6');
+					server.close();
+					done();
+				});
 			});
 		});
 	});
