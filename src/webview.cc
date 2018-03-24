@@ -468,7 +468,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 	Nan::HandleScope scope;
 	Nan::Callback* cb;
 	const gchar* uri = webkit_web_view_get_uri(web_view);
-//	g_log("change %d %d %s %s\n", load_event, self->state, self->uri, uri);
+//	g_print("change %d %d %s %s\n", load_event, self->state, self->uri, uri);
 	switch (load_event) {
 		case WEBKIT_LOAD_STARTED: // 0
 			/* New load, we have now a provisional URI */
