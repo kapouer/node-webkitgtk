@@ -156,8 +156,9 @@ function closedListener(what) {
 		priv.tickets = cleanTickets(priv.tickets);
 		this.priv = initialPriv();
 		break;
-	default:
-		this.emit('close');
+	case "crash":
+		this.emit('crash');
+		break;
 	}
 }
 

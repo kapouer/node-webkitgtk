@@ -126,7 +126,7 @@ WebView::WebView(Handle<Object> opts) {
 
 	// WindowClosed will in turn call destroy (through webkitgtk.js closedListener)
 	g_signal_connect(window, "destroy", G_CALLBACK(WebView::WindowClosed), this);
-	g_signal_connect(view, "web-process-crashed", G_CALLBACK(WebView::WindowClosed), this);
+	g_signal_connect(view, "web-process-crashed", G_CALLBACK(WebView::ViewCrashed), this);
 
 	GdkScreen* screen = gtk_window_get_screen(GTK_WINDOW(window));
 	GdkVisual* rgba_visual = gdk_screen_get_rgba_visual(screen);
@@ -279,6 +279,14 @@ void WebView::WindowClosed(GtkWidget* window, gpointer data) {
 	self->window = NULL;
 	Nan::HandleScope scope;
 	Local<Value> argv[] = { Nan::New<String>("window").ToLocalChecked() };
+	self->closeCallback->Call(1, argv);
+}
+
+void WebView::ViewCrashed(WebKitWebView* view, gpointer data) {
+	WebView* self = (WebView*)data;
+	self->window = NULL;
+	Nan::HandleScope scope;
+	Local<Value> argv[] = { Nan::New<String>("crash").ToLocalChecked() };
 	self->closeCallback->Call(1, argv);
 }
 

@@ -41,6 +41,7 @@ public:
 
 	static void InspectorClosed(WebKitWebInspector*, gpointer);
 	static void WindowClosed(GtkWidget*, gpointer);
+	static void ViewCrashed(WebKitWebView*, gpointer);
 	static gboolean Authenticate(WebKitWebView*, WebKitAuthenticationRequest*, gpointer);
 	static void InitExtensions(WebKitWebContext*, gpointer);
 	static gboolean DecidePolicy(WebKitWebView*, WebKitPolicyDecision*, WebKitPolicyDecisionType, gpointer);
