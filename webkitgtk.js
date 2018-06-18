@@ -1315,21 +1315,29 @@ emit) {
 	var hasLoaded = false;
 	var hasReady = false;
 	var missedEvent;
-	var preloadList = [], observer;
+	var preloadList = [];
+	var observer;
 
 	var intervals = {len: 0, stall: 0, inc: 1};
 	var timeouts = {len: 0, stall: 0, inc: 1};
+	var immediates = {len: 0, inc: 1};
 	var frames = {len: 0, stall: 0, ignore: !stallFrame};
 	var requests = {len: 0, stall: 0};
+	var tracks = {len: 0, stall: 0};
 
 	if (preload) disableExternalResources();
+	else trackExternalResources();
+
+	if (!window.setImmediate) window.setImmediate = window.setTimeout;
+	if (!window.clearImmediate) window.clearImmediate = window.clearTimeout;
 
 	var w = {};
-	['setTimeout', 'clearTimeout',
+	['setImmediate', 'clearImmediate',
+	'setTimeout', 'clearTimeout',
 	'setInterval', 'clearInterval',
-	'XMLHttpRequest', 'WebSocket',
+	'XMLHttpRequest', 'WebSocket', 'fetch',
 	'requestAnimationFrame', 'cancelAnimationFrame'].forEach(function(meth) {
-		w[meth] = window[meth];
+		if (window[meth]) w[meth] = window[meth].bind(window);
 	});
 	window['hasRunEvent_' + cstamp] = function(event) {
 		if (EV[event] > lastRunEvent) {
@@ -1339,6 +1347,8 @@ emit) {
 	};
 
 	window['ignore_' + cstamp] = ignoreListener;
+
+	window['cancel_' + cstamp] = cancelListener;
 
 	if (document.readyState != 'loading') readyListener();
 	else document.addEventListener('DOMContentLoaded', readyListener, false);
@@ -1351,7 +1361,6 @@ emit) {
 			var tag = node.nodeName.toLowerCase();
 			var params = {
 				body: ["onload", null],
-				link: ["rel", ""],
 				script: ["type", "text/plain"]
 			}[tag];
 			if (!params) return;
@@ -1374,10 +1383,103 @@ emit) {
 				}
 			}
 		});
-		observer.observe(document, {
+		observer.observe(document.documentElement, {
 			childList: true,
 			subtree: true
 		});
+	}
+
+	function trackExternalResources() {
+		observer = new MutationObserver(function(mutations) {
+			var node, list;
+			for (var m=0; m < mutations.length; m++) {
+				list = mutations[m].addedNodes;
+				if (!list) continue;
+				for (var i=0; i < list.length; i++) {
+					node = list[i];
+					if (node.nodeType != 1) continue;
+					trackNode(node);
+				}
+			}
+		});
+		observer.observe(document.documentElement, {
+			childList: true,
+			subtree: true
+		});
+	}
+
+	function closeObserver() {
+		if (!observer) return;
+		observer.disconnect();
+		observer = null;
+	}
+
+	function ignoreListener(uri) {
+		if (!uri || uri.slice(0, 5) == "data:") return;
+		var req = requests[uri];
+		if (!req) req = requests[uri] = {count: 0};
+		req.stall = true;
+		var tra = tracks[uri];
+		if (!tra) tra = tracks[uri] = {count: 0};
+		tra.ignore = true;
+	}
+
+	function cancelListener(uri) {
+		if (!uri || uri.slice(0, 5) == "data:") return;
+		var obj = tracks[uri];
+		if (!obj) obj = tracks[uri] = {count:0};
+		if (obj.cancel) return;
+		obj.cancel = true;
+		var count = obj.count;
+		tracks.stall += count;
+		obj.count = 0;
+		if (tracks.len <= tracks.stall) check('tracks');
+	}
+
+	function trackNodeDone(e) {
+		var uri = this.src || this.href;
+		if (!uri) {
+			console.error("trackNodeDone called on a node without uri");
+			return;
+		}
+		var obj = tracks[uri];
+		if (!obj) {
+			console.error("trackNodeDone called on untracked uri", uri);
+			return;
+		}
+		if (obj.ignore) return;
+		if (!obj.cancel) {
+			tracks.len--;
+			obj.count--;
+		}
+		if (tracks.len <= tracks.stall) check('tracks');
+		this.removeEventListener('load', trackNodeDone);
+		this.removeEventListener('error', trackNodeDone);
+	}
+
+	function trackNode(node) {
+		if (node.nodeName == "LINK") {
+			if (!node.href || node.rel != "import" && node.rel != "stylesheet") return;
+			// do not track when not supported
+			if (node.rel == "import" && !node.import && !window.HTMLImports) return;
+		} else if (node.nodeName == "SCRIPT") {
+			if (!node.src || node.type && node.type != "text/javascript") return;
+		} else {
+			return;
+		}
+		var uri = node.src || node.href;
+		if (!uri || uri.slice(0, 5) == "data:") return;
+		var obj = tracks[uri];
+		if (!obj) obj = tracks[uri] = {count: 0};
+		if (obj.cancel) {
+			node.dispatchEvent(new CustomEvent('error', {bubbles: false}));
+			return;
+		}
+		if (obj.ignore) return;
+		tracks.len++;
+		obj.count++;
+		node.addEventListener('load', trackNodeDone);
+		node.addEventListener('error', trackNodeDone);
 	}
 
 	function loadListener() {
@@ -1397,7 +1499,8 @@ emit) {
 		if (lastEvent != EV.init) return;
 
 		if (preloadList.length) {
-			w.setTimeout.call(window, function() {
+			closeObserver();
+			w.setTimeout(function() {
 				preloadList.forEach(function(obj) {
 					if (obj.val === undefined) obj.node.removeAttribute(obj.att);
 					else obj.node[obj.att] = obj.val;
@@ -1405,13 +1508,13 @@ emit) {
 				preloadList = [];
 				check("ready");
 				if (missedEvent == EV.load) {
-					w.setTimeout.call(window, check.bind(this, 'load'), 0);
+					w.setTimeout(check.bind(this, 'load'));
 				}
-			}, 0);
+			});
 		} else {
 			check("ready");
 			if (missedEvent == EV.load) {
-				w.setTimeout.call(window, check.bind(this, 'load'), 0);
+				w.setTimeout(check.bind(this, 'load'));
 			}
 		}
 	}
@@ -1420,11 +1523,45 @@ emit) {
 		return (new URL(url, document.location)).href;
 	}
 
-	function ignoreListener(uri) {
-		if (!uri) return;
-		if (!requests[uri]) requests[uri] = {count: 0};
-		requests[uri].stall = true;
+	function doneImmediate(id) {
+		var t = id != null && immediates[id];
+		if (t) {
+			delete immediates[id];
+			immediates.len--;
+			if (immediates.len == 0) {
+				check('immediate');
+			}
+		} else {
+			t = id;
+		}
+		return t;
 	}
+	window.setImmediate = function setImmediate(fn) {
+		immediates.len++;
+		var obj = {
+			fn: fn
+		};
+		var fnobj = function(obj) {
+			var err;
+			try {
+				obj.fn.apply(null, Array.from(arguments).slice(1));
+			} catch (e) {
+				err = e;
+			}
+			doneImmediate(obj.id);
+			if (err) throw err; // rethrow
+		}.bind(null, obj);
+		var t = w.setImmediate(fnobj);
+		var id = ++immediates.inc;
+		immediates[id] = t;
+		obj.id = id;
+		return id;
+	};
+
+	window.clearImmediate = function(id) {
+		var t = doneImmediate(id);
+		return w.clearImmediate(t);
+	};
 
 	function checkTimeouts() {
 		delete timeouts.to;
@@ -1439,7 +1576,7 @@ emit) {
 			if (obj.stall) timeouts.stall--;
 			delete timeouts[id];
 			timeouts.len--;
-			if (timeouts.len <= timeouts.stall && !timeouts.ignore) {
+			if (timeouts.len <= timeouts.stall) {
 				check('timeout');
 			}
 			t = obj.t;
@@ -1449,10 +1586,9 @@ emit) {
 		return t;
 	}
 	window.setTimeout = function setTimeout(fn, timeout) {
-		var args = Array.from(arguments);
 		var stall = false;
 		timeout = timeout || 0;
-		if (timeout >= stallTimeout) {
+		if (timeout >= stallTimeout || timeouts.ignore && timeout > 0) {
 			stall = true;
 			timeouts.stall++;
 		}
@@ -1460,7 +1596,7 @@ emit) {
 		var obj = {
 			fn: fn
 		};
-		args[0] = function(obj) {
+		var fnobj = function(obj) {
 			var err;
 			try {
 				obj.fn.apply(null, Array.from(arguments).slice(1));
@@ -1470,7 +1606,7 @@ emit) {
 			doneTimeout(obj.id);
 			if (err) throw err; // rethrow
 		}.bind(null, obj);
-		var t = w.setTimeout.apply(window, args);
+		var t = w.setTimeout(fnobj, timeout);
 		var id = ++timeouts.inc;
 		timeouts[id] = {stall: stall, t: t};
 		obj.id = id;
@@ -1478,7 +1614,7 @@ emit) {
 	};
 	window.clearTimeout = function(id) {
 		var t = doneTimeout(id);
-		return w.clearTimeout.call(window, t);
+		return w.clearTimeout(t);
 	};
 
 	function checkIntervals() {
@@ -1488,7 +1624,6 @@ emit) {
 	}
 
 	window.setInterval = function(fn, interval) {
-		var args = Array.from(arguments);
 		interval = interval || 0;
 		var stall = false;
 		if (interval >= stallInterval) {
@@ -1496,7 +1631,7 @@ emit) {
 			intervals.stall++;
 		}
 		intervals.len++;
-		var t = w.setInterval.apply(window, args);
+		var t = w.setInterval(fn, interval);
 		var id = ++intervals.inc;
 		intervals[id] = {stall: stall, t: t};
 		return id;
@@ -1515,7 +1650,7 @@ emit) {
 		} else {
 			t = id;
 		}
-		return w.clearInterval.call(window, t);
+		return w.clearInterval(t);
 	};
 
 	function doneFrame(id) {
@@ -1527,8 +1662,8 @@ emit) {
 			}
 		}
 	}
-	window.requestAnimationFrame = function(fn) {
-		var id = w.requestAnimationFrame.call(window, function(ts) {
+	if (w.requestAnimationFrame) window.requestAnimationFrame = function(fn) {
+		var id = w.requestAnimationFrame(function(ts) {
 			var err;
 			doneFrame(id);
 			try {
@@ -1543,19 +1678,19 @@ emit) {
 			frames[id] = true;
 		}
 		if (!frames.timeout && !frames.ignore) {
-			frames.timeout = w.setTimeout.call(window, function() {
+			frames.timeout = w.setTimeout(function() {
 				frames.ignore = true;
 				check('frame');
 			}, stallFrame);
 		}
 		return id;
 	};
-	window.cancelAnimationFrame = function(id) {
+	if (w.cancelAnimationFrame) window.cancelAnimationFrame = function(id) {
 		doneFrame(id);
-		return w.cancelAnimationFrame.call(window, id);
+		return w.cancelAnimationFrame(id);
 	};
 
-	if (window.WebSocket) window.WebSocket = function() {
+	if (w.WebSocket) window.WebSocket = function() {
 		var ws = new w.WebSocket(Array.from(arguments));
 		function checkws() {
 			check('websocket');
@@ -1602,7 +1737,7 @@ emit) {
 		priv.timeout = xhrTimeout(priv.url);
 	};
 	function xhrTimeout(url) {
-		return w.setTimeout.call(window, function() {
+		return w.setTimeout(function() {
 			var req = requests[url];
 			if (req) {
 				if (!req.stall) requests.stall++;
@@ -1616,7 +1751,7 @@ emit) {
 		if (!priv) return;
 		if (e.totalSize > 0 && priv.timeout) {
 			// set a new timeout
-			w.clearTimeout.call(window, priv.timeout);
+			w.clearTimeout(priv.timeout);
 			priv.timeout = xhrTimeout(priv.url);
 		}
 	}
@@ -1627,61 +1762,70 @@ emit) {
 	function xhrClean() {
 		var priv = this._private;
 		if (!priv) return;
+		delete this._private;
 		this.removeEventListener("progress", xhrProgress);
 		this.removeEventListener("load", xhrChange);
 		this.removeEventListener("abort", xhrClean);
 		this.removeEventListener("error", xhrClean);
 		this.removeEventListener("timeout", xhrClean);
-		if (priv.timeout) w.clearTimeout.call(window, priv.timeout);
+		if (priv.timeout) w.clearTimeout(priv.timeout);
 		var req = requests[priv.url];
 		if (req) {
 			req.count--;
 			if (req.stall) requests.stall--;
 		}
-		delete this._private;
 		requests.len--;
 		check('xhr clean');
 	}
 
+	var scheduledCheck = false;
 	function check(from, url) {
+		if (scheduledCheck) return;
+		scheduledCheck = true;
+		w.setTimeout(function() {
+			scheduledCheck = false;
+			checkNow(from, url);
+		});
+	}
+
+	function checkNow(from, url) {
 		var info = {
-			timeouts: timeouts.len - timeouts.stall,
-			intervals: intervals.len - intervals.stall,
-			frames: frames.len - frames.stall,
-			requests: requests.len - requests.stall,
+			immediates: immediates.len == 0,
+			timeouts: timeouts.len <= timeouts.stall,
+			intervals: intervals.len <= intervals.stall || intervals.ignore,
+			frames: frames.len <= frames.stall || frames.ignore,
+			requests: requests.len <= requests.stall,
+			tracks: tracks.len <= tracks.stall,
 			lastEvent: lastEvent,
 			lastRunEvent: lastRunEvent
 		};
+
 		if (document.readyState == "complete") {
 			// if loading was stopped (location change or else) the load event
 			// is not emitted but readyState is complete
 			hasLoaded = true;
 		}
-		w.setTimeout.call(window, function() {
-			if (lastEvent <= lastRunEvent) {
-				if (lastEvent == EV.load) {
-					if ((timeouts.ignore || timeouts.len <= timeouts.stall)
-						&& (intervals.ignore || intervals.len <= intervals.stall)
-						&& (frames.ignore || frames.len <= frames.stall)
-						&& requests.len <= requests.stall) {
-						lastEvent += 1;
-						emit("idle", from, url, info);
-					}
-				} else if (lastEvent == EV.idle) {
-					emit("busy", from, url);
-				} else if (lastEvent == EV.init && hasReady) {
+		if (lastEvent <= lastRunEvent) {
+			if (lastEvent == EV.load) {
+				if (info.tracks && info.immediates && info.timeouts && info.intervals && info.frames && info.requests) {
 					lastEvent += 1;
-					emit("ready", from, url, info);
-				} else if (lastEvent == EV.ready && hasLoaded) {
-					lastEvent += 1;
-					emit("load", from, url, info);
-					intervals.to = w.setTimeout.call(window, checkIntervals, stallInterval);
-					timeouts.to = w.setTimeout.call(window, checkTimeouts, stallTimeout);
-				} else {
-					return;
+					closeObserver();
+					emit("idle", from, url, info);
 				}
+			} else if (lastEvent == EV.idle) {
+				emit("busy", from, url);
+			} else if (lastEvent == EV.init && hasReady) {
+				lastEvent += 1;
+				emit("ready", from, url, info);
+			} else if (lastEvent == EV.ready && hasLoaded) {
+				lastEvent += 1;
+				emit("load", from, url, info);
+				intervals.to = w.setTimeout(checkIntervals, stallInterval);
+				timeouts.to = w.setTimeout(checkTimeouts, stallTimeout);
+			} else {
+				return;
 			}
-		});
+		}
 	}
 }
 
