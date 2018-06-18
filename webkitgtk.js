@@ -149,13 +149,15 @@ function closedListener(what) {
 	switch (what) {
 	case "inspector":
 		priv.inspecting = false;
-		return;
+		break;
 	case "window":
 		delete this.webview;
 		destroy.call(this, priv.destroyCb);
 		priv.tickets = cleanTickets(priv.tickets);
 		this.priv = initialPriv();
 		break;
+	default:
+		this.emit('close');
 	}
 }
 
