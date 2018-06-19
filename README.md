@@ -445,7 +445,7 @@ These events can happen at any moment:
   Called when document location changes (not when history state change).  
   Navigation is permitted or not using `navigation` option, not this event.
 
-* console (deprecated)
+* console (deprecated)  
   listener(level, ...) where level is 'log', 'error', 'warn' or 'info'.  
   Remaining arguments are the arguments of the corresponding calls to
   console[level] inside the page.  
