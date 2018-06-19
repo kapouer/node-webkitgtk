@@ -454,6 +454,9 @@ These events can happen at any moment:
   This event is deprecated - use `console` load option to enable/disable
   console output instead.
 
+* crash (since version 4.9.0)  
+  When the underlying web view has crashed.  
+  It's a good idea to destroy it and use a new one.
 
 methods
 -------
