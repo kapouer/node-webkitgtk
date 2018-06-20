@@ -17,7 +17,7 @@ describe("clear cache method", function suite() {
 		var port;
 		var count = 0;
 		var bufSize = 1600000;
-		var bigBuf = Buffer(bufSize).fill("h");
+		var bigBuf = Buffer.alloc(bufSize).fill("h");
 		var server = require('http').createServer(function(req, res) {
 			if (req.url != '/') {
 				res.statusCode = 404;
