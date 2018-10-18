@@ -178,12 +178,11 @@ NAN_METHOD(WebView::ClearCache) {
 NAN_METHOD(WebView::Stop) {
 	Nan::HandleScope scope;
 	WebView* self = ObjectWrap::Unwrap<WebView>(info.This());
-	bool wasLoading = FALSE;
-	if (self->loadCallback != NULL) {
-		wasLoading = TRUE;
-	}
-	if (wasLoading == TRUE) self->stopCallback = new Nan::Callback(info[0].As<Function>());
+	bool wasLoading = self->loadCallback != NULL;
+	self->stopCallback = new Nan::Callback(info[0].As<Function>());
 	webkit_web_view_stop_loading(self->view);
+	// g_message("call to stop %d, %d", wasLoading, self->state);
+	self->stop(wasLoading && self->state == DOCUMENT_COMMITED);
 	info.GetReturnValue().Set(Nan::New<Boolean>(wasLoading));
 }
 
@@ -467,6 +466,13 @@ gboolean WebView::ScriptDialog(WebKitWebView* web_view, WebKitScriptDialog* dial
 	else return FALSE;
 }
 
+void WebView::updateUri(const gchar* uri) {
+	if (uri != NULL) {
+		if (this->uri != NULL) g_free(this->uri);
+		this->uri = g_strdup(uri);
+	}
+}
+
 guint getStatusFromView(WebKitWebView* web_view) {
 	WebKitWebResource* resource = webkit_web_view_get_main_resource(web_view);
 	if (resource != NULL) {
@@ -478,11 +484,36 @@ guint getStatusFromView(WebKitWebView* web_view) {
 	return 0;
 }
 
-void WebView::updateUri(const gchar* uri) {
-	if (uri != NULL) {
-		if (this->uri != NULL) g_free(this->uri);
-		this->uri = g_strdup(uri);
+bool WebView::stop(bool nowait, GError* err) {
+	Nan::HandleScope scope;
+	bool handled = FALSE;
+	if (this->stopCallback != NULL) {
+		Local<Value> argvstop[] = {
+			Nan::New<Boolean>(this->loadCallback != NULL)
+		};
+		Nan::Call(*(this->stopCallback), 1, argvstop);
+		delete this->stopCallback;
+		this->stopCallback = NULL;
+		handled = TRUE;
 	}
+	if (nowait && this->loadCallback != NULL) {
+		Local<Value> argv[2] = {};
+		if (err != NULL) {
+			argv[0] = Nan::Error(err->message);
+			this->state = DOCUMENT_ERROR;
+		} else {
+			argv[0] = Nan::Null();
+		}
+		int status = 0;
+		if (!handled) status = getStatusFromView(view);
+		if (status == 0 && this->userContent == TRUE) status = 200;
+		argv[1] = Nan::New<Integer>(status);
+		Nan::Call(*(this->loadCallback), 2, argv);
+		delete this->loadCallback;
+		this->loadCallback = NULL;
+		handled = TRUE;
+	}
+	return handled;
 }
 
 void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpointer data) {
@@ -490,7 +521,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 	Nan::HandleScope scope;
 	Nan::Callback* cb;
 	const gchar* uri = webkit_web_view_get_uri(web_view);
-//	g_print("change %d %d %s %s\n", load_event, self->state, self->uri, uri);
+	// g_message("change %d %d %s %s\n", load_event, self->state, self->uri, uri);
 	switch (load_event) {
 		case WEBKIT_LOAD_STARTED: // 0
 			/* New load, we have now a provisional URI */
@@ -512,41 +543,12 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 			if (self->state == DOCUMENT_LOADING) {
 				self->state = DOCUMENT_LOADED;
 				self->updateUri(uri);
-				if (self->loadCallback != NULL && self->waitFinish == FALSE && self->stopCallback == NULL) {
-					guint status = getStatusFromView(web_view);
-					if (status == 0 && self->userContent == TRUE) status = 200;
-					Local<Value> argv[] = {
-						Nan::Null(),
-						Nan::New<Integer>(status)
-					};
-					cb = self->loadCallback;
-					self->loadCallback = NULL;
-					Nan::Call(*cb, 2, argv);
-					delete cb;
-				}
+				self->stop(self->waitFinish == FALSE && self->stopCallback == NULL);
 			}
 		break;
 		case WEBKIT_LOAD_FINISHED: // 3
 			self->state = DOCUMENT_AVAILABLE;
-			if (self->loadCallback != NULL && self->waitFinish == TRUE) {
-				guint status = getStatusFromView(web_view);
-				if (status == 0 && self->userContent == TRUE) status = 200;
-				Local<Value> argv[] = {
-					Nan::Null(),
-					Nan::New<Integer>(status)
-				};
-				cb = self->loadCallback;
-				self->loadCallback = NULL;
-				Nan::Call(*cb, 2, argv);
-				delete cb;
-			}
-			if (self->stopCallback != NULL) {
-				Local<Value> argvstop[] = {};
-				cb = self->stopCallback;
-				self->stopCallback = NULL;
-				Nan::Call(*cb, 0, argvstop);
-				delete cb;
-			}
+			self->stop(self->waitFinish == TRUE);
 		break;
 	}
 }
@@ -555,23 +557,10 @@ gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gcha
 	WebView* self = (WebView*)data;
 	Nan::HandleScope scope;
 	Nan::Callback* cb;
-//  g_log("fail %d %d %s %s\n", load_event, self->state, self->uri, failing_uri);
-	if (self->state >= DOCUMENT_LOADING && g_strcmp0(failing_uri, self->uri) == 0) {
-		if (self->loadCallback != NULL) {
-			self->state = DOCUMENT_ERROR;
-			Local<Value> argv[] = {
-				Nan::Error(error->message),
-				Nan::New<Integer>(getStatusFromView(web_view))
-			};
-			cb = self->loadCallback;
-			self->loadCallback = NULL;
-			Nan::Call(*cb, 2, argv);
-			delete cb;
-		}
-		return TRUE;
-	} else {
-		return FALSE;
-	}
+	return self->stop(
+		self->state >= DOCUMENT_COMMITED && g_strcmp0(failing_uri, self->uri) == 0,
+		error
+	);
 }
 
 NAN_METHOD(WebView::New) {
@@ -591,7 +580,7 @@ NAN_METHOD(WebView::Load) {
 	}
 	Nan::Callback* loadCb = new Nan::Callback(info[3].As<Function>());
 
-	if (self->state == DOCUMENT_LOADING) {
+	if (self->state == DOCUMENT_COMMITED) {
 		Local<Value> argv[] = {
 			Nan::Error("A document is already being loaded")
 		};
@@ -715,7 +704,7 @@ NAN_METHOD(WebView::Load) {
 		vc
 	);
 
-	self->state = DOCUMENT_LOADING;
+	self->state = DOCUMENT_COMMITED;
 	self->updateUri(**uri);
 
 	Nan::Utf8String* script = getOptStr(opts, "script");

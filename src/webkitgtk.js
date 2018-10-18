@@ -828,7 +828,10 @@ function load(uri, opts, cb) {
 			delete priv.timeout;
 		}
 		this.status = status;
-		if (!err && status < 200 || status >= 400) err = status;
+		if (!err) {
+			if (status === 0) err = new Error("Interrupted by user");
+			else if (status < 200 || status >= 400) err = status;
+		}
 		cb(err, this);
 		if (!err && priv.inspecting && this.webview.inspect) {
 			this.webview.inspect();
@@ -913,14 +916,13 @@ WebKit.prototype.stop = function(cb) {
 	var pcb = promet(this, cb);
 	if (priv.state < INITIALIZED) return pcb.cb(errorLoad(priv.state));
 	var wasLoading = false;
-	var fincb = function() {
-		debug("stop done");
+	var fincb = function(wasLoading) {
+		debug("stop done", wasLoading);
 		pcb.cb(null, wasLoading);
 	}.bind(this);
-	wasLoading = this.webview && this.webview.stop && this.webview.stop(fincb);
-	// was not loading, meaning stop(cb) will not call cb so call it on this side
-	if (!wasLoading) setImmediate(fincb);
 	this.readyState = "stop";
+	wasLoading = this.webview && this.webview.stop && this.webview.stop(fincb);
+	debug("was loading", wasLoading);
 	return pcb.ret;
 };
 

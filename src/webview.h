@@ -27,8 +27,9 @@ class WebView : public node::ObjectWrap {
 public:
 	static const int DOCUMENT_ERROR = -1;
 	static const int DOCUMENT_AVAILABLE = 0;
-	static const int DOCUMENT_LOADING = 1;
-	static const int DOCUMENT_LOADED = 2;
+	static const int DOCUMENT_COMMITED = 1;
+	static const int DOCUMENT_LOADING = 2;
+	static const int DOCUMENT_LOADED = 3;
 
 	static void Init(v8::Handle<v8::Object>, v8::Handle<v8::Object>);
 	static void Exit(void*);
@@ -67,6 +68,7 @@ public:
 
 	void destroy();
 	void unloaded();
+	bool stop(bool, GError* = NULL);
 
 	WebKitUserScript* userScript;
 	WebKitUserStyleSheet* userStyleSheet;

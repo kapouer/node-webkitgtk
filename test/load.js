@@ -47,9 +47,18 @@ describe("load method", function suite() {
 		});
 	});
 
-	it("should time out", function(done) {
+	it("should time out before loading started", function(done) {
 		this.timeout(500);
-		WebKit.load('http://google.com', {timeout:50}, function(err, w) {
+		WebKit.load('http://google.com', {timeout:5}, function(err, w) {
+			expect(err).to.be.ok();
+			expect(w.status).to.be(0);
+			done();
+		});
+	});
+
+	it("should time out after loading started", function(done) {
+		this.timeout(5000);
+		WebKit.load('https://linkedin.com', {timeout:200}, function(err, w) {
 			expect(err).to.be.ok();
 			expect(w.status).to.be(0);
 			done();
@@ -123,7 +132,7 @@ describe("load method", function suite() {
 				expect(err).not.to.be(501);
 				w.stop(function(err, wasLoading) {
 					expect(err).to.not.be.ok();
-					expect(wasLoading).to.be(false);
+					expect(wasLoading).to.be(true);
 				});
 				setTimeout(function() {
 					server.close();
