@@ -293,7 +293,7 @@ void WebView::InspectorClosed(WebKitWebInspector* inspector, gpointer data) {
 	WebView* self = (WebView*)data;
 	Nan::HandleScope scope;
 	Local<Value> argv[] = { Nan::New<String>("inspector").ToLocalChecked() };
-	self->closeCallback->Call(1, argv);
+	Nan::Call(*(self->closeCallback), 1, argv);
 }
 
 void WebView::WindowClosed(GtkWidget* window, gpointer data) {
@@ -305,7 +305,7 @@ void WebView::WindowClosed(GtkWidget* window, gpointer data) {
 	self->window = NULL;
 	Nan::HandleScope scope;
 	Local<Value> argv[] = { Nan::New<String>("window").ToLocalChecked() };
-	self->closeCallback->Call(1, argv);
+	Nan::Call(*(self->closeCallback), 1, argv);
 }
 #if WEBKIT_CHECK_VERSION(2,20,0)
 void WebView::ViewCrashed(WebKitWebView* view, WebKitWebProcessTerminationReason reason, gpointer data) {
@@ -313,7 +313,7 @@ void WebView::ViewCrashed(WebKitWebView* view, WebKitWebProcessTerminationReason
 	self->window = NULL;
 	Nan::HandleScope scope;
 	Local<Value> argv[] = { Nan::New<String>("crash").ToLocalChecked() };
-	self->closeCallback->Call(1, argv);
+	Nan::Call(*(self->closeCallback), 1, argv);
 }
 #else
 void WebView::ViewCrashed(WebKitWebView* view, gpointer data) {
@@ -321,7 +321,7 @@ void WebView::ViewCrashed(WebKitWebView* view, gpointer data) {
 	self->window = NULL;
 	Nan::HandleScope scope;
 	Local<Value> argv[] = { Nan::New<String>("crash").ToLocalChecked() };
-	self->closeCallback->Call(1, argv);
+	Nan::Call(*(self->closeCallback), 1, argv);
 }
 #endif
 
@@ -341,7 +341,7 @@ gboolean WebView::Authenticate(WebKitWebView* view, WebKitAuthenticationRequest*
 	selfAuthRequest->init(request);
 
 	Local<Value> argv[] = { obj };
-	Local<Value> ignore = self->authCallback->Call(1, argv);
+	Local<Value> ignore = Nan::Call(*(self->authCallback), 1, argv).ToLocalChecked();
 	if (ignore->IsBoolean() && ignore->BooleanValue() == true) {
 		webkit_authentication_request_authenticate(request, NULL);
 	}
@@ -369,7 +369,7 @@ gboolean WebView::DecidePolicy(WebKitWebView* web_view, WebKitPolicyDecision* de
 		Local<String> uri = Nan::New<String>(webkit_uri_request_get_uri(navRequest)).ToLocalChecked();
 		Local<String> type = Nan::New<String>("navigation").ToLocalChecked();
 		Local<Value> argv[] = { type, uri };
-		Local<Value> ignore = self->policyCallback->Call(2, argv);
+		Local<Value> ignore = Nan::Call(*(self->policyCallback), 2, argv).ToLocalChecked();
 		if (ignore->IsBoolean() && ignore->BooleanValue() == true) {
 			webkit_policy_decision_ignore(decision);
 			return TRUE;
@@ -411,7 +411,7 @@ void WebView::handleEventMessage(WebKitUserContentManager* contman, WebKitJavasc
 			Nan::Null(),
 			Nan::New<String>(str_value).ToLocalChecked()
 		};
-		self->eventsCallback->Call(2, argv);
+		Nan::Call(*(self->eventsCallback), 2, argv);
 	} else {
 		g_warning("Error in script message handler: unexpected js_result value");
 	}
@@ -441,7 +441,7 @@ void WebView::ResourceReceiveData(WebKitWebResource* resource, guint64 length, g
 		obj,
 		Nan::New<Integer>((int)length)
 	};
-	self->receiveDataCallback->Call(argc, argv);
+	Nan::Call(*(self->receiveDataCallback), argc, argv);
 }
 
 void WebView::ResourceResponse(WebKitWebResource* resource, gpointer data) {
@@ -459,7 +459,7 @@ void WebView::ResourceResponse(WebKitWebResource* resource, gpointer data) {
 		Nan::New<String>((char*)vc->closure).ToLocalChecked(),
 		obj
 	};
-	self->responseCallback->Call(argc, argv);
+	Nan::Call(*(self->responseCallback), argc, argv);
 }
 
 gboolean WebView::ScriptDialog(WebKitWebView* web_view, WebKitScriptDialog* dialog, WebView* self) {
@@ -521,7 +521,7 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 					};
 					cb = self->loadCallback;
 					self->loadCallback = NULL;
-					cb->Call(2, argv);
+					Nan::Call(*cb, 2, argv);
 					delete cb;
 				}
 			}
@@ -537,14 +537,14 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 				};
 				cb = self->loadCallback;
 				self->loadCallback = NULL;
-				cb->Call(2, argv);
+				Nan::Call(*cb, 2, argv);
 				delete cb;
 			}
 			if (self->stopCallback != NULL) {
 				Local<Value> argvstop[] = {};
 				cb = self->stopCallback;
 				self->stopCallback = NULL;
-				cb->Call(0, argvstop);
+				Nan::Call(*cb, 0, argvstop);
 				delete cb;
 			}
 		break;
@@ -565,7 +565,7 @@ gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gcha
 			};
 			cb = self->loadCallback;
 			self->loadCallback = NULL;
-			cb->Call(2, argv);
+			Nan::Call(*cb, 2, argv);
 			delete cb;
 		}
 		return TRUE;
@@ -596,7 +596,7 @@ NAN_METHOD(WebView::Load) {
 			Nan::Error("A document is already being loaded")
 		};
 		if (loadCb != NULL) {
-			loadCb->Call(1, argv);
+			Nan::Call(*loadCb, 1, argv);
 			delete loadCb;
 		}
 		return;
@@ -607,7 +607,7 @@ NAN_METHOD(WebView::Load) {
 			Nan::Error("load(uri, opts, cb) expected a string for uri argument")
 		};
 		if (loadCb != NULL) {
-			loadCb->Call(1, argv);
+			Nan::Call(*loadCb, 1, argv);
 			delete loadCb;
 		}
 		return;
@@ -796,7 +796,7 @@ void WebView::RunFinished(GObject* object, GAsyncResult* result, gpointer data) 
 			Nan::Error(error->message),
 			Nan::New<String>(**nStr).ToLocalChecked()
 		};
-		self->eventsCallback->Call(2, argv);
+		Nan::Call(*(self->eventsCallback), 2, argv);
 		g_error_free(error);
 		delete nStr;
 	} else {
@@ -845,7 +845,7 @@ void WebView::RunSyncFinished(GObject* object, GAsyncResult* result, gpointer da
 			Nan::Error(error->message),
 			Nan::New<String>(**nStr).ToLocalChecked()
 		};
-		self->eventsCallback->Call(2, argv);
+		Nan::Call(*(self->eventsCallback), 2, argv);
 		g_error_free(error);
 		delete nStr;
 		delete vc;
@@ -865,7 +865,7 @@ void WebView::RunSyncFinished(GObject* object, GAsyncResult* result, gpointer da
 			Nan::Null(),
 			Nan::New<String>(str_value).ToLocalChecked()
 		};
-		self->eventsCallback->Call(2, argv);
+		Nan::Call(*(self->eventsCallback), 2, argv);
 	} else {
 		// this can actually happen when invoking runSync directly
 	}
@@ -906,7 +906,7 @@ cairo_status_t WebView::PngWrite(void* closure, const unsigned char* data, unsig
 		Nan::Null(),
 		buff.ToLocalChecked()
 	};
-	self->pngCallback->Call(2, argv);
+	Nan::Call(*(self->pngCallback), 2, argv);
 	return CAIRO_STATUS_SUCCESS;
 }
 
@@ -929,7 +929,7 @@ void WebView::PngFinished(GObject* object, GAsyncResult* result, gpointer data) 
 	} else {
 		argv[0] = Nan::Error(cairo_status_to_string(status));
 	}
-	self->pngCallback->Call(1, argv);
+	Nan::Call(*(self->pngCallback), 1, argv);
 	delete self->pngCallback;
 	self->pngCallback = NULL;
 }
@@ -963,7 +963,7 @@ void WebView::PrintFinished(WebKitPrintOperation* op, gpointer data) {
 	if (self->printUri == NULL) return;
 	Nan::HandleScope scope;
 	Local<Value> argv[] = {};
-	self->printCallback->Call(0, argv);
+	Nan::Call(*(self->printCallback), 0, argv);
 	delete self->printCallback;
 	self->printCallback = NULL;
 	delete self->printUri;
@@ -975,7 +975,7 @@ void WebView::PrintFailed(WebKitPrintOperation* op, gpointer error, gpointer dat
 	Local<Value> argv[] = {
 		Nan::Error(((GError*)error)->message)
 	};
-	self->printCallback->Call(1, argv);
+	Nan::Call(*(self->printCallback), 1, argv);
 	delete self->printCallback;
 	self->printCallback = NULL;
 	delete self->printUri;

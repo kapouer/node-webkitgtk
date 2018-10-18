@@ -71,7 +71,7 @@ void WebResponse::DataFinished(GObject* object, GAsyncResult* result, gpointer d
 		Local<Value> argv[] = {
 			Nan::Error(error != NULL ? error->message : "Empty buffer")
 		};
-		self->dataCallback->Call(1, argv);
+		Nan::Call(*(self->dataCallback), 1, argv);
 		delete self->dataCallback;
 		if (error != NULL) g_error_free(error);
 		self->dataCallback = NULL;
@@ -81,7 +81,7 @@ void WebResponse::DataFinished(GObject* object, GAsyncResult* result, gpointer d
 		Nan::Null(),
 		Nan::NewBuffer(reinterpret_cast<char*>(buf), length).ToLocalChecked()
 	};
-	self->dataCallback->Call(2, argv);
+	Nan::Call(*(self->dataCallback), 2, argv);
 }
 
 NAN_GETTER(WebResponse::get_prop) {
