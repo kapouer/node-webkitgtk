@@ -210,11 +210,12 @@ function authDispatcher(request) {
 	// ignore auth request synchronously
 	if (this.listeners('authenticate').length == 0) return true;
 	this.emit('authenticate', request);
+	return false;
 }
 
 function policyDispatcher(type, uri) {
 	// prevents navigation once a view has started loading (if navigation is false)
-	if (uri == "" || uri == "about:blank" || uri == this.uri) return;
+	if (uri == "" || uri == "about:blank" || uri == this.uri) return false;
 	if (type == "navigation" && this.priv.state == INITIALIZED) {
 		if (this.listeners('navigate').length > 0) this.emit('navigate', uri);
 		if (this.priv.navigation == false) {
@@ -222,6 +223,7 @@ function policyDispatcher(type, uri) {
 			return true;
 		}
 	}
+	return false;
 }
 
 function checkIdle() {
