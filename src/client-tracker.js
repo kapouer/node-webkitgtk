@@ -133,7 +133,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		if (tracks.len <= tracks.stall) check('tracks');
 	}
 
-	function trackNodeDone(e) {
+	function trackNodeDone() {
 		var uri = this.src || this.href;
 		if (!uri) {
 			console.error("trackNodeDone called on a node without uri");
@@ -447,7 +447,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	}
 
 	var wopen = window.XMLHttpRequest.prototype.open;
-	window.XMLHttpRequest.prototype.open = function(method, url, async) {
+	window.XMLHttpRequest.prototype.open = function(method, url) {
 		if (this._private) xhrClean.call(this);
 		this.addEventListener("progress", xhrProgress);
 		this.addEventListener("load", xhrChange);
@@ -497,7 +497,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			priv.timeout = xhrTimeout(priv.url);
 		}
 	}
-	function xhrChange(e) {
+	function xhrChange() {
 		if (this.readyState != this.DONE) return;
 		xhrClean.call(this);
 	}

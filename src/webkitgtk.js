@@ -238,14 +238,14 @@ function checkIdle() {
 }
 
 function errorReviver(key, val) {
-	if (!val || typeof val != "object") return val;
+	if (!val || typeof val != "object") return val;
 	var name = val.name;
 	if (!name || /Error$/.test(name) == false || !global[name]) return val;
 	var err = new (global[name])();
 	if (!val.stack) delete err.stack;
 	err.stack = val.stack;
 	err.toString = function() {
-		return this.name + ': ' + (this.message || "") + (this.stack ? "\n    " + this.stack : "");
+		return this.name + ': ' + (this.message || "") + (this.stack ? "\n    " + this.stack : "");
 	};
 	err.inspect = function() {
 		return this.toString();
@@ -350,7 +350,7 @@ Object.defineProperty(WebKit.prototype, "uri", {
 			if (uri == "about:blank") uri = "";
 			return uri;
 		}	else {
-			return;
+			return undefined;
 		}
 	}
 });
@@ -474,7 +474,7 @@ function responseDispatcher(curstamp, binding) {
 	var stalled = false;
 	var decrease = 0;
 	if (info.main || !info.remote || info.ignore) {
-
+		// pass
 	} else if (info.mtime == Infinity) {
 		stalled = true;
 		decrease = -info.count;
@@ -512,7 +512,7 @@ function noop(err) {
 function display(opts, cb) {
 	var display = opts.display != null ? opts.display : process.env.DISPLAY;
 	if (typeof display == "string") {
-		var match = /^(?:(\d+)x(\d+)x(\d+))?\:(\d+)$/.exec(display);
+		var match = /^(?:(\d+)x(\d+)x(\d+))?:(\d+)$/.exec(display);
 		if (match) {
 			if (match[1] != null) opts.width = match[1];
 			if (match[2] != null) opts.height = match[2];
@@ -601,7 +601,6 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		}
 	} else if (!opts.preload) {
 		if (!opts.script) opts.script = "";
-		opts.script = opts.script;
 	}
 	p.then(function() {
 		var deprecations = {
@@ -797,8 +796,8 @@ function load(uri, opts, cb) {
 			opts.preload && !priv.jsdom,
 			priv.cstamp,
 			priv.stall,
-			opts.stallTimeout != null ? opts.stallTimeout : 100,
-			opts.stallInterval != null ? opts.stallInterval : 1000,
+			opts.stallTimeout != null ? opts.stallTimeout : 100,
+			opts.stallInterval != null ? opts.stallInterval : 1000,
 			opts.stallFrame != null ? opts.stallFrame : 1000
 		]
 	});
@@ -1301,7 +1300,6 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 
 function pdf(filepath, opts, cb) {
 	var margins = opts.margins;
-	var unit;
 	if (margins == null) margins = 0;
 	if (typeof margins == "string" || typeof margins == "number") {
 		var num = parseInt(margins);
