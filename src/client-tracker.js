@@ -21,6 +21,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	var frames = {len: 0, stall: 0, ignore: !stallFrame};
 	var requests = {len: 0, stall: 0};
 	var tracks = {len: 0, stall: 0};
+	var fetchs = {len: 0};
 
 	if (preload) disableExternalResources();
 	else trackExternalResources();
@@ -413,7 +414,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		}, stallXhr);
 
 		return new Promise(function(resolve, reject) {
-			immediates.len++;
+			fetchs.len++;
 			w.fetch(url, obj).catch(function(ex) {
 				reject(ex);
 				cleanFetch(req);
@@ -438,7 +439,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		}
 		check('fetch');
 		w.setTimeout(function() {
-			immediates.len--;
+			fetchs.len--;
 		});
 	}
 
@@ -529,6 +530,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	function checkNow(from, url) {
 		var info = {
 			immediates: immediates.len == 0,
+			fetchs: fetchs.len == 0,
 			timeouts: timeouts.len <= timeouts.stall,
 			intervals: intervals.len <= intervals.stall || intervals.ignore,
 			frames: frames.len <= frames.stall || frames.ignore,
@@ -545,7 +547,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		}
 		if (lastEvent <= lastRunEvent) {
 			if (lastEvent == EV.load) {
-				if (info.tracks && info.immediates && info.timeouts && info.intervals && info.frames && info.requests) {
+				if (info.tracks && info.immediates && info.fetchs && info.timeouts && info.intervals && info.frames && info.requests) {
 					lastEvent += 1;
 					closeObserver();
 					emit("idle", from, url, info);
