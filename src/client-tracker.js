@@ -240,13 +240,13 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			fn: fn
 		};
 		var fnobj = function(obj) {
+			doneImmediate(obj.id);
 			var err;
 			try {
 				obj.fn.apply(null, Array.from(arguments).slice(1));
 			} catch (e) {
 				err = e;
 			}
-			doneImmediate(obj.id);
 			if (err) throw err; // rethrow
 		}.bind(null, obj);
 		var t = w.setImmediate(fnobj);
