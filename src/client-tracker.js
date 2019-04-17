@@ -401,8 +401,6 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		return ws;
 	};
 
-	var immediateJumps = 0;
-
 	if (w.fetch) window.fetch = function(url, obj) {
 		requests.len++;
 		var req = {
@@ -439,10 +437,8 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			requests.len--;
 		}
 		check('fetch');
-		immediateJumps++;
 		w.setTimeout(function() {
 			immediates.len--;
-			immediateJumps--;
 		});
 	}
 

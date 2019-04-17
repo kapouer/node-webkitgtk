@@ -74,7 +74,6 @@ module.exports = function errorEmitter(emit) {
 		obj.message = this.message;
 		return obj;
 	};
-
 	window.onerror = function(message, file, line, col, err) {
 		var ret = ["error", message, file, line, col];
 		if (!err && lastError) {
