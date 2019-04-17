@@ -221,7 +221,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	}
 
 	function doneImmediate(id) {
-		var t = id != null && immediates[id];
+		var t = id !== null && immediates[id];
 		if (t) {
 			delete immediates[id];
 			immediates.len--;
