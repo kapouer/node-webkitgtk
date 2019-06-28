@@ -75,7 +75,7 @@ describe("png method", function suite() {
 			// this may won't even generate a png since no surface is yet acquired
 			var pngFile = __dirname + '/shots/testr1err.png';
 			w.png(pngFile, function(err) {
-				require('fs').stat(pngFile, function(errStat, stat) {
+				require('fs').access(pngFile, function(errStat) {
 					if (errStat) {
 						// no file so an error happened
 						expect(err).to.be.ok();

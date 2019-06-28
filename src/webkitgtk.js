@@ -1238,7 +1238,11 @@ WebKit.prototype.png = function(obj, cb) {
 	var pcb = promet(this, cb);
 	if (typeof obj == "string") {
 		wstream = fs.createWriteStream(obj);
-		wstream.on('error', pcb.cb);
+		wstream.on('error', function(err) {
+			fs.unlink(obj, function() {
+				pcb.cb(err);
+			});
+		});
 	} else if (obj instanceof stream.Writable || obj instanceof stream.Duplex) {
 		wstream = obj;
 	} else {
