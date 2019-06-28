@@ -350,6 +350,10 @@ Wrapping the application with `xvfb-run` command line tool is a safe(r) alternat
 pdf() options
 -------------
 
+If you plan to author html pages for printing, i strongly suggest to set
+an html document width in pixels equal to the paper width at 144 dpi (example:
+1190px for iso_a4 portrait).
+
 - orientation  
   landscape | portrait, default to portrait
 
