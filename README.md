@@ -353,6 +353,8 @@ pdf() options
 If you plan to author html pages for printing, i strongly suggest to set
 an html document width in pixels equal to the paper width at 144 dpi (example:
 1190px for iso_a4 portrait).
+Also never forget that 1in = 2.54cm = 25.4mm = 72pt = 6pc. See
+https://www.w3.org/Style/Examples/007/units.html
 
 - orientation  
   landscape | portrait, default to portrait
