@@ -5,6 +5,7 @@ var join = require('path').join;
 
 
 describe("long polling", function suite() {
+	this.timeout(3000);
 	it("should idle before server sends message", function(done) {
 		var engine = require('engine.io');
 		var port;

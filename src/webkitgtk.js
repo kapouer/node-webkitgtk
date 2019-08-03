@@ -30,6 +30,7 @@ var hasRunEvent = '(' + function(name, event) {
 		var func = window && window['hasRunEvent_' + name];
 		if (func) func(event);
 	} catch (ex) {
+		// ignore
 	}
 }.toString() + ')("%name", "%event")';
 
