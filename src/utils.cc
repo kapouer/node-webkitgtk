@@ -2,16 +2,16 @@
 
 using namespace v8;
 
-Nan::Utf8String* getOptStr(Handle<Object> opts, const gchar* name) {
+Nan::Utf8String* getOptStr(Local<Object> opts, const gchar* name) {
 	Local<Value> opt = opts->Get(H(name));
 	Local<Value> empty;
 	Nan::Utf8String* str = new Nan::Utf8String(opt->IsString() ? opt : empty);
 	return str;
 }
 
-Nan::Callback* getCb(Handle<Object> opts, const gchar* name) {
+Nan::Callback* getCb(Local<Object> opts, const gchar* name) {
 	Nan::Callback* cb = NULL;
-	if (opts->Has(H(name))) {
+	if (Nan::Has(opts, H(name)).FromJust()) {
 		Local<Value> opt = opts->Get(H(name));
 		if (opt->IsFunction()) {
 			cb = new Nan::Callback(opt.As<Function>());

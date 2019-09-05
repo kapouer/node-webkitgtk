@@ -21,7 +21,7 @@ void WebResponse::init(WebKitWebResource* resource, WebKitURIResponse* response)
 	if (response != NULL) g_object_ref(response);
 }
 
-void WebResponse::Init(Handle<Object> target) {
+void WebResponse::Init(Local<Object> target) {
 	Nan::HandleScope scope;
 
 	Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(WebResponse::New);

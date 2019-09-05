@@ -25,7 +25,7 @@ void timeout_cb(uv_timer_t* handle, int status) {
 	}
 }
 
-WebView::WebView(Handle<Object> opts) {
+WebView::WebView(Local<Object> opts) {
 	Nan::Utf8String* cstampStr = getOptStr(opts, "cstamp");
 	this->cstamp = **cstampStr;
 	this->receiveDataCallback = getCb(opts, "receiveDataListener");
@@ -257,7 +257,7 @@ void WebView::unloaded() {
 	}
 }
 
-void WebView::Init(Handle<Object> exports, Handle<Object> module) {
+void WebView::Init(Local<Object> exports, Local<Object> module) {
 	node::AtExit(Exit);
 
 	Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(WebView::New);

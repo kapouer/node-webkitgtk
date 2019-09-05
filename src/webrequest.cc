@@ -16,7 +16,7 @@ void WebRequest::init(WebKitURIRequest* request) {
 	g_object_ref(request);
 }
 
-void WebRequest::Init(Handle<Object> target) {
+void WebRequest::Init(Local<Object> target) {
 	Nan::HandleScope scope;
 
 	Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(WebRequest::New);

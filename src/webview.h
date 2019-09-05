@@ -31,7 +31,7 @@ public:
 	static const int DOCUMENT_LOADING = 2;
 	static const int DOCUMENT_LOADED = 3;
 
-	static void Init(v8::Handle<v8::Object>, v8::Handle<v8::Object>);
+	static void Init(v8::Local<v8::Object>, v8::Local<v8::Object>);
 	static void Exit(void*);
 
 #if WEBKIT_CHECK_VERSION(2,7,4)
@@ -74,7 +74,7 @@ public:
 	WebKitUserStyleSheet* userStyleSheet;
 private:
 	static Nan::Persistent<v8::Function> constructor;
-	WebView(v8::Handle<v8::Object>);
+	WebView(v8::Local<v8::Object>);
 	~WebView();
 
 	guint contextSignalId;

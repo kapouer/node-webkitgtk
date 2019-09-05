@@ -9,7 +9,7 @@
 class WebRequest : public node::ObjectWrap {
 public:
 	static Nan::Persistent<v8::FunctionTemplate> constructor;
-	static void Init(v8::Handle<v8::Object>);
+	static void Init(v8::Local<v8::Object>);
 	static NAN_METHOD(New);
 
 	WebKitURIRequest* request = NULL;

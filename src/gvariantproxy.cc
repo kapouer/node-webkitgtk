@@ -94,7 +94,7 @@ static NAN_PROPERTY_ENUMERATOR(EnumerateNamedProperties) {
 	info.GetReturnValue().Set(array);
 }
 
-void GVariantProxy::Init(Handle<Object> target) {
+void GVariantProxy::Init(Local<Object> target) {
 	Nan::HandleScope scope;
 	Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(GVariantProxy::New);
 	Local<ObjectTemplate> otmpl = tpl->InstanceTemplate();

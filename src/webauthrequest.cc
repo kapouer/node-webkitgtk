@@ -14,7 +14,7 @@ void WebAuthRequest::init(WebKitAuthenticationRequest* request) {
 	g_object_ref(request);
 }
 
-void WebAuthRequest::Init(Handle<Object> target) {
+void WebAuthRequest::Init(Local<Object> target) {
 	Nan::HandleScope scope;
 
 	Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(WebAuthRequest::New);

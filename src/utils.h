@@ -9,37 +9,37 @@
 #include <glib.h>
 #include <soup.h>
 
-Nan::Utf8String* getOptStr(v8::Handle<v8::Object>, const gchar*);
-Nan::Callback* getCb(v8::Handle<v8::Object>, const gchar*);
+Nan::Utf8String* getOptStr(v8::Local<v8::Object>, const gchar*);
+Nan::Callback* getCb(v8::Local<v8::Object>, const gchar*);
 void update_soup_headers_with_dict(SoupMessageHeaders*, GVariant*);
 GVariant* soup_headers_to_gvariant_dict(SoupMessageHeaders*);
 
 // Method removed from NAN
 NAN_INLINE bool NanBooleanOptionValue(
 		v8::Local<v8::Object> optionsObj
-	, v8::Handle<v8::String> opt, bool def
+	, v8::Local<v8::String> opt, bool def
 ) {
 	if (def) {
 		return optionsObj.IsEmpty()
-			|| !optionsObj->Has(opt)
-			|| optionsObj->Get(opt)->BooleanValue();
+			|| !Nan::Has(optionsObj, opt).FromJust()
+			|| Nan::To<bool>(Nan::Get(optionsObj, opt).ToLocalChecked()).FromJust();
 	} else {
 		return !optionsObj.IsEmpty()
-			&& optionsObj->Has(opt)
-			&& optionsObj->Get(opt)->BooleanValue();
+			&& Nan::Has(optionsObj, opt).FromJust()
+			&& Nan::To<bool>(Nan::Get(optionsObj, opt).ToLocalChecked()).FromJust();
 	}
 }
 
 // Method removed from NAN
 NAN_INLINE uint32_t NanUInt32OptionValue(
 		v8::Local<v8::Object> optionsObj
-	, v8::Handle<v8::String> opt
+	, v8::Local<v8::String> opt
 	, uint32_t def
 ) {
 	return !optionsObj.IsEmpty()
-		&& optionsObj->Has(opt)
-		&& optionsObj->Get(opt)->IsNumber()
-			? optionsObj->Get(opt)->Uint32Value()
+		&& Nan::Has(optionsObj, opt).FromJust()
+		&& Nan::Get(optionsObj, opt).ToLocalChecked()->IsNumber()
+			? Nan::To<uint32_t>(Nan::Get(optionsObj, opt).ToLocalChecked()).FromJust()
 			: def;
 }
 
