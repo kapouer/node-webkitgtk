@@ -26,10 +26,10 @@
     "node": ">=8"
   },
   "optionalDependencies": {
-    "chalk": "^1.1.1",
-    "headless": "^1.0.0",
-    "jsdom": "^9.8.3",
-    "request": "^2.60.0"
+    "chalk": "^3.0.0",
+    "got": "^9.6.0",
+    "headless": "^1.2.0",
+    "jsdom": "^15.2.1"
   },
   "devDependencies": {
     "engine.io": "^1.4.2",
