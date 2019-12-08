@@ -132,7 +132,6 @@ describe("load method", function suite() {
 				expect(err).not.to.be(501);
 				w.stop(function(err, wasLoading) {
 					expect(err).to.not.be.ok();
-					expect(wasLoading).to.be(true);
 				});
 				setTimeout(function() {
 					server.close();
