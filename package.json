@@ -27,9 +27,9 @@
   },
   "optionalDependencies": {
     "chalk": "^3.0.0",
-    "got": "^9.6.0",
     "headless": "^1.2.0",
-    "jsdom": "^15.2.1"
+    "jsdom": "^15.2.1",
+    "request": "^2.88.0"
   },
   "devDependencies": {
     "engine.io": "^1.4.2",
