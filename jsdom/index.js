@@ -24,6 +24,7 @@ WebKit.prototype.binding = function(opts, cfg, cb) {
 };
 
 WebKit.prototype.rawload = function(uri, opts, cb) {
+	if (this.webview) this.webview.close();
 	var pcb = WebKit.promet(this, cb);
 	uri = URL.format(URL.parse(uri));
 	var jsdomOpts = {
@@ -52,6 +53,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 				throw obj.error;
 			}
 		};
+		window.destroy = window.close;
 
 		window.run = window.eval.bind(window);
 		window.uri = uri;
@@ -104,7 +106,8 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		},
 		runSync: function(script, ticket) {
 			this._runlist.push(script);
-		}
+		},
+		close: function() {}
 	};
 
 	if ((!uri || uri == "about:blank") && opts.content == null) {
@@ -118,7 +121,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		} else {
 			// trick to have a main uri before loading main doc
 			this.webview.loading = true;
-			var loader = resourceLoader.call({inst:this, opts: opts}, uri, {
+			var req = resourceLoader.call({inst:this, opts: opts}, uri, {
 				cookie: cookies
 			}, (err, body) => {
 				this.webview.loading = false;
@@ -135,10 +138,15 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			this.webview.stop = (cb) => {
 				if (this.webview.loading) {
 					this.webview.loading = false;
-					if (loader.req) loader.req.abort();
-					setImmediate(cb);
-					return true;
+					req.abort();
+					setImmediate(() => {
+						cb(true);
+					});
+					pcb.cb(new Error("Aborted"), 0);
 				} else {
+					setImmediate(() => {
+						cb(false);
+					});
 					return false;
 				}
 				// return nothing and WebKit.stop will callback on our behalf
@@ -184,7 +192,10 @@ class CustomResourceLoader extends ResourceLoader {
 function resourceLoader(uri, opts, cb) {
 	// Checking if the ressource should be loaded
 	debug("resource loader", uri);
-	if (this.opts.preload) return cb(null, null);
+	if (this.opts.preload) {
+		cb(null, null);
+		return;
+	}
 	var priv = this.inst.priv;
 	var stamp = priv.stamp;
 	var funcFilterStr = 'window.request_' + priv.cstamp;
