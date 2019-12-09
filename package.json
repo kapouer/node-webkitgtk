@@ -41,11 +41,17 @@
     "http-digest-auth": "^0.1.3",
     "mocha": "^2.5.3",
     "pdfinfo": "0.0.3",
+    "postinstall-patch": "^0.7.0",
     "rimraf": "^2.5.4"
   },
   "scripts": {
+    "prepare": "postinstall",
     "install": "make || exit 0",
     "test": "make check"
+  },
+  "prepare": {
+    "promise-polyfill": "patch patches/promise-microtask.patch",
+    "promise-polyfill/dist/polyfill.js": "copy lib/promise.js"
   },
   "repository": "git@github.com:kapouer/node-webkitgtk.git",
   "author": "Jérémy Lal <kapouer@melix.org>",

@@ -9,7 +9,7 @@ var toSource = require('tosource');
 var clientConsole = require('./client-console');
 var clientError = require('./client-error');
 var clientTracker = require('./client-tracker');
-var clientPromise = fs.readFileSync(require.resolve('promise-polyfill/dist/polyfill.js'));
+var clientPromise = fs.readFileSync('./lib/promise.js');
 
 // available after init
 var debugStall;
