@@ -50,6 +50,7 @@
     "test": "make check"
   },
   "prepare": {
+    "jsdom": "patch patches/jsdom-concurrent.patch",
     "promise-polyfill": "patch patches/promise-microtask.patch",
     "promise-polyfill/dist/polyfill.js": "copy lib/promise.js"
   },

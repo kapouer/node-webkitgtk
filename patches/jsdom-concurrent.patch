@@ -1,0 +1,12 @@
+--- lib/api.js	2019-12-09 13:14:35.380061018 +0100
++++ lib/api.js.new	2019-12-09 13:14:18.944369349 +0100
+@@ -281,6 +281,9 @@
+   }
+ 
+   // concurrentNodeIterators??
++  if (options.concurrentNodeIterators) {
++    transformed.windowOptions.concurrentNodeIterators = Number(options.concurrentNodeIterators);
++  }
+ 
+   return transformed;
+ }
