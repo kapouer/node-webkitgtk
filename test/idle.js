@@ -24,31 +24,21 @@ describe("idle event", function suite() {
 				console: true,
 				content: `<!DOCTYPE html>
 				<html><head><script type="text/javascript">
-				function getJson(url, cb) {
-					var xhr = new XMLHttpRequest();
-					xhr.open("GET", url, true);
-					xhr.setRequestHeader("Accept", "application/json; q=1.0");
-
-					xhr.onreadystatechange = function() {
-						if (this.readyState != this.DONE) return;
-						cb(null, JSON.parse(this.response));
-					};
-					xhr.send();
-				}
-				getJson('/xhr', function(err, data) {
+				fetch('/xhr').then((res) => res.json()).then(function(data) {
 					document.querySelector('#xhr').innerHTML = data.test;
-				});
-				var n = 100;
-				var p = Promise.resolve();
-				for (var i=0; i < n; i++) {
-					p = p.then(function() {
-						var d = document.createElement("p");
-						d.innerHTML = "toto";
-						document.body.appendChild(d);
+				}).then(function() {
+					var n = 100;
+					var p = Promise.resolve();
+					for (var i=0; i < n; i++) {
+						p = p.then(function() {
+							var d = document.createElement("p");
+							d.innerHTML = "toto";
+							document.body.appendChild(d);
+						});
+					}
+					p.then(function() {
+						document.querySelector('#xhr').innerHTML += i;
 					});
-				}
-				p.then(function() {
-					document.querySelector('#xhr').innerHTML += i;
 				});
 				</script></head><body>
 					<div id="xhr"></div>
@@ -277,12 +267,6 @@ describe("idle event", function suite() {
 							document.body.innerHTML = "Success ? " + window.hasJS1 + "," + window.hasJS2;
 						});
 					});
-					readyNode(one).then(function() {
-						var one = document.createElement('script');
-						one.src = '/one.js';
-						document.head.appendChild(one);
-						readyNode()
-					});
 				};
 				</script></head><body>
 				</body></html>`
@@ -405,19 +389,19 @@ describe("idle event", function suite() {
 				console: true,
 				content: `<!DOCTYPE html>
 				<html><head><script type="text/javascript">
-				Promise.all([
-					fetch('/test1'),
-					fetch('/test2'),
-					fetch('/test3'),
-					fetch('/test4'),
-					fetch('/test5'),
-					fetch('/test6')
-				]).then(function(arr) {
-					return Promise.all(arr.map(res => res.json()));
-				}).then(function(objs) {
-					var paths = objs.map(x => x.path);
-					document.getElementById('results').innerText = paths.join(',');
-				});
+					Promise.all([
+						fetch('/test1'),
+						fetch('/test2'),
+						fetch('/test3'),
+						fetch('/test4'),
+						fetch('/test5'),
+						fetch('/test6')
+					]).then(function(arr) {
+						return Promise.all(arr.map(res => res.json()));
+					}).then(function(objs) {
+						var paths = objs.map(x => x.path);
+						document.getElementById('results').textContent = paths.join(',');
+					});
 				</script></head><body>
 					<div id="results"></div>
 				</body></html>`
@@ -426,9 +410,7 @@ describe("idle event", function suite() {
 			})
 			.once('idle', function() {
 				this.run(function(done) {
-					done(null,
-						document.querySelector('#results').innerHTML
-					);
+					done(null, document.querySelector('#results').innerHTML);
 				}, function(err, list) {
 					expect(list).to.be('/test1,/test2,/test3,/test4,/test5,/test6');
 					server.close();
