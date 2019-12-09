@@ -8,16 +8,17 @@ module.exports = function consoleEmitter(emit) {
 		'log',
 		'time',
 		'timeEnd',
+		'trace',
 		'warn'
 	];
 
 	sharedConsoleMethods.forEach(function(meth) {
-		window.console[meth] = function() {
+		if (window.console[meth]) window.console[meth] = function() {
 			var args = ['console', meth].concat(Array.from(arguments));
 			emit.apply(null, args);
 		};
 	});
-	window.console.trace = function() {
+	if (!window.console.trace) window.console.trace = function() {
 		var args = Array.from(arguments);
 		args.push(new Error());
 		args = ['console', 'trace'].concat(args);
