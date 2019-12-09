@@ -73,7 +73,6 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			window.document._cookieDomain = window.document.location.hostname;
 		}
 		if (opts.console) window.console = console;
-		require('./xhr').call(this, window);
 
 		window.webkit = {
 			messageHandlers: {
