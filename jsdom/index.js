@@ -20,6 +20,7 @@ module.exports = function(WebKit) {
 
 WebKit.prototype.binding = function(opts, cfg, cb) {
 	this.priv.cfg = cfg;
+	this.priv.jsdom = true;
 	cb();
 };
 
