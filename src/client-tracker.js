@@ -18,6 +18,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	var intervals = {len: 0, stall: 0, inc: 1};
 	var timeouts = {len: 0, stall: 0, inc: 1};
 	var immediates = {len: 0, inc: 1};
+	var tasks = {len: 0, inc: 1};
 	var frames = {len: 0, stall: 0, ignore: !stallFrame};
 	var requests = {len: 0, stall: 0};
 	var tracks = {len: 0, stall: 0};
@@ -31,6 +32,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 
 	var w = {};
 	['setImmediate', 'clearImmediate',
+	'queueMicrotask',
 	'setTimeout', 'clearTimeout',
 	'setInterval', 'clearInterval',
 	'XMLHttpRequest', 'WebSocket', 'fetch',
@@ -259,6 +261,23 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	window.clearImmediate = function(id) {
 		var t = doneImmediate(id);
 		return w.clearImmediate(t);
+	};
+
+	window.queueMicrotask = function(fn) {
+		tasks.len++;
+		return w.queueMicrotask(function() {
+			var err;
+			try {
+				fn();
+			} catch(ex) {
+				err = ex;
+			}
+			tasks.len--;
+			if (tasks.len == 0) {
+				check('task');
+			}
+			if (err) throw err;
+		});
 	};
 
 	function checkTimeouts() {
@@ -518,7 +537,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	}
 
 	function check(from, url) {
-		w.setImmediate(function() {
+		w.queueMicrotask(function() {
 			checkNow(from, url);
 		});
 	}
@@ -526,6 +545,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	function checkNow(from, url) {
 		var info = {
 			immediates: immediates.len == 0,
+			tasks: tasks.len == 0,
 			fetchs: fetchs.len == 0,
 			timeouts: timeouts.len <= timeouts.stall,
 			intervals: intervals.len <= intervals.stall || intervals.ignore,
@@ -543,7 +563,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		}
 		if (lastEvent <= lastRunEvent) {
 			if (lastEvent == EV.load) {
-				if (info.tracks && info.immediates && info.fetchs && info.timeouts && info.intervals && info.frames && info.requests) {
+				if (info.tracks && info.immediates && info.tasks && info.fetchs && info.timeouts && info.intervals && info.frames && info.requests) {
 					lastEvent += 1;
 					closeObserver();
 					emit("idle", from, url, info);

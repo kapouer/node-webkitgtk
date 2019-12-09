@@ -9,7 +9,7 @@ var toSource = require('tosource');
 var clientConsole = require('./client-console');
 var clientError = require('./client-error');
 var clientTracker = require('./client-tracker');
-var clientPromise = fs.readFileSync(require.resolve('promise-polyfill'));
+var clientPromise = fs.readFileSync(require.resolve('promise-polyfill/dist/polyfill.js'));
 
 // available after init
 var debugStall;
@@ -790,6 +790,13 @@ function load(uri, opts, cb) {
 
 	if (Buffer.isBuffer(opts.content)) opts.content = opts.content.toString();
 	if (Buffer.isBuffer(opts.style)) opts.style = opts.style.toString();
+
+	scripts.push(`
+		var P = window.Promise;
+		if (!window.queueMicrotask) window.queueMicrotask = function(fn) {
+			P.resolve().then(fn);
+		};
+	`);
 
 	scripts.push({
 		fn: clientTracker,
