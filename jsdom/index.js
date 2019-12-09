@@ -4,6 +4,7 @@ const vm = require("vm");
 const httpCodes = require('http').STATUS_CODES;
 const URL = require('url');
 const AuthRequest = require('./auth-request');
+const clientFetch = require('fs').readFileSync(require.resolve('whatwg-fetch/dist/fetch.umd.js')).toString();
 
 const request = function() { // lazy loading request
 	var request;
@@ -56,6 +57,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			}
 		};
 		window.destroy = window.close;
+		window.eval(clientFetch);
 
 		window.run = window.eval.bind(window);
 		window.uri = uri;
