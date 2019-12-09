@@ -1,5 +1,5 @@
 const debug = require('debug')('webkitgtk');
-const {JSDOM, ResourceLoader} = require('jsdom');
+const {JSDOM, ResourceLoader, VirtualConsole} = require('jsdom');
 const vm = require("vm");
 const httpCodes = require('http').STATUS_CODES;
 const URL = require('url');
@@ -36,6 +36,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 			inst: this
 		})
 	};
+	if (!opts.console) jsdomOpts.virtualConsole = new VirtualConsole();
 	var priv = this.priv;
 
 	jsdomOpts.url = uri || "about:blank";
