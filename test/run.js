@@ -83,13 +83,13 @@ describe("run method", function suite() {
 	});
 	it("should run long job between load and idle", function(done) {
 		this.timeout(3000);
-		var doc = '<html><head><script type="text/javascript" src="test.js"></script></body></html>';
+		var doc = '<html><head><script type="text/javascript" src="test.js"></script></head><body></body></html>';
 		var state = 0;
 		var server = require('http').createServer(function(req, res) {
 			if (req.url == "/") {
 				res.statusCode = 200;
 				res.end(doc);
-			} else if (req.url == "/test.js" || req.url == "/test2.js") {
+			} else if (req.url == "/test.js" || req.url == "/test2.js") {
 				res.statusCode = 200;
 				setTimeout(function() {
 					res.setHeader('Content-Type', "application/javascript");
