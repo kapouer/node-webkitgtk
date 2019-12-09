@@ -105,10 +105,16 @@ describe("run method", function suite() {
 				w.preload("http://localhost:" + server.address().port, {console: true}, function(err) {
 					w.when('ready', function(cb) {
 						w.run(function(bool, done) {
-							document.documentElement.className = "toto";
-							document.querySelector('script').src = 'test2.js';
+							try {
+								document.documentElement.className = "toto";
+								document.querySelector('script').src = 'test2.js';
+							} catch(ex) {
+								done(ex.toString());
+								return;
+							}
 							done(null, "param");
 						}, false, function(err, parm) {
+							expect(err).to.not.be.ok();
 							setTimeout(function() {
 								state = 1;
 								cb();
