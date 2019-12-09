@@ -83,10 +83,10 @@ describe("request listener", function suite() {
 		});
 	});
 
-	it("should cancel the request by setting cancel = false in filter", function(done) {
+	it("should cancel the request by setting cancel = true in filter", function(done) {
 		this.timeout(15000);
 		WebKit(function(err, w) {
-			w.load("http://www.selmer.fr", {
+			w.load("https://www.selmer.fr", {
 				filter: function() {
 					if (/\.js$/.test(this.uri)) this.cancel = true;
 				},
@@ -256,7 +256,7 @@ describe("request listener", function suite() {
 	it("should cancel xhr requests immediately", function(done) {
 		// this typically is not the case if ret = TRUE in src/webextension.cc
 		// and works if uri is set to ""
-		this.timeout(1000);
+		this.timeout(3000);
 		var doc = '<html><head>\
 		<script type="text/javascript">var xhr = new XMLHttpRequest();\
 			xhr.open("GET", "/test", true);\
