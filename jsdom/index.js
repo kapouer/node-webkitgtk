@@ -30,6 +30,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	var pcb = WebKit.promet(this, cb);
 	uri = URL.format(URL.parse(uri));
 	var jsdomOpts = {
+		concurrentNodeIterators: 10000,
 		runScripts: "dangerously",
 		resources: new CustomResourceLoader({
 			// jsdom opts
