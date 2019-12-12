@@ -1,6 +1,6 @@
 {
   "name": "webkitgtk",
-  "version": "4.10.0",
+  "version": "4.11.0",
   "description": "webkitgtk addon with powerful Node.js API",
   "keywords": [
     "webkit",
