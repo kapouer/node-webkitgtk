@@ -1,4 +1,11 @@
-[![NPM](https://nodei.co/npm/webkitgtk.png?downloads=true)](https://nodei.co/npm/webkitgtk/)
+# DEPRECATED
+
+At the moment, probably a better idea is to use playwright.
+
+It supports lots of browser engines, among them are webkit gtk and wpe ports.
+
+I plan to write a module that emits the "idle" event, which is the only really novelty here.
+
 
 node-webkitgtk
 ==============
