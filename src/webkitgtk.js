@@ -1314,7 +1314,7 @@ function pdf(filepath, opts, cb) {
 	var margins = opts.margins;
 	if (margins == null) margins = 0;
 	if (typeof margins == "string" || typeof margins == "number") {
-		var num = parseInt(margins);
+		var num = parseFloat(margins);
 		margins = {
 			top: num,
 			left: num,
