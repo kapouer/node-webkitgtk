@@ -2,7 +2,7 @@
 #define WEBKITGTK_UTILS_H
 
 #define ATTR(t, name, get, set) Nan::SetAccessor(t->InstanceTemplate(), Nan::New(name).ToLocalChecked(), get, set);
-#define TOSTR(obj) (*String::Utf8Value((obj)->ToString()))
+#define TOSTR(obj) (*Nan::Utf8String((obj)))
 #define H(name) Nan::New<String>(name).ToLocalChecked()
 
 #include <nan.h>

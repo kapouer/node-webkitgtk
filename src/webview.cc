@@ -35,9 +35,9 @@ WebView::WebView(Local<Object> opts) {
 	this->authCallback = getCb(opts, "authListener");
 	this->closeCallback = getCb(opts, "closedListener");
 
-	this->offscreen = opts->Get(H("offscreen"))->BooleanValue();
-	this->resizing = opts->Get(H("resizing"))->BooleanValue();
-	bool hasInspector = opts->Get(H("inspector"))->BooleanValue();
+	this->offscreen = Nan::To<bool>(opts->Get(H("offscreen"))).FromJust();
+	this->resizing = Nan::To<bool>(opts->Get(H("resizing"))).FromJust();
+	bool hasInspector = Nan::To<bool>(opts->Get(H("inspector"))).FromJust();
 
 	Nan::AdjustExternalMemory(400000);
 
@@ -276,9 +276,9 @@ void WebView::Init(Local<Object> exports, Local<Object> module) {
 
 	ATTR(tpl, "uri", get_prop, NULL);
 
-	constructor.Reset(tpl->GetFunction());
+	constructor.Reset(Nan::GetFunction(tpl).ToLocalChecked());
 
-	module->Set(Nan::New("exports").ToLocalChecked(), tpl->GetFunction());
+	module->Set(Nan::New("exports").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
 	GVariantProxy::Init(exports);
 	WebResponse::Init(exports);
 	WebRequest::Init(exports);
@@ -341,7 +341,7 @@ gboolean WebView::Authenticate(WebKitWebView* view, WebKitAuthenticationRequest*
 
 	Local<Value> argv[] = { obj };
 	Local<Value> ignore = Nan::Call(*(self->authCallback), 1, argv).ToLocalChecked();
-	if (ignore->IsBoolean() && ignore->BooleanValue() == true) {
+	if (ignore->IsBoolean() && Nan::To<bool>(ignore).FromJust() == true) {
 		webkit_authentication_request_authenticate(request, NULL);
 	}
 	return TRUE;
@@ -369,7 +369,7 @@ gboolean WebView::DecidePolicy(WebKitWebView* web_view, WebKitPolicyDecision* de
 		Local<String> type = Nan::New<String>("navigation").ToLocalChecked();
 		Local<Value> argv[] = { type, uri };
 		Local<Value> ignore = Nan::Call(*(self->policyCallback), 2, argv).ToLocalChecked();
-		if (ignore->IsBoolean() && ignore->BooleanValue() == true) {
+		if (ignore->IsBoolean() && Nan::To<bool>(ignore).FromJust() == true) {
 			webkit_policy_decision_ignore(decision);
 			return TRUE;
 		}
@@ -565,7 +565,7 @@ gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gcha
 
 NAN_METHOD(WebView::New) {
 	Nan::HandleScope scope;
-	WebView* self = new WebView(info[0]->ToObject());
+	WebView* self = new WebView(Nan::To<Object>(info[0]).ToLocalChecked());
 	self->Wrap(info.This());
 	info.GetReturnValue().Set(info.This());
 }
@@ -604,7 +604,7 @@ NAN_METHOD(WebView::Load) {
 
 	Nan::Utf8String* uri = new Nan::Utf8String(info[0]);
 
-	Local<Object> opts = info[2]->ToObject();
+	Local<Object> opts = Nan::To<Object>(info[2]).ToLocalChecked();
 
 	if (NanBooleanOptionValue(opts, H("transparent"), false) == TRUE) {
 		if (self->transparencySupport == FALSE) {
@@ -656,11 +656,11 @@ NAN_METHOD(WebView::Load) {
 		if (spec != NULL) {
 			optsVal = Nan::Get(opts, optsName).ToLocalChecked();
 			if (G_IS_PARAM_SPEC_BOOLEAN(spec) && optsVal->IsBoolean()) {
-				g_object_set(settings, spec->name, optsVal->BooleanValue(), NULL);
+				g_object_set(settings, spec->name, Nan::To<bool>(optsVal).FromJust(), NULL);
 			} else if (G_IS_PARAM_SPEC_STRING(spec) && optsVal->IsString()) {
 				g_object_set(settings, spec->name, *(Nan::Utf8String(optsVal)), NULL);
 			} else if (G_IS_PARAM_SPEC_UINT(spec) && optsVal->IsUint32()) {
-				g_object_set(settings, spec->name, optsVal->Uint32Value(), NULL);
+				g_object_set(settings, spec->name, Nan::To<uint32_t>(optsVal).FromJust(), NULL);
 			} else if (!optsVal->IsUndefined()) {
 				g_warning("Ignored opt name %s", spec->name);
 			}
@@ -1007,7 +1007,7 @@ NAN_METHOD(WebView::Print) {
 		return;
 	}
 	self->printCallback = new Nan::Callback(info[2].As<Function>());
-	Local<Object> opts = info[1]->ToObject();
+	Local<Object> opts = Nan::To<Object>(info[1]).ToLocalChecked();
 
 	WebKitPrintOperation* op = webkit_print_operation_new(self->view);
 
@@ -1022,7 +1022,7 @@ NAN_METHOD(WebView::Print) {
 		paperStr = new Nan::Utf8String(paperVal);
 		paperSize = gtk_paper_size_new(**paperStr);
 	} else if (paperVal->IsObject()) {
-		Local<Object> paperObj = paperVal->ToObject();
+		Local<Object> paperObj = Nan::To<Object>(paperVal).ToLocalChecked();
 		unitStr = getOptStr(paperObj, "unit");
 		paperSize = gtk_paper_size_new_custom(
 			"custom",
@@ -1042,9 +1042,9 @@ NAN_METHOD(WebView::Print) {
 	gdouble defaultMargin = 0;
 	Local<Object> marginsObj;
 	if (marginsVal->IsNumber()) {
-		defaultMargin = marginsVal->NumberValue();
+		defaultMargin = Nan::To<gdouble>(marginsVal).FromJust();
 	} else if (marginsVal->IsObject()) {
-		marginsObj = marginsVal->ToObject();
+		marginsObj = Nan::To<Object>(marginsVal).ToLocalChecked();
 		marginUnit = getUnit(**getOptStr(marginsObj, "unit"));
 	}
 	gtk_page_setup_set_left_margin(setup,

@@ -27,7 +27,7 @@ static NAN_PROPERTY_GETTER(GetNamedProperty) {
 	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(info.Holder());
 	const gchar* val;
 	if (self->dict != NULL) {
-		Nan::Utf8String* prop = new Nan::Utf8String(property->ToString());
+		Nan::Utf8String* prop = new Nan::Utf8String(property);
 		if (!g_variant_dict_lookup(self->dict, **prop, "s", &val)) val = NULL;
 		delete prop;
 	}
@@ -38,8 +38,8 @@ static NAN_PROPERTY_SETTER(SetNamedProperty) {
 	Nan::HandleScope scope;
 	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(info.Holder());
 	if (self->dict == NULL) return;
-	Nan::Utf8String* prop = new Nan::Utf8String(property->ToString());
-	Nan::Utf8String* val = new Nan::Utf8String(value->ToString());
+	Nan::Utf8String* prop = new Nan::Utf8String(property);
+	Nan::Utf8String* val = new Nan::Utf8String(value);
 	gchar* valstr = NULL;
 	if (!value->IsUndefined() && !value->IsNull()) {
 		valstr = **val;
@@ -54,7 +54,7 @@ static NAN_PROPERTY_QUERY(QueryNamedProperty) {
 	gboolean hasProp = FALSE;
 	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(info.Holder());
 	if (self->dict != NULL) {
-		Nan::Utf8String* prop = new Nan::Utf8String(property->ToString());
+		Nan::Utf8String* prop = new Nan::Utf8String(property);
 		hasProp = g_variant_dict_contains(self->dict, **prop);
 		delete prop;
 	}
@@ -66,7 +66,7 @@ static NAN_PROPERTY_DELETER(DeleteNamedProperty) {
 	GVariantProxy* self = node::ObjectWrap::Unwrap<GVariantProxy>(info.Holder());
 	Nan::Utf8String* prop = NULL;
 	if (self->dict != NULL) {
-		prop = new Nan::Utf8String(property->ToString());
+		prop = new Nan::Utf8String(property);
 		hasProp = g_variant_dict_contains(self->dict, **prop);
 	}
 	if (hasProp) {
@@ -109,7 +109,7 @@ void GVariantProxy::Init(Local<Object> target) {
 		EnumerateNamedProperties
 	);
 	tpl->SetClassName(Nan::New("GVariantProxy").ToLocalChecked());
-	target->Set(Nan::New("GVariantProxy").ToLocalChecked(), tpl->GetFunction());
+	target->Set(Nan::New("GVariantProxy").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
 	constructor.Reset(tpl);
 }
 

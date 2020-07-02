@@ -28,7 +28,7 @@ void WebAuthRequest::Init(Local<Object> target) {
 	Nan::SetPrototypeMethod(tpl, "use", WebAuthRequest::Use);
 	Nan::SetPrototypeMethod(tpl, "ignore", WebAuthRequest::Ignore);
 
-	target->Set(Nan::New("WebAuthRequest").ToLocalChecked(), tpl->GetFunction());
+	target->Set(Nan::New("WebAuthRequest").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
 	constructor.Reset(tpl);
 }
 

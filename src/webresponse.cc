@@ -37,7 +37,7 @@ void WebResponse::Init(Local<Object> target) {
 
 	Nan::SetPrototypeMethod(tpl, "data", WebResponse::Data);
 
-	target->Set(Nan::New("WebResponse").ToLocalChecked(), tpl->GetFunction());
+	target->Set(Nan::New("WebResponse").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
 	constructor.Reset(tpl);
 }
 
