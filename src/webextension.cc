@@ -22,15 +22,6 @@ gboolean g_strv_contains (const gchar* const* strv, const gchar* str) {
 }
 #endif
 
-static gchar* JSValueToStr(JSGlobalContextRef context, JSValueRef val) {
-	JSStringRef js_str_value = JSValueToStringCopy(context, val, NULL);
-	gsize str_length = JSStringGetMaximumUTF8CStringSize(js_str_value);
-	gchar* str_value = (gchar*)g_malloc(str_length);
-	JSStringGetUTF8CString(js_str_value, str_value, str_length);
-	JSStringRelease(js_str_value);
-	return str_value;
-}
-
 static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* request, WebKitURIResponse* redirected_response, gpointer data) {
 	gchar* cstamp = (gchar*)data;
 	const gchar* uri = webkit_uri_request_get_uri(request);
@@ -44,33 +35,27 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 		|| g_strcmp0(uri, pageUri) == 0
 	) return FALSE;
 
-	JSValueRef result;
-	JSValueRef exception;
-	gboolean hasHandler = FALSE;
-	JSGlobalContextRef jsContext = webkit_frame_get_javascript_context_for_script_world(
+	JSCContext* jsContext = webkit_frame_get_js_context_for_script_world(
 		webkit_web_page_get_main_frame(page),
 		webkit_script_world_get_default()
 	);
 
 	const char* funcStr = g_strconcat("window.request_", cstamp, NULL);
 
-	JSStringRef funcScript = JSStringCreateWithUTF8CString(g_strconcat("!!(", funcStr, ")", NULL));
-	exception = NULL;
-	result = JSEvaluateScript(
+	JSCValue* result = jsc_context_evaluate(
 		jsContext,
-		funcScript,
-		NULL, // JSObjectRef thisObject
-		NULL, // JSStringRef sourceURL
-		0, // int startingLineNumber
-		&exception  // JSValueRef* exception
+		g_strconcat("!!(", funcStr, ")", NULL),
+		-1
 	);
+	JSCException* exception = jsc_context_get_exception(jsContext);
 	if (exception != NULL) {
-		gchar* exceptionStr = JSValueToStr(jsContext, exception);
+		gchar* exceptionStr = jsc_exception_to_string(exception);
 		g_warning("%s, while checking availability of filter function handler", exceptionStr);
 		g_free(exceptionStr);
 	}
-	if (JSValueIsBoolean(jsContext, result)) {
-		hasHandler = JSValueToBoolean(jsContext, result);
+	gboolean hasHandler = FALSE;
+	if (jsc_value_is_boolean(result)) {
+		hasHandler = jsc_value_to_boolean(result);
 	} else {
 		g_warning("Invalid value returned while checking availability of filter function handler");
 	}
@@ -91,25 +76,21 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 		"(\"", g_strescape(uri, NULL), "\",\"",
 		g_strescape(redirect, NULL), "\")",
 		NULL);
-	JSStringRef script = JSStringCreateWithUTF8CString(scriptStr);
-	exception = NULL;
-	result = JSEvaluateScript(
+	result = jsc_context_evaluate(
 		jsContext,
-		script,
-		NULL, // JSObjectRef thisObject
-		NULL, // JSStringRef sourceURL
-		0, // int startingLineNumber
-		&exception  // JSValueRef* exception
+		scriptStr,
+		-1
 	);
+	exception = jsc_context_get_exception(jsContext);
 
 	if (exception != NULL) {
-		gchar* exceptionStr = JSValueToStr(jsContext, exception);
+		gchar* exceptionStr = jsc_exception_to_string(exception);
 		g_warning("%s, while running filter function handler", exceptionStr);
 		g_free(exceptionStr);
 	}
 
-	if (JSValueIsBoolean(jsContext, result)) {
-		if (JSValueToBoolean(jsContext, result)) {
+	if (jsc_value_is_boolean(result)) {
+		if (jsc_value_to_boolean(result)) {
 			// go through
 			g_message("accept %s", uri);
 		} else {
@@ -117,8 +98,8 @@ static gboolean web_page_send_request(WebKitWebPage* page, WebKitURIRequest* req
 			webkit_uri_request_set_uri(request, g_strconcat("#", uri, NULL));
 			return TRUE;
 		}
-	} else if (JSValueIsString(jsContext, result)) {
-		gchar* str_value = JSValueToStr(jsContext, result);
+	} else if (jsc_value_is_string(result)) {
+		gchar* str_value = jsc_value_to_string(result);
 		g_message("rewrite %s to %s", uri, str_value);
 		webkit_uri_request_set_uri(request, str_value);
 		g_free(str_value);

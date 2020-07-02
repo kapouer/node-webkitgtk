@@ -3,7 +3,7 @@
 using namespace v8;
 
 Nan::Utf8String* getOptStr(Local<Object> opts, const gchar* name) {
-	Local<Value> opt = opts->Get(H(name));
+	Local<Value> opt = Nan::Get(opts, H(name)).ToLocalChecked();
 	Local<Value> empty;
 	Nan::Utf8String* str = new Nan::Utf8String(opt->IsString() ? opt : empty);
 	return str;
@@ -12,7 +12,7 @@ Nan::Utf8String* getOptStr(Local<Object> opts, const gchar* name) {
 Nan::Callback* getCb(Local<Object> opts, const gchar* name) {
 	Nan::Callback* cb = NULL;
 	if (Nan::Has(opts, H(name)).FromJust()) {
-		Local<Value> opt = opts->Get(H(name));
+		Local<Value> opt = Nan::Get(opts, H(name)).ToLocalChecked();
 		if (opt->IsFunction()) {
 			cb = new Nan::Callback(opt.As<Function>());
 		}

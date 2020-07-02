@@ -88,7 +88,7 @@ static NAN_PROPERTY_ENUMERATOR(EnumerateNamedProperties) {
 	int i = 0;
 	while (g_variant_iter_next(&iter, "{sv}", &key, &val)) {
 		if (!g_strcmp0(key, "uri")) continue;
-		array->Set(Nan::New<Number>(i++), Nan::New<String>(key).ToLocalChecked());
+		Nan::Set(array, i++, Nan::New<String>(key).ToLocalChecked());
 		g_free(key);
 	}
 	info.GetReturnValue().Set(array);

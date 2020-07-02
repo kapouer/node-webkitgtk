@@ -35,9 +35,15 @@ WebView::WebView(Local<Object> opts) {
 	this->authCallback = getCb(opts, "authListener");
 	this->closeCallback = getCb(opts, "closedListener");
 
-	this->offscreen = Nan::To<bool>(opts->Get(H("offscreen"))).FromJust();
-	this->resizing = Nan::To<bool>(opts->Get(H("resizing"))).FromJust();
-	bool hasInspector = Nan::To<bool>(opts->Get(H("inspector"))).FromJust();
+	this->offscreen = Nan::To<bool>(
+		Nan::Get(opts, H("offscreen")).ToLocalChecked()
+	).FromJust();
+	this->resizing = Nan::To<bool>(
+		Nan::Get(opts, H("resizing")).ToLocalChecked()
+	).FromJust();
+	bool hasInspector = Nan::To<bool>(
+		Nan::Get(opts, H("inspector")).ToLocalChecked()
+	).FromJust();
 
 	Nan::AdjustExternalMemory(400000);
 
@@ -278,7 +284,7 @@ void WebView::Init(Local<Object> exports, Local<Object> module) {
 
 	constructor.Reset(Nan::GetFunction(tpl).ToLocalChecked());
 
-	module->Set(Nan::New("exports").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
+	Nan::Set(module, Nan::New("exports").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
 	GVariantProxy::Init(exports);
 	WebResponse::Init(exports);
 	WebRequest::Init(exports);
@@ -396,16 +402,11 @@ void WebView::handleEventMessage(WebKitUserContentManager* contman, WebKitJavasc
 	ViewClosure* vc = (ViewClosure*)data;
 	if (vc->closure == NULL) return;
 	WebView* self = (WebView*)(vc->view);
-	JSGlobalContextRef context = webkit_javascript_result_get_global_context(js_result);
-	JSValueRef value = webkit_javascript_result_get_value(js_result);
+	JSCValue* value = webkit_javascript_result_get_js_value(js_result);
 	gchar* str_value = NULL;
 	Nan::HandleScope scope;
-	if (JSValueIsString(context, value)) {
-		JSStringRef js_str_value = JSValueToStringCopy(context, value, NULL);
-		gsize str_length = JSStringGetMaximumUTF8CStringSize(js_str_value);
-		str_value = (gchar*)g_malloc(str_length);
-		JSStringGetUTF8CString(js_str_value, str_value, str_length);
-		JSStringRelease(js_str_value);
+	if (jsc_value_is_string(value)) {
+		str_value = jsc_value_to_string(value);
 		Local<Value> argv[] = {
 			Nan::Null(),
 			Nan::New<String>(str_value).ToLocalChecked()
@@ -519,7 +520,6 @@ bool WebView::stop(bool nowait, GError* err) {
 void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpointer data) {
 	WebView* self = (WebView*)data;
 	Nan::HandleScope scope;
-	Nan::Callback* cb;
 	const gchar* uri = webkit_web_view_get_uri(web_view);
 	// g_message("change %d %d %s %s\n", load_event, self->state, self->uri, uri);
 	switch (load_event) {
@@ -556,7 +556,6 @@ void WebView::Change(WebKitWebView* web_view, WebKitLoadEvent load_event, gpoint
 gboolean WebView::Fail(WebKitWebView* web_view, WebKitLoadEvent load_event, gchar* failing_uri, GError* error, gpointer data) {
 	WebView* self = (WebView*)data;
 	Nan::HandleScope scope;
-	Nan::Callback* cb;
 	return self->stop(
 		self->state >= DOCUMENT_COMMITED && g_strcmp0(failing_uri, self->uri) == 0,
 		error
@@ -841,15 +840,10 @@ void WebView::RunSyncFinished(GObject* object, GAsyncResult* result, gpointer da
 		return;
 	}
 
-	JSGlobalContextRef context = webkit_javascript_result_get_global_context(js_result);
-	JSValueRef value = webkit_javascript_result_get_value(js_result);
+	JSCValue* value = webkit_javascript_result_get_js_value(js_result);
 	gchar* str_value = NULL;
-	if (JSValueIsString(context, value)) {
-		JSStringRef js_str_value = JSValueToStringCopy(context, value, NULL);
-		gsize str_length = JSStringGetMaximumUTF8CStringSize(js_str_value);
-		str_value = (gchar*)g_malloc(str_length);
-		JSStringGetUTF8CString(js_str_value, str_value, str_length);
-		JSStringRelease(js_str_value);
+	if (jsc_value_is_string(value)) {
+		str_value = jsc_value_to_string(value);
 		Local<Value> argv[] = {
 			Nan::Null(),
 			Nan::New<String>(str_value).ToLocalChecked()
@@ -1017,7 +1011,7 @@ NAN_METHOD(WebView::Print) {
 	Nan::Utf8String* paperStr = NULL;
 	Nan::Utf8String* unitStr = NULL;
 
-	Local<Value> paperVal = opts->Get(H("paper"));
+	Local<Value> paperVal = Nan::Get(opts, H("paper")).ToLocalChecked();
 	if (paperVal->IsString()) {
 		paperStr = new Nan::Utf8String(paperVal);
 		paperSize = gtk_paper_size_new(**paperStr);
@@ -1037,7 +1031,7 @@ NAN_METHOD(WebView::Print) {
 
 	gtk_page_setup_set_paper_size_and_default_margins(setup, paperSize);
 
-	Local<Value> marginsVal = opts->Get(H("margins"));
+	Local<Value> marginsVal = Nan::Get(opts, H("margins")).ToLocalChecked();
 	GtkUnit marginUnit = GTK_UNIT_POINTS;
 	gdouble defaultMargin = 0;
 	Local<Object> marginsObj;
