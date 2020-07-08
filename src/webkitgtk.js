@@ -769,7 +769,7 @@ function load(uri, opts, cb) {
 						return arg;
 					}
 				});
-				var err = args.length > 0 && args[0];
+				// var err = args.length > 0 && args[0];
 				if (level == "trace") level = "error";
 				console[level].apply(null, args);
 			}
