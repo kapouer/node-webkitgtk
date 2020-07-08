@@ -741,11 +741,13 @@ function load(uri, opts, cb) {
 			}
 		}
 	}.bind(this), 100); // let dom client cancel stalled xhr first
+	priv.responseInterval.unref();
 	priv.navigation = opts.navigation || false;
 	priv.timeout = setTimeout(function() {
 		debugStall("%s ms - %s", opts.timeout || 30000, uri);
 		this.stop();
 	}.bind(this), opts.timeout || 30000);
+	priv.timeout.unref();
 
 	priv.uris = {};
 	priv.pendingRequests = 0;
@@ -1116,6 +1118,7 @@ function run(script, ticket, args, cb) {
 			if (cbObj.stamp != this.priv.stamp) return;
 			cb.call(this, new Error("script timed out\n" + obj.inscript));
 		}.bind(this), priv.runTimeout);
+		priv.tickets[obj.ticket].timeout.unref();
 	}
 }
 
