@@ -724,13 +724,8 @@ function load(uri, opts, cb) {
 	priv.allow = opts.allow || "all";
 	priv.stall = opts.stall != null ? opts.stall : 1000;
 	priv.runTimeout = opts.runTimeout != null ? opts.runTimeout : 10000;
-	priv.tickets = cleanTickets(priv.tickets);
 	priv.stamp = uran();
-
-	if (priv.responseInterval) {
-		clearInterval(priv.responseInterval);
-		delete priv.responseInterval;
-	}
+	privReset(priv);
 	priv.responseInterval = setInterval(function() {
 		var now = Date.now();
 		var info;
@@ -747,7 +742,6 @@ function load(uri, opts, cb) {
 		}
 	}.bind(this), 100); // let dom client cancel stalled xhr first
 	priv.navigation = opts.navigation || false;
-	priv.idling = false;
 	priv.timeout = setTimeout(function() {
 		debugStall("%s ms - %s", opts.timeout || 30000, uri);
 		this.stop();
@@ -953,27 +947,31 @@ WebKit.prototype.reset = function(cb) {
 		this.removeAllListeners();
 		this.promises = null;
 		this.readyState = null;
-		if (priv.responseInterval) {
-			clearInterval(priv.responseInterval);
-			delete priv.responseInterval;
-		}
-		if (priv.uris) delete priv.uris;
-		priv.idling = false;
-		priv.tickets = cleanTickets(priv.tickets);
+		privReset(priv);
 		this.status = null;
 		setImmediate(pcb.cb);
 	}.bind(this));
 	return pcb.ret;
 };
 
-WebKit.prototype.unload = function(cb) {
-	var priv = this.priv;
-	this.readyState = "unloading";
+function privReset(priv) {
 	if (priv.responseInterval) {
 		clearInterval(priv.responseInterval);
 		delete priv.responseInterval;
 	}
-	if (priv.uris) delete priv.uris;
+	if (priv.timeout) {
+		clearTimeout(priv.timeout);
+		delete priv.timeout;
+	}
+	delete priv.uris;
+	priv.idling = false;
+	priv.tickets = cleanTickets(priv.tickets);
+}
+
+WebKit.prototype.unload = function(cb) {
+	var priv = this.priv;
+	this.readyState = "unloading";
+	privReset(priv);
 	var pcb = promet(this, cb);
 
 	this.removeAllListeners('ready');
@@ -982,10 +980,6 @@ WebKit.prototype.unload = function(cb) {
 	this.removeAllListeners('unload');
 	this.removeAllListeners('busy');
 	this.promises = null;
-
-	priv.idling = false;
-
-	cleanTickets(priv.tickets);
 
 	var p = Promise.resolve();
 
@@ -1030,6 +1024,7 @@ function cleanTickets(tickets) {
 }
 
 function destroy(cb) {
+	privReset(this.priv);
 	if (this.webview) {
 		this.priv.destroyCb = cb;
 		if (this.webview.destroy) {
