@@ -311,3 +311,8 @@ script[src], link[href] tags that are inserted by javascript.
 in some high load scenarios this avoids missing end of promise chain.
 - fix a segfault by cleaning up GeometryChanged event listener on destroy
 
+
+4.12.0
+------
+
+Node.js 12 support
