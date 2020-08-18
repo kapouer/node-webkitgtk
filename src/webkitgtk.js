@@ -296,7 +296,7 @@ function eventsDispatcher(err, json) {
 		if (obj.event == "ready") {
 			this.readyState = "interactive";
 			this.emit(obj.event);
-		} else  if (obj.event == "load") {
+		} else if (obj.event == "load") {
 			this.readyState = "complete";
 			this.emit(obj.event);
 		} else if (obj.event == "idle") {
@@ -528,7 +528,7 @@ function display(opts, cb) {
 		}
 	}
 	display = parseInt(display);
-	if (isNaN(display)) display = 0;
+	if (Number.isNaN(display)) display = 0;
 	opts.display = display;
 	if (availableDisplays[display]) {
 		return setImmediate(cb.bind(this, null, null, display));
@@ -1065,7 +1065,7 @@ WebKit.prototype.destroy = function(cb) {
 
 WebKit.prototype.run = function(script, cb) {
 	var args = Array.from(arguments).slice(1);
-	var argType = args.length > 0 ? typeof args[args.length-1] : null;
+	var argType = args.length > 0 ? typeof args[args.length - 1] : null;
 	if (argType == "function") cb = args.pop();
 	else cb = null;
 	var pcb = promet(this, cb);
@@ -1075,7 +1075,7 @@ WebKit.prototype.run = function(script, cb) {
 
 WebKit.prototype.runev = function(script, cb) {
 	var args = Array.from(arguments).slice(1);
-	var argType = args.length > 0 ? typeof args[args.length-1] : null;
+	var argType = args.length > 0 ? typeof args[args.length - 1] : null;
 	if (argType == "function") cb = args.pop();
 	else cb = null;
 	var pcb = promet(this, cb);
@@ -1244,7 +1244,11 @@ function prepareRun(script, ticket, args, priv) {
 			}
 			var ww = window && window.webkit;
 			ww = ww && ww.messageHandlers && ww.messageHandlers.events;
-			if (ww && ww.postMessage) try { ww.postMessage(msg); } catch(ex) {}
+			if (ww && ww.postMessage) try {
+				ww.postMessage(msg);
+			} catch(ex) {
+				/* pass */
+			}
 		}.toString()
 		.replace('TICKET', JSON.stringify(ticket))
 		.replace('STAMP', JSON.stringify(priv.stamp));
