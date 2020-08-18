@@ -394,8 +394,9 @@ function requestDispatcher(req) {
 	var info = priv.uris[uri];
 
 	var from = req.from;
+	var rinfo;
 	if (from != null) {
-		var rinfo = priv.uris[from];
+		rinfo = priv.uris[from];
 		if (rinfo) {
 			info = priv.uris[uri] = priv.uris[from];
 		}
@@ -419,9 +420,9 @@ function requestDispatcher(req) {
 	} else if (!info.count && info.mtime != Infinity) {
 		info.mtime = Date.now();
 	}
-	info.count++;
+	if (!rinfo)	info.count++;
 
-	if (!info.ignore && info.remote && this.readyState != "idle") {
+	if (!info.ignore && info.remote && this.readyState != "idle" && !rinfo) {
 		priv.pendingRequests++;
 		debug("counted as pending", priv.pendingRequests, uri, info);
 	}
