@@ -33,6 +33,7 @@
     "request": "^2.88.0"
   },
   "devDependencies": {
+    "@kapouer/eslint-config": "^1.0.0",
     "engine.io": "^1.4.2",
     "engine.io-client": "^1.4.2",
     "expect.js": "^0.3.1",
@@ -56,5 +57,18 @@
   },
   "repository": "git@github.com:kapouer/node-webkitgtk.git",
   "author": "Jérémy Lal <kapouer@melix.org>",
-  "license": "MIT"
+  "license": "MIT",
+  "eslintConfig": {
+    "extends": "@kapouer/eslint-config",
+    "overrides": [
+      {
+        "files": [
+          "test/*.js"
+        ],
+        "env": {
+          "mocha": true
+        }
+      }
+    ]
+  }
 }
