@@ -77,9 +77,9 @@ WebKit.prototype.init = function(opts, cb) {
 	var pcb = promet(this, cb);
 
 	if (opts.verbose) {
-		debugStall = console.warn;
-		debugWarn = console.warn;
-		debugError = console.error;
+		debugStall = console.warn; // eslint-disable-line
+		debugWarn = console.warn; // eslint-disable-line
+		debugError = console.error; // eslint-disable-line
 	} else {
 		debugStall = require('debug')('webkitgtk:timeout');
 		debugWarn = require('debug')('webkitgtk:warn');
@@ -440,6 +440,7 @@ function responseDispatcher(curstamp, binding) {
 		// came from webextension, this uri is cancelled
 		uri = res._uri = uri.substring(1);
 		if (status != 0) {
+			// eslint-disable-next-line
 			console.error("Cancelled response but non-zero status", uri, status);
 		}
 	}
@@ -461,6 +462,7 @@ function responseDispatcher(curstamp, binding) {
 		} else if (uri != mainUri) {
 			if (uri.slice(0, 5) != "data:") {
 				// ignore data-uri for that warning
+				// eslint-disable-next-line
 				console.warn(this.uri, "had an untracked response", uri, status);
 			}
 			return;
@@ -490,7 +492,10 @@ function responseDispatcher(curstamp, binding) {
 	if (decrease != 0) {
 		priv.pendingRequests += decrease;
 		debug('counted as ending pending', priv.pendingRequests, uri, info);
-		if (priv.pendingRequests < 0) console.warn("counting more responses than requests with", uri, this.uri);
+		if (priv.pendingRequests < 0) {
+			// eslint-disable-next-line
+			console.warn("counting more responses than requests with", uri, this.uri);
+		}
 	}
 	if (!stalled && status > 0) this.emit('response', res);
 	checkIdle.call(this);
@@ -507,6 +512,7 @@ function isNetworkProtocol(uri) {
 }
 
 function noop(err) {
+	// eslint-disable-next-line
 	if (err) console.error(err);
 }
 
@@ -560,7 +566,7 @@ function errorLoad(state) {
 		msg = "cannot call method during loading";
 	}
 	var error = new Error(msg);
-	console.trace(error);
+	console.trace(error); // eslint-disable-line
 	return error;
 }
 
@@ -614,6 +620,7 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 		for (var key in deprecations) {
 			if (opts[key] == null) continue;
 			var newkey = deprecations[key];
+			// eslint-disable-next-line
 			console.warn(key, "option is deprecated, please use", newkey);
 			opts[newkey] = opts[key];
 		}
@@ -662,6 +669,7 @@ function initPromise(ev) {
 		}).then(function() {
 			if (stamp == this.priv.stamp) {
 				done.call(this, ev, function(err) {
+					// eslint-disable-next-line
 					if (err) console.error(err);
 				});
 			} else {
@@ -771,6 +779,7 @@ function load(uri, opts, cb) {
 				});
 				// var err = args.length > 0 && args[0];
 				if (level == "trace") level = "error";
+				// eslint-disable-next-line
 				console[level].apply(null, args);
 			}
 		});
@@ -814,6 +823,7 @@ function load(uri, opts, cb) {
 	if (Array.isArray(opts.scripts)) {
 		scripts = scripts.concat(opts.scripts);
 	} else if (opts.scripts) {
+		// eslint-disable-next-line
 		console.warn("scripts option should be an array");
 	}
 
@@ -872,6 +882,7 @@ function prepareFilters(cstamp, filters) {
 					try {
 						func.apply(msg, filter.slice(1));
 					} catch(ex) {
+						// eslint-disable-next-line
 						console.error("An error happened while filtering url with", func, ex);
 					}
 				});
@@ -942,6 +953,7 @@ WebKit.prototype.reset = function(cb) {
 		p = p.then(function() {
 			return this.stop();
 		}.bind(this)).catch(function(err) {
+			// eslint-disable-next-line
 			console.error(err);
 		});
 	}
@@ -989,6 +1001,7 @@ WebKit.prototype.unload = function(cb) {
 		p = p.then(function() {
 			return this.stop();
 		}.bind(this)).catch(function(err) {
+			// eslint-disable-next-line
 			console.error(err);
 		});
 	}
@@ -999,6 +1012,7 @@ WebKit.prototype.unload = function(cb) {
 			content:'<html></html>'
 		});
 	}.bind(this)).catch(function(err) {
+		// eslint-disable-next-line
 		console.error(err);
 	}).then(function() {
 		debug('unload done');
@@ -1112,6 +1126,7 @@ function run(script, ticket, args, cb) {
 			var cb = cbObj.cb;
 			if (!cb) {
 				// this should never happen
+				// eslint-disable-next-line
 				console.error('FIXME - timeout after the script has already been run');
 			}
 			delete cbObj.cb;
