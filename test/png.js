@@ -1,16 +1,16 @@
-var WebKit = require('../');
-var expect = require('expect.js');
-var fs = require('fs');
+const WebKit = require('../');
+const expect = require('expect.js');
+const fs = require('fs');
 
-describe("png method", function suite() {
+describe("png method", () => {
 	it("should wait for load event and save a screenshot to disk", function(done) {
 		this.timeout(10000);
-		var filepath = __dirname + '/shots/test.png';
-		WebKit(function(err, w) {
+		const filepath = __dirname + '/shots/test.png';
+		WebKit((err, w) => {
 			w.load("https://www.debian.org/").once('load', function() {
-				this.png(filepath, function(err) {
+				this.png(filepath, (err) => {
 					expect(err).to.not.be.ok();
-					fs.stat(filepath, function(err, stat) {
+					fs.stat(filepath, (err, stat) => {
 						expect(stat.size).to.be.above(50000);
 						done();
 					});
@@ -21,20 +21,20 @@ describe("png method", function suite() {
 
 	it("should save a screenshot to disk", function(done) {
 		this.timeout(10000);
-		var filepath = __dirname + '/shots/test2.png';
-		WebKit(function(err, w) {
+		const filepath = __dirname + '/shots/test2.png';
+		WebKit((err, w) => {
 			w.load("https://www.debian.org/", {
 				width: 512,
 				height: 512,
 				style: fs.readFileSync(__dirname + "/../css/png.css")
-			}, function(err) {
+			}, (err) => {
 				expect(err).to.not.be.ok();
-			}).on("request", function(req) {
+			}).on("request", (req) => {
 				if (/\.js$/.test(req.uri)) req.uri = null;
 			}).once("load", function() {
-				this.png(filepath, function(err) {
+				this.png(filepath, (err) => {
 					expect(err).to.not.be.ok();
-					fs.stat(filepath, function(err, stat) {
+					fs.stat(filepath, (err, stat) => {
 						expect(stat.size).to.be.above(30000);
 						done();
 					});
@@ -43,20 +43,20 @@ describe("png method", function suite() {
 		});
 	});
 
-	it("should not crash when calling png right now and twice in a row", function(done) {
-		var w = new WebKit();
-		w.init(function() {
-			w.load('https://www.debian.org').once('load', function() {
-				var count = 0;
+	it("should not crash when calling png right now and twice in a row", (done) => {
+		const w = new WebKit();
+		w.init(() => {
+			w.load('https://www.debian.org').once('load', () => {
+				let count = 0;
 				// this won't even generate a png since no surface is yet acquired
-				w.png(__dirname + '/shots/testr1.png', function(err) {
+				w.png(__dirname + '/shots/testr1.png', (err) => {
 					expect(err).to.not.be.ok();
 					expect(count).to.be(1);
 					done();
 				});
-				var ex;
+				let ex;
 				try {
-					w.png(__dirname + '/shots/testr2.png', function(err) {
+					w.png(__dirname + '/shots/testr2.png', (err) => {
 						expect(true).to.be(false);
 					});
 				} catch(e) {
@@ -68,14 +68,14 @@ describe("png method", function suite() {
 		});
 	});
 
-	it("should error out when called before document and is loaded", function(done) {
-		var w = new WebKit();
-		w.init(function() {
+	it("should error out when called before document and is loaded", (done) => {
+		const w = new WebKit();
+		w.init(() => {
 			w.load('https://www.debian.org');
 			// this may won't even generate a png since no surface is yet acquired
-			var pngFile = __dirname + '/shots/testr1err.png';
-			w.png(pngFile, function(err) {
-				require('fs').access(pngFile, function(errStat) {
+			const pngFile = __dirname + '/shots/testr1err.png';
+			w.png(pngFile, (err) => {
+				require('fs').access(pngFile, (errStat) => {
 					if (errStat) {
 						// no file so an error happened
 						expect(err).to.be.ok();

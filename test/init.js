@@ -1,24 +1,21 @@
-var WebKit = require('../');
-var expect = require('expect.js');
-var fs = require('fs');
-var Path = require('path');
-var glob = require('glob');
-var rimraf = require('rimraf');
+const WebKit = require('../');
+const expect = require('expect.js');
+const fs = require('fs');
+const Path = require('path');
+const rimraf = require('rimraf');
 
 // this test doesn't really work
 
-describe("init method", function suite() {
-	before(function(done) {
+describe("init method", () => {
+	before((done) => {
 		rimraf(Path.join(__dirname, '..', 'cache/test?'), done);
 	});
 	it("should initialize cacheDir with call to init", function(done) {
 		this.timeout(10000);
-		var called = false;
-		WebKit({cacheDir: "cache/test1"}, function(err, w) {
+		WebKit({cacheDir: "cache/test1"}, (err, w) => {
 			expect(err).to.not.be.ok();
-			called = true;
-			w.load('http://google.com', function(err) {
-				fs.exists("./cache/test1", function(yes) {
+			w.load('http://google.com', (err) => {
+				fs.exists("./cache/test1", (yes) => {
 					expect(yes).to.be.ok();
 					done();
 				});
@@ -27,10 +24,8 @@ describe("init method", function suite() {
 	});
 	it("should clear cache", function(done) {
 		this.timeout(15000);
-		var called = false;
-		var port;
-		var count = 0;
-		var server = require('http').createServer(function(req, res) {
+		let count = 0;
+		const server = require('http').createServer((req, res) => {
 			if (req.url == '/index.html') {
 				res.statusCode = 200;
 				res.setHeader('Content-Type', 'text/html');
@@ -49,27 +44,27 @@ describe("init method", function suite() {
 				res.statusCode = 404;
 				res.end("Not Found");
 			}
-		}).listen(function() {
-			var url = `http://localhost:${server.address().port}/index.html`;
-			var w;
-			WebKit({cacheDir: "cache/test2"}).then(function(inst) {
+		}).listen(() => {
+			const url = `http://localhost:${server.address().port}/index.html`;
+			let w;
+			WebKit({cacheDir: "cache/test2"}).then((inst) => {
 				w = inst;
 				return w.load(url).when('idle');
-			}).then(function() {
+			}).then(() => {
 				return w.load(url).when('idle');
-			}).then(function() {
+			}).then(() => {
 				expect(count).to.be(1);
 				w.clearCache();
-				return new Promise(function(resolve) {
+				return new Promise((resolve) => {
 					setTimeout(resolve, 100);
 				});
-			}).then(function() {
+			}).then(() => {
 				return w.load(url).when('idle');
-			}).then(function() {
+			}).then(() => {
 				expect(count).to.be(2);
 				done();
-			}).catch(function(err) {
-				setImmediate(function() {
+			}).catch((err) => {
+				setImmediate(() => {
 					throw err;
 				});
 			});

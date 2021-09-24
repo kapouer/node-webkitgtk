@@ -1,20 +1,20 @@
-var WebKit = require('../');
-var expect = require('expect.js');
-var fs = require('fs');
+const WebKit = require('../');
+const expect = require('expect.js');
 
-describe("error reporting", function suite() {
+describe("error reporting", () => {
 	it("should catch async script errors", function(done) {
 		this.timeout(1000);
-		var w = WebKit.load("http://localhost", {content: '<html></html>'}, function(err) {
-			w.run(function(done) {
-				setTimeout(function() {
-					var r = 2 + h;
+		const w = WebKit.load("http://localhost", {content: '<html></html>'}, (err) => {
+			w.run((done) => {
+				setTimeout(() => {
+					// eslint-disable-next-line no-undef, no-unused-vars
+					const r = 2 + h;
 					done(); // won't actually be called
 				}, 100);
-			}, function(err) {
+			}, (err) => {
 				expect(err).to.be.ok(); // timeout
 			});
-			w.on('error', function(msg, uri, line, col, err) {
+			w.on('error', (msg, uri, line, col, err) => {
 				expect(msg).to.be('ReferenceError: Can\'t find variable: h');
 				done();
 			});
@@ -22,10 +22,10 @@ describe("error reporting", function suite() {
 	});
 	it("should catch sync script errors", function(done) {
 		this.timeout(1000);
-		var w = WebKit.load("http://localhost", {content: '<html></html>'}, function(err) {
-			w.run(function() {
+		const w = WebKit.load("http://localhost", {content: '<html></html>'}, (err) => {
+			w.run(() => {
 				document.createWhatever("tata");
-			}, function(err) {
+			}, (err) => {
 				expect(err && err.stack).to.be.ok();
 				done();
 			});
@@ -33,20 +33,21 @@ describe("error reporting", function suite() {
 	});
 	it("should log uncaught Error instances with actual exception stack", function(done) {
 		this.timeout(1000);
-		WebKit(function(err, w) {
-			w.load("http://localhost", {content: '<html></html>'}, function(err) {
-				w.run(function(done) {
-					setTimeout(function myfunc() {
-						var err = new SyntaxError("i am here");
+		WebKit((err, w) => {
+			w.load("http://localhost", {content: '<html></html>'}, (err) => {
+				w.run((done) => {
+					setTimeout(() => {
+						const err = new SyntaxError("i am here");
 						err.code = 404;
 						throw err;
+						// eslint-disable-next-line no-unreachable
 						done(); // won't actually be called
 					}, 100);
-				}, function(err) {
+				}, (err) => {
 					expect(err).to.be.ok(); // timeout
 				});
 			});
-			w.on('error', function(msg, uri, line, col, err) {
+			w.on('error', (msg, uri, line, col, err) => {
 				expect(err).to.be.ok();
 				expect(err.message).to.be("i am here");
 				expect(err.code).to.be(404);

@@ -1,43 +1,42 @@
-var WebKit = require('../');
-var expect = require('expect.js');
-var fs = require('fs');
+const WebKit = require('../');
+const expect = require('expect.js');
 
-describe("run method", function suite() {
+describe("run method", () => {
 	it("should emit two 'test' events with arguments", function(done) {
 		this.timeout(1000);
-		var countCalls = 1;
-		WebKit.load("", function(err, w) {
-			w.runev(function(emit) {
-				var count = 0;
+		let countCalls = 1;
+		WebKit.load("", (err, w) => {
+			w.runev((emit) => {
+				let count = 0;
 				(function twice() {
 					if (count > 0) emit('testev', count, "hello");
 					if (++count == 3) return;
 					setTimeout(twice, 100);
 				})();
 			})
-			.on('testev', function(count, hello) {
-				expect(hello).to.be("hello");
-				expect(countCalls++).to.be(count);
-				if (count == 2) done();
-			});
+				.on('testev', (count, hello) => {
+					expect(hello).to.be("hello");
+					expect(countCalls++).to.be(count);
+					if (count == 2) done();
+				});
 		});
 	});
-	it("should pass fail when missing custom arguments mismatch script signature", function(done) {
-		WebKit.load("http://localhost", {content:'<html></html>'}, function(err, w) {
-			w.run(function(nonstringifyable, cb) {
+	it("should pass fail when missing custom arguments mismatch script signature", (done) => {
+		WebKit.load("http://localhost", {content:'<html></html>'}, (err, w) => {
+			w.run((nonstringifyable, cb) => {
 				// here the first argument is in fact cb, en cb is empty because nonstringifyable is missing
 				cb(null, nonstringifyable); // won't actually be called
-			}, function(err, results) {
+			}, (err, results) => {
 				expect(err).to.be.ok();
 				done();
 			});
 		});
 	});
-	it("should throw error when passing non-stringifyable custom argument", function(done) {
-		WebKit.load("http://localhost", {content:'<html></html>'}, function(err, w) {
-			w.run(function(obj, arr, str, done) {
+	it("should throw error when passing non-stringifyable custom argument", (done) => {
+		WebKit.load("http://localhost", {content:'<html></html>'}, (err, w) => {
+			w.run((obj, arr, str, done) => {
 				done(null, obj.a, arr[1], str);
-			}, {a:1}, ["a", 4], "testé\n", function(err, a1, b4, ctest) {
+			}, {a:1}, ["a", 4], "testé\n", (err, a1, b4, ctest) => {
 				expect(err).to.not.be.ok();
 				expect(a1).to.be(1);
 				expect(b4).to.be(4);
@@ -46,35 +45,35 @@ describe("run method", function suite() {
 			});
 		});
 	});
-	it("should just work with script and script callback", function(done) {
-		WebKit.load("http://localhost", {content:'<html></html>'}, function(err, w) {
-			w.run(function(done) {
+	it("should just work with script and script callback", (done) => {
+		WebKit.load("http://localhost", {content:'<html></html>'}, (err, w) => {
+			w.run((done) => {
 				done(null, "stuff");
-			}, function(err, stuff) {
+			}, (err, stuff) => {
 				expect(err).to.not.be.ok();
 				expect(stuff).to.be("stuff");
 				done();
 			});
 		});
 	});
-	it("should run sync", function(done) {
-		WebKit.load("http://localhost", {content:'<html></html>'}, function(err, w) {
-			w.run("document.body.outerHTML", function(err, html, cb) {
+	it("should run sync", (done) => {
+		WebKit.load("http://localhost", {content:'<html></html>'}, (err, w) => {
+			w.run("document.body.outerHTML", (err, html, cb) => {
 				expect(err).to.not.be.ok();
 				expect(html).to.be("<body></body>");
 				done();
 			});
 		});
 	});
-	it("should run sync with params and callback", function(done) {
-		var doc = '<html><head></head><body>tato</body></html>';
+	it("should run sync with params and callback", (done) => {
+		const doc = '<html><head></head><body>tato</body></html>';
 		WebKit.load("http://localhost", {content: doc.replace('tato', '')}).once('ready', function() {
-			var w = this;
-			w.run(function(one, two) {
+			const w = this;
+			w.run((one, two) => {
 				document.body.appendChild(document.createTextNode(one + two));
-			}, 'ta', 'to', function(err) {
+			}, 'ta', 'to', (err) => {
 				expect(err).to.not.be.ok();
-				w.html(function(err, str) {
+				w.html((err, str) => {
 					expect(str).to.be(doc);
 					done();
 				});
@@ -83,15 +82,15 @@ describe("run method", function suite() {
 	});
 	it("should run long job between load and idle", function(done) {
 		this.timeout(3000);
-		var doc = '<html><head><script type="text/javascript" src="test.js"></script></head><body></body></html>';
-		var state = 0;
-		var server = require('http').createServer(function(req, res) {
+		const doc = '<html><head><script type="text/javascript" src="test.js"></script></head><body></body></html>';
+		let state = 0;
+		const server = require('http').createServer((req, res) => {
 			if (req.url == "/") {
 				res.statusCode = 200;
 				res.end(doc);
 			} else if (req.url == "/test.js" || req.url == "/test2.js") {
 				res.statusCode = 200;
-				setTimeout(function() {
+				setTimeout(() => {
 					res.setHeader('Content-Type', "application/javascript");
 					res.write('document.documentElement.setAttribute("test", "toto");');
 					res.end();
@@ -100,11 +99,11 @@ describe("run method", function suite() {
 				res.statusCode = 404;
 				res.end();
 			}
-		}).listen(function() {
-			WebKit(function(err, w) {
-				w.preload("http://localhost:" + server.address().port, {console: true}, function(err) {
-					w.when('ready', function(cb) {
-						w.run(function(bool, done) {
+		}).listen(() => {
+			WebKit((err, w) => {
+				w.preload("http://localhost:" + server.address().port, {console: true}, (err) => {
+					w.when('ready', (cb) => {
+						w.run((bool, done) => {
 							try {
 								document.documentElement.className = "toto";
 								document.querySelector('script').src = 'test2.js';
@@ -113,9 +112,9 @@ describe("run method", function suite() {
 								return;
 							}
 							done(null, "param");
-						}, false, function(err, parm) {
+						}, false, (err, parm) => {
 							expect(err).to.not.be.ok();
-							setTimeout(function() {
+							setTimeout(() => {
 								state = 1;
 								cb();
 							}, 1000);
@@ -125,20 +124,20 @@ describe("run method", function suite() {
 			}).once('idle', function() {
 				expect(state).to.be(1);
 				state = 2;
-				this.html(function(err, str) {
-					expect(str).to.be('<html class="toto"><head><script type="text/javascript" src="test2.js"></script></head><body></body></html>')
+				this.html((err, str) => {
+					expect(str).to.be('<html class="toto"><head><script type="text/javascript" src="test2.js"></script></head><body></body></html>');
 					done();
 				});
 			});
 		});
 	});
-	it("should run async and time out", function(done) {
+	it("should run async and time out", (done) => {
 		WebKit.load("http://localhost", {runTimeout: 500, content: "<html></html>"}).once('ready', function() {
-			this.run(function(done) {
-				setTimeout(function() {
+			this.run((done) => {
+				setTimeout(() => {
 					done();
 				}, 700);
-			}, function(err) {
+			}, (err) => {
 				expect(err).to.be.ok();
 				expect(err instanceof Error).to.be(true);
 				done();
@@ -146,24 +145,24 @@ describe("run method", function suite() {
 		});
 	});
 
-	it("should run simple script", function(done) {
+	it("should run simple script", (done) => {
 		WebKit.load("http://localhost", {script: "(function() {window.test = true;})()", content: "<html></html>"}).once('ready', function() {
-			this.run(function() {
+			this.run(() => {
 				return window.test;
-			}, function(err, val) {
+			}, (err, val) => {
 				expect(val).to.be.ok();
 				done();
 			});
 		});
 	});
 
-	it("should run and return promise", function(done) {
+	it("should run and return promise", (done) => {
 		WebKit.load("http://localhost", {script: "(function() {window.test = true;})()", content: "<html></html>"}).once('ready', function() {
-			this.run(function() {
+			this.run(() => {
 				return window.test;
-			}).catch(function(err) {
+			}).catch((err) => {
 				expect(err).to.be.not.ok();
-			}).then(function(val) {
+			}).then((val) => {
 				expect(val).to.be.ok();
 				done();
 			});

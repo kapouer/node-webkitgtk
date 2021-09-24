@@ -1,27 +1,26 @@
-var WebKit = require('../');
-var expect = require('expect.js');
-var fs = require('fs');
+const WebKit = require('../');
+const expect = require('expect.js');
 
 // TODO
 // navigation screws page lifecycle events
 //
 
-describe("navigation", function suite() {
-	it("should emit navigate event when navigation is true and allow redirection", function(done) {
-		var counter = 0;
-		var navcount = 0;
-		var server = require('http').createServer(function(req, res) {
+describe("navigation", () => {
+	it("should emit navigate event when navigation is true and allow redirection", (done) => {
+		let counter = 0;
+		let navcount = 0;
+		const server = require('http').createServer((req, res) => {
 			res.statusCode = 200;
 			res.end("ok" + counter++);
-		}).listen(function() {
+		}).listen(() => {
 			WebKit.load("http://localhost:" + server.address().port, {
 				navigation: true
-			}, function(err, w) {
-				w.run(function(done) {
+			}, (err, w) => {
+				w.run((done) => {
 					document.location = '/anotherpage';
 					done();
-				}, function() {
-					setTimeout(function() {
+				}, () => {
+					setTimeout(() => {
 						server.close();
 						expect(counter).to.be(2);
 						expect(navcount).to.be(1);
@@ -34,10 +33,10 @@ describe("navigation", function suite() {
 			});
 		});
 	});
-	it("should emit navigate event when navigation is false and disallow redirection", function(done) {
-		var counter = 0;
-		var navcount = 0;
-		var server = require('http').createServer(function(req, res) {
+	it("should emit navigate event when navigation is false and disallow redirection", (done) => {
+		let counter = 0;
+		let navcount = 0;
+		const server = require('http').createServer((req, res) => {
 			res.statusCode = 200;
 			if (req.url == "/") {
 				counter++;
@@ -53,17 +52,17 @@ describe("navigation", function suite() {
 				counter++;
 				res.end("ok" + counter++);
 			} else if (req.url == "/delay.js") {
-				setTimeout(function() {
+				setTimeout(() => {
 					res.end("console.log('delayed');");
 				}, 500);
 			}
-		}).listen(function() {
+		}).listen(() => {
 			WebKit.load("http://localhost:" + server.address().port, {
 				navigation: false
 			}).on('navigate', function(url) {
 				navcount++;
 				expect(url).to.be(this.uri + 'anotherpage');
-			}).when('idle', function(cb) {
+			}).when('idle', (cb) => {
 				expect(counter).to.be(1);
 				expect(navcount).to.be(1);
 				cb();

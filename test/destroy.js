@@ -1,13 +1,12 @@
-var WebKit = require('../');
-var expect = require('expect.js');
-var fs = require('fs');
+const WebKit = require('../');
+const expect = require('expect.js');
 
-describe("destroy method", function suite() {
-	it("should be idempotent", function(done) {
-		var view = new WebKit();
-		view.init(function(err) {
+describe("destroy method", () => {
+	it("should be idempotent", (done) => {
+		const view = new WebKit();
+		view.init((err) => {
 			expect(err).to.not.be.ok();
-			view.destroy(function(err) {
+			view.destroy((err) => {
 				expect(err).to.not.be.ok();
 				view.destroy(done);
 			});

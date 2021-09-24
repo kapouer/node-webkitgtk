@@ -1,16 +1,15 @@
-var WebKit = require('../');
-var expect = require('expect.js');
-var fs = require('fs');
+const WebKit = require('../');
+const expect = require('expect.js');
 
-describe("idle event", function suite() {
-	it("should chain lots of promises on client while doing xhr and idle after end of promises", function(done) {
-		var hasXHR = false;
-		var server = require('http').createServer(function(req, res) {
+describe("idle event", () => {
+	it("should chain lots of promises on client while doing xhr and idle after end of promises", (done) => {
+		let hasXHR = false;
+		const server = require('http').createServer((req, res) => {
 			if (req.url == "/xhr") {
 				res.statusCode = 200;
 				hasXHR = true;
 				res.setHeader('Content-Type', 'application/json');
-				setTimeout(function() {
+				setTimeout(() => {
 					res.end(JSON.stringify({
 						test: 'xhr'
 					}));
@@ -19,7 +18,7 @@ describe("idle event", function suite() {
 				res.statusCode = 404;
 				res.end("Not Found");
 			}
-		}).listen(function() {
+		}).listen(() => {
 			WebKit.load("http://localhost:" + server.address().port, {
 				console: true,
 				content: `<!DOCTYPE html>
@@ -43,27 +42,27 @@ describe("idle event", function suite() {
 				</script></head><body>
 					<div id="xhr"></div>
 				</body></html>`
-			}, function(err) {
+			}, (err) => {
 				expect(err).to.be(null);
 			})
-			.once('idle', function() {
-				expect(hasXHR).to.be.ok();
-				this.html().then(function(str) {
-					expect(str.indexOf('<div id="xhr">xhr100</div>')).to.be.greaterThan(0);
-				}).then(done).catch(done);
-			});
+				.once('idle', function() {
+					expect(hasXHR).to.be.ok();
+					this.html().then((str) => {
+						expect(str.indexOf('<div id="xhr">xhr100</div>')).to.be.greaterThan(0);
+					}).then(done).catch(done);
+				});
 		});
 	});
 	it("should wait xhr requests called in chain, even with a zero timeout delay", function(done) {
 		this.timeout(5000);
-		var hasXHR1 = false;
-		var hasXHR2 = false;
-		var server = require('http').createServer(function(req, res) {
+		let hasXHR1 = false;
+		let hasXHR2 = false;
+		const server = require('http').createServer((req, res) => {
 			if (req.url == "/xhr1") {
 				res.statusCode = 200;
 				hasXHR1 = true;
 				res.setHeader('Content-Type', 'application/json');
-				setTimeout(function() {
+				setTimeout(() => {
 					res.end(JSON.stringify({
 						test: 'xhr1'
 					}));
@@ -72,7 +71,7 @@ describe("idle event", function suite() {
 				res.statusCode = 200;
 				hasXHR2 = true;
 				res.setHeader('Content-Type', 'application/json');
-				setTimeout(function() {
+				setTimeout(() => {
 					res.end(JSON.stringify({
 						test: 'xhr2'
 					}));
@@ -81,7 +80,7 @@ describe("idle event", function suite() {
 				res.statusCode = 404;
 				res.end("Not Found");
 			}
-		}).listen(function() {
+		}).listen(() => {
 			WebKit.load("http://localhost:" + server.address().port, {
 				console: true,
 				content: `<!DOCTYPE html>
@@ -109,37 +108,37 @@ describe("idle event", function suite() {
 					<div id="xhr1"></div>
 					<div id="xhr2"></div>
 				</body></html>`
-			}, function(err) {
+			}, (err) => {
 				expect(err).to.be(null);
 			})
-			.once('idle', function() {
-				this.run(function(done) {
-					done(null,
-						document.querySelector('#xhr1').innerHTML,
-						document.querySelector('#xhr2').innerHTML
-					);
-				}, function(err, xhr1, xhr2) {
-					expect(xhr1).to.be('xhr1');
-					expect(xhr2).to.be('xhr2');
-					server.close();
-					done();
+				.once('idle', function() {
+					this.run((done) => {
+						done(null,
+							document.querySelector('#xhr1').innerHTML,
+							document.querySelector('#xhr2').innerHTML
+						);
+					}, (err, xhr1, xhr2) => {
+						expect(xhr1).to.be('xhr1');
+						expect(xhr2).to.be('xhr2');
+						server.close();
+						done();
+					});
+					expect(hasXHR1).to.be.ok();
+					expect(hasXHR2).to.be.ok();
 				});
-				expect(hasXHR1).to.be.ok();
-				expect(hasXHR2).to.be.ok();
-			});
 		});
 	});
 
 	it("should wait xhr requests called in chain, even with promises", function(done) {
 		this.timeout(5000);
-		var hasXHR1 = false;
-		var hasXHR2 = false;
-		var server = require('http').createServer(function(req, res) {
+		let hasXHR1 = false;
+		let hasXHR2 = false;
+		const server = require('http').createServer((req, res) => {
 			if (req.url == "/xhr1") {
 				res.statusCode = 200;
 				hasXHR1 = true;
 				res.setHeader('Content-Type', 'application/json');
-				setTimeout(function() {
+				setTimeout(() => {
 					res.end(JSON.stringify({
 						test: 'xhr1'
 					}));
@@ -148,7 +147,7 @@ describe("idle event", function suite() {
 				res.statusCode = 200;
 				hasXHR2 = true;
 				res.setHeader('Content-Type', 'application/json');
-				setTimeout(function() {
+				setTimeout(() => {
 					res.end(JSON.stringify({
 						test: 'xhr2'
 					}));
@@ -157,7 +156,7 @@ describe("idle event", function suite() {
 				res.statusCode = 404;
 				res.end("Not Found");
 			}
-		}).listen(function() {
+		}).listen(() => {
 			WebKit.load("http://localhost:" + server.address().port, {
 				console: true,
 				content: `<!DOCTYPE html>
@@ -193,53 +192,53 @@ describe("idle event", function suite() {
 					<div id="xhr2"></div>
 					<div id="end"></div>
 				</body></html>`
-			}, function(err) {
+			}, (err) => {
 				expect(err).to.be(null);
 			})
-			.once('idle', function() {
-				this.run(function(done) {
-					done(null,
-						document.querySelector('#xhr1').innerHTML,
-						document.querySelector('#xhr2').innerHTML,
-						document.querySelector('#end').innerHTML
-					);
-				}, function(err, xhr1, xhr2, end) {
-					expect(xhr1).to.be('xhr1');
-					expect(xhr2).to.be('xhr2');
-					expect(end).to.be('end');
-					server.close();
-					done();
+				.once('idle', function() {
+					this.run((done) => {
+						done(null,
+							document.querySelector('#xhr1').innerHTML,
+							document.querySelector('#xhr2').innerHTML,
+							document.querySelector('#end').innerHTML
+						);
+					}, (err, xhr1, xhr2, end) => {
+						expect(xhr1).to.be('xhr1');
+						expect(xhr2).to.be('xhr2');
+						expect(end).to.be('end');
+						server.close();
+						done();
+					});
+					expect(hasXHR1).to.be.ok();
+					expect(hasXHR2).to.be.ok();
 				});
-				expect(hasXHR1).to.be.ok();
-				expect(hasXHR2).to.be.ok();
-			});
 		});
 	});
 
 	it("should wait script node to load then some other script node", function(done) {
 		this.timeout(5000);
-		var hasJS1 = false;
-		var hasJS2 = false;
-		var server = require('http').createServer(function(req, res) {
+		let hasJS1 = false;
+		let hasJS2 = false;
+		const server = require('http').createServer((req, res) => {
 			if (req.url == "/one.js") {
 				res.statusCode = 200;
 				hasJS1 = true;
 				res.setHeader('Content-Type', 'text/javascript');
-				setTimeout(function() {
+				setTimeout(() => {
 					res.end("window.hasJS1 = true;");
 				}, 300);
 			} else if (req.url == "/two.js") {
 				res.statusCode = 200;
 				hasJS2 = true;
 				res.setHeader('Content-Type', 'text/javascript');
-				setTimeout(function() {
+				setTimeout(() => {
 					res.end("window.hasJS2 = true;");
 				}, 300);
 			} else {
 				res.statusCode = 404;
 				res.end("Not Found");
 			}
-		}).listen(function() {
+		}).listen(() => {
 			WebKit.load("http://localhost:" + server.address().port, {
 				console: true,
 				content: `<!DOCTYPE html>
@@ -270,34 +269,34 @@ describe("idle event", function suite() {
 				};
 				</script></head><body>
 				</body></html>`
-			}, function(err) {
+			}, (err) => {
 				expect(err).to.be(null);
 			})
-			.once('idle', function() {
-				this.run(function(done) {
-					done(null, document.body.innerHTML);
-				}, function(err, inner) {
-					expect(inner).to.be('Success ? true,true');
-					server.close();
-					done();
+				.once('idle', function() {
+					this.run((done) => {
+						done(null, document.body.innerHTML);
+					}, (err, inner) => {
+						expect(inner).to.be('Success ? true,true');
+						server.close();
+						done();
+					});
+					expect(hasJS1).to.be.ok();
+					expect(hasJS2).to.be.ok();
 				});
-				expect(hasJS1).to.be.ok();
-				expect(hasJS2).to.be.ok();
-			});
 		});
 	});
 
 	it("should wait fetch requests called in chain, even with a zero timeout delay", function(done) {
 		this.timeout(6000);
-		var hasXHR1 = false;
-		var hasXHR2 = false;
-		var hasXHR3 = false;
-		var server = require('http').createServer(function(req, res) {
+		let hasXHR1 = false;
+		let hasXHR2 = false;
+		let hasXHR3 = false;
+		const server = require('http').createServer((req, res) => {
 			if (req.url == "/xhr1") {
 				res.statusCode = 200;
 				hasXHR1 = true;
 				res.setHeader('Content-Type', 'application/json');
-				setTimeout(function() {
+				setTimeout(() => {
 					res.end(JSON.stringify({
 						test: 'xhr1'
 					}));
@@ -306,7 +305,7 @@ describe("idle event", function suite() {
 				res.statusCode = 200;
 				hasXHR2 = true;
 				res.setHeader('Content-Type', 'application/json');
-				setTimeout(function() {
+				setTimeout(() => {
 					res.end(JSON.stringify({
 						test: 'xhr2'
 					}));
@@ -315,7 +314,7 @@ describe("idle event", function suite() {
 				res.statusCode = 500;
 				hasXHR3 = true;
 				res.setHeader('Content-Type', 'application/json');
-				setTimeout(function() {
+				setTimeout(() => {
 					res.end(JSON.stringify({
 						test: 'xhr3'
 					}));
@@ -324,7 +323,7 @@ describe("idle event", function suite() {
 				res.statusCode = 404;
 				res.end("Not Found");
 			}
-		}).listen(function() {
+		}).listen(() => {
 			WebKit.load("http://localhost:" + server.address().port, {
 				console: true,
 				content: `<!DOCTYPE html>
@@ -352,39 +351,39 @@ describe("idle event", function suite() {
 					<div id="xhr2"></div>
 					<div id="xhr3"></div>
 				</body></html>`
-			}, function(err) {
+			}, (err) => {
 				expect(err).to.be(null);
 			})
-			.once('idle', function() {
-				this.run(function(done) {
-					done(null,
-						document.querySelector('#xhr1').innerHTML,
-						document.querySelector('#xhr2').innerHTML,
-						document.querySelector('#xhr3').innerHTML
-					);
-				}, function(err, xhr1, xhr2, xhr3) {
-					expect(xhr1).to.be('xhr1');
-					expect(xhr2).to.be('xhr2');
-					expect(xhr3).to.be('error500');
-					server.close();
-					done();
+				.once('idle', function() {
+					this.run((done) => {
+						done(null,
+							document.querySelector('#xhr1').innerHTML,
+							document.querySelector('#xhr2').innerHTML,
+							document.querySelector('#xhr3').innerHTML
+						);
+					}, (err, xhr1, xhr2, xhr3) => {
+						expect(xhr1).to.be('xhr1');
+						expect(xhr2).to.be('xhr2');
+						expect(xhr3).to.be('error500');
+						server.close();
+						done();
+					});
+					expect(hasXHR1).to.be.ok();
+					expect(hasXHR2).to.be.ok();
+					expect(hasXHR3).to.be.ok();
 				});
-				expect(hasXHR1).to.be.ok();
-				expect(hasXHR2).to.be.ok();
-				expect(hasXHR3).to.be.ok();
-			});
 		});
 	});
 
 	it("should wait fetch requests called in parallel", function(done) {
 		this.timeout(1000);
-		var server = require('http').createServer(function(req, res) {
+		const server = require('http').createServer((req, res) => {
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json');
 			res.end(JSON.stringify({
 				path: req.url
 			}));
-		}).listen(function() {
+		}).listen(() => {
 			WebKit.load("http://localhost:" + server.address().port, {
 				console: true,
 				content: `<!DOCTYPE html>
@@ -405,18 +404,18 @@ describe("idle event", function suite() {
 				</script></head><body>
 					<div id="results"></div>
 				</body></html>`
-			}, function(err) {
+			}, (err) => {
 				expect(err).to.be(null);
 			})
-			.once('idle', function() {
-				this.run(function(done) {
-					done(null, document.querySelector('#results').innerHTML);
-				}, function(err, list) {
-					expect(list).to.be('/test1,/test2,/test3,/test4,/test5,/test6');
-					server.close();
-					done();
+				.once('idle', function() {
+					this.run((done) => {
+						done(null, document.querySelector('#results').innerHTML);
+					}, (err, list) => {
+						expect(list).to.be('/test1,/test2,/test3,/test4,/test5,/test6');
+						server.close();
+						done();
+					});
 				});
-			});
 		});
 	});
 
