@@ -1,5 +1,4 @@
 const debug = require('debug')('webkitgtk');
-const util = require('util');
 const EventEmitter = require('events').EventEmitter;
 const stream = require('stream');
 const fs = require('fs');
@@ -10,6 +9,7 @@ const clientConsole = require('./client-console');
 const clientError = require('./client-error');
 const clientTracker = require('./client-tracker');
 const clientPromise = fs.readFileSync(path.join(__dirname, '../lib/promise.js'));
+const Response = require('./response');
 
 // available after init
 let debugStall;
@@ -34,114 +34,395 @@ const hasRunEvent = '(' + function(name, event) {
 	}
 }.toString() + ')("%name", "%event")';
 
-function WebKit(opts, cb) {
-	if (!(this instanceof WebKit)) {
+class WebKit extends EventEmitter {
+	static navigator = require(path.join(__dirname, '../navigator.json'));
+
+	constructor() {
+		super();
+		this.priv = initialPriv();
+	}
+
+	static load(uri, opts, cb) {
+		if (!cb && typeof opts == "function") {
+			cb = opts;
+			opts = null;
+		}
 		const inst = new WebKit();
-		if (arguments.length) return inst.init(opts, cb);
-		return inst;
-	}
-	this.priv = initialPriv();
-	if (arguments.length) throw new Error("Use WebKit(opts, cb) as short-hand for (new Webkit()).init(opts, cb)");
-}
-
-util.inherits(WebKit, EventEmitter);
-
-try {
-	WebKit.navigator = require(path.join(__dirname, '../navigator.json'));
-} catch(ex) {
-	WebKit.navigator = {};
-}
-
-WebKit.load = function(uri, opts, cb) {
-	if (!cb && typeof opts == "function") {
-		cb = opts;
-		opts = null;
-	}
-	const inst = new WebKit();
-	const pcb = promet(inst, cb);
-	inst.init(opts, (err, w) => {
-		if (err) return pcb.cb(err, w);
-		inst.load(uri, opts, pcb.cb);
-	});
-	return pcb.ret;
-};
-
-WebKit.prototype.init = function(opts, cb) {
-	if (!cb && typeof opts == "function") {
-		cb = opts;
-		opts = null;
-	}
-	if (opts == null) opts = {};
-	else if (typeof opts != "object") opts = {display: opts};
-
-	const pcb = promet(this, cb);
-
-	if (opts.verbose) {
-		debugStall = console.warn; // eslint-disable-line
-		debugWarn = console.warn; // eslint-disable-line
-		debugError = console.error; // eslint-disable-line
-	} else {
-		debugStall = require('debug')('webkitgtk:timeout');
-		debugWarn = require('debug')('webkitgtk:warn');
-		debugError = require('debug')('webkitgtk:error');
+		const pcb = promet(inst, cb);
+		inst.init(opts, (err, w) => {
+			if (err) return pcb.cb(err, w);
+			inst.load(uri, opts, pcb.cb);
+		});
+		return pcb.ret;
 	}
 
-	const priv = this.priv;
-	if (priv.state >= INITIALIZING) return pcb.cb(new Error("init must not be called twice"), this);
-	priv.state = INITIALIZING;
-
-	if (opts.debug) {
-		priv.debug = true;
-		opts.offscreen = false;
-		opts.inspector = true;
+	get uri() {
+		if (this.webview) {
+			let uri = this.webview.uri;
+			if (uri == "about:blank") uri = "";
+			return uri;
+		}	else {
+			return undefined;
+		}
 	}
 
-	if (opts.offscreen == null) opts.offscreen = true;
+	init(opts, cb) {
+		if (!cb && typeof opts == "function") {
+			cb = opts;
+			opts = null;
+		}
+		if (opts == null) opts = {};
+		else if (typeof opts != "object") opts = { display: opts };
 
-	if (opts.offscreen) {
-		// as of webkitgtk version 2.14,
-		// compositing mode has huge performance impact on initialization,
-		// and it is useless in offscreen mode
-		process.env.WEBKIT_DISABLE_COMPOSITING_MODE = "1";
-	}
+		const pcb = promet(this, cb);
 
-	debug('init');
-	this.binding(opts, {
-		cstamp: priv.cstamp,
-		receiveDataListener: receiveDataDispatcher.bind(this),
-		responseListener: responseDispatcher.bind(this),
-		eventsListener: eventsDispatcher.bind(this),
-		policyListener: policyDispatcher.bind(this),
-		authListener: authDispatcher.bind(this),
-		closedListener: closedListener.bind(this),
-		cookiePolicy: opts.cookiePolicy || "",
-		cacheDir: opts.cacheDir,
-		cacheModel: opts.cacheModel,
-		offscreen: opts.offscreen,
-		resizing: opts.resizing,
-		inspector: opts.inspector
-	}, (err) => {
-		priv.state = INITIALIZED;
-		pcb.cb(err, this);
-	});
-	return pcb.ret;
-};
+		if (opts.verbose) {
+			debugStall = console.warn; // eslint-disable-line
+			debugWarn = console.warn; // eslint-disable-line
+			debugError = console.error; // eslint-disable-line
+		} else {
+			debugStall = require('debug')('webkitgtk:timeout');
+			debugWarn = require('debug')('webkitgtk:warn');
+			debugError = require('debug')('webkitgtk:error');
+		}
 
-WebKit.prototype.binding = function(opts, cfg, cb) {
-	display.call(this, opts, (err, child, newDisplay) => {
-		if (err) return cb(err);
-		debug('display found', newDisplay);
 		const priv = this.priv;
-		if (child) priv.xvfb = child;
-		process.env.DISPLAY = ":" + newDisplay;
-		const Bindings = require(path.join(__dirname, '../lib/webkitgtk.node'));
-		cfg.webextension = path.join(__dirname, '../lib/ext');
-		this.webview = new Bindings(cfg);
-		instances++;
-		debug('new instance created');
-		cb();
-	});
-};
+		if (priv.state >= INITIALIZING) return pcb.cb(new Error("init must not be called twice"), this);
+		priv.state = INITIALIZING;
+
+		if (opts.debug) {
+			priv.debug = true;
+			opts.offscreen = false;
+			opts.inspector = true;
+		}
+
+		if (opts.offscreen == null) opts.offscreen = true;
+
+		if (opts.offscreen) {
+			// as of webkitgtk version 2.14,
+			// compositing mode has huge performance impact on initialization,
+			// and it is useless in offscreen mode
+			process.env.WEBKIT_DISABLE_COMPOSITING_MODE = "1";
+		}
+
+		debug('init');
+		this.binding(opts, {
+			cstamp: priv.cstamp,
+			receiveDataListener: receiveDataDispatcher.bind(this),
+			responseListener: responseDispatcher.bind(this),
+			eventsListener: eventsDispatcher.bind(this),
+			policyListener: policyDispatcher.bind(this),
+			authListener: authDispatcher.bind(this),
+			closedListener: closedListener.bind(this),
+			cookiePolicy: opts.cookiePolicy || "",
+			cacheDir: opts.cacheDir,
+			cacheModel: opts.cacheModel,
+			offscreen: opts.offscreen,
+			resizing: opts.resizing,
+			inspector: opts.inspector
+		}, (err) => {
+			priv.state = INITIALIZED;
+			pcb.cb(err, this);
+		});
+		return pcb.ret;
+	}
+
+	binding(opts, cfg, cb) {
+		display.call(this, opts, (err, child, newDisplay) => {
+			if (err) return cb(err);
+			debug('display found', newDisplay);
+			const priv = this.priv;
+			if (child) priv.xvfb = child;
+			process.env.DISPLAY = ":" + newDisplay;
+			const Bindings = require(path.join(__dirname, '../lib/webkitgtk.node'));
+			cfg.webextension = path.join(__dirname, '../lib/ext');
+			this.webview = new Bindings(cfg);
+			instances++;
+			debug('new instance created');
+			cb();
+		});
+	}
+
+	rawload(uri, opts, cb) {
+		const priv = this.priv;
+		priv.state = LOADING;
+		if (opts.content != null && !opts.content || !uri) opts.content = "<html></html>";
+		let cookies = opts.cookies;
+		const pcb = promet(this, cb);
+		let p = Promise.resolve();
+		let clearCookies = true;
+		if (cookies) {
+			debug('load cookies');
+			if (!Array.isArray(cookies)) cookies = [cookies];
+			const script = cookies.map((cookie) => {
+				return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
+			}).concat(['']).join(";\n");
+			if (!opts.content) { // blank load to be able to set cookies before real one
+				clearCookies = false;
+				p = p.then(() => {
+					const content = `<html><head>
+						<script type="text/javascript">${script}</script>
+						</head></html>`;
+					return new Promise((resolve, reject) => {
+						this.webview.load(uri, priv.stamp, {
+							content: content,
+							clearCookies: true
+						}, (err) => {
+							if (err) reject(err);
+							else resolve();
+						});
+					});
+				}).catch((err) => {
+					pcb.cb(err);
+				});
+			} else { // no main document loading, just set in user script
+				if (!opts.script) opts.script = "";
+				opts.script = script + opts.script;
+			}
+		} else if (!opts.preload) {
+			if (!opts.script) opts.script = "";
+		}
+		p.then(() => {
+			const deprecations = {
+				ua: "user-agent",
+				charset: "default-charset",
+				private: "enable-private-browsing",
+				images: "auto-load-images",
+				localAccess: "allow-file-access-from-file-urls"
+			};
+			for (const key in deprecations) {
+				if (opts[key] == null) continue;
+				const newkey = deprecations[key];
+				// eslint-disable-next-line
+				console.warn(key, "option is deprecated, please use", newkey);
+				opts[newkey] = opts[key];
+			}
+			if (!opts['default-charset']) opts['default-charset'] = "utf-8";
+			opts.clearCookies = clearCookies;
+			this.webview.load(uri, this.priv.stamp, opts, (err, inst) => {
+				priv.state = INITIALIZED;
+				pcb.cb(err, inst);
+			});
+		});
+		return pcb.ret;
+	}
+
+	load(uri, opts, cb) {
+		if (!cb && typeof opts == "function") {
+			cb = opts;
+			opts = null;
+		}
+		if (!opts) opts = {};
+		const pcb = promet(this, cb);
+		load.call(this, uri, opts, pcb.cb);
+		return pcb.ret;
+	}
+
+	when(ev, fn) {
+		const self = this;
+		if (!this.promises) initWhen.call(this);
+		const holder = this.promises[ev];
+		if (!fn) return holder.promise;
+		const isThen = fn.length == 0;
+		const thenable = isThen ? fn : function() {
+			return new Promise((resolve, reject) => {
+				fn.call(self, (err) => {
+					if (err) reject(err);
+					else resolve();
+				});
+			});
+		};
+		holder.promise = holder.promise.then(thenable);
+		if (isThen) return holder.promise;
+		else return this;
+	}
+
+	prepare() {
+		this.promises = null;
+	}
+
+	preload(uri, opts, cb) {
+		if (!cb && typeof opts == "function") {
+			cb = opts;
+			opts = null;
+		}
+		if (!opts) opts = {};
+		const pcb = promet(this, cb);
+		const nopts = {};
+		for (const key in opts) nopts[key] = opts[key];
+		nopts.allow = "none";
+		nopts.preload = true;
+		load.call(this, uri, nopts, pcb.cb);
+		return pcb.ret;
+	}
+
+	stop(cb) {
+		debug("stop");
+		const priv = this.priv;
+		const pcb = promet(this, cb);
+		if (priv.state < INITIALIZED) return pcb.cb(errorLoad(priv.state));
+		let wasLoading = false;
+		const fincb = function(wasLoading) {
+			debug("stop done", wasLoading);
+			pcb.cb(null, wasLoading);
+		}.bind(this);
+		this.readyState = "stop";
+		wasLoading = this.webview && this.webview.stop && this.webview.stop(fincb);
+		debug("was loading", wasLoading);
+		return pcb.ret;
+	}
+
+	clearCache() {
+		if (this.priv.state < INITIALIZED) throw errorLoad(this.priv.state);
+		this.webview && this.webview.clearCache();
+	}
+
+	reset(cb) {
+		const pcb = promet(this, cb);
+		let p = Promise.resolve();
+		const priv = this.priv;
+		if (priv.state == LOADING) {
+			p = p.then(() => {
+				return this.stop();
+			}).catch((err) => {
+				// eslint-disable-next-line
+				console.error(err);
+			});
+		}
+		p.then(() => {
+			this.removeAllListeners();
+			this.promises = null;
+			this.readyState = null;
+			privReset(priv);
+			this.status = null;
+			setImmediate(pcb.cb);
+		});
+		return pcb.ret;
+	}
+
+	unload(cb) {
+		const priv = this.priv;
+		this.readyState = "unloading";
+		privReset(priv);
+		const pcb = promet(this, cb);
+
+		this.removeAllListeners('ready');
+		this.removeAllListeners('load');
+		this.removeAllListeners('idle');
+		this.removeAllListeners('unload');
+		this.removeAllListeners('busy');
+		this.promises = null;
+
+		let p = Promise.resolve();
+
+		if (priv.state == LOADING) {
+			p = p.then(() => {
+				return this.stop();
+			}).catch((err) => {
+				// eslint-disable-next-line
+				console.error(err);
+			});
+		}
+		p.then(() => {
+			delete priv.stamp;
+			debug('unload');
+			return this.rawload('about:blank', {
+				content:'<html></html>'
+			});
+		}).catch((err) => {
+			// eslint-disable-next-line
+			console.error(err);
+		}).then(() => {
+			debug('unload done');
+			this.readyState = null;
+			this.status = null;
+			priv.tickets = cleanTickets(priv.tickets);
+			this.emit('unload');
+			this.removeAllListeners();
+			this.promises = null;
+			setImmediate(pcb.cb);
+		});
+		return pcb.ret;
+	}
+
+	destroy(cb) {
+		const pcb = promet(this, cb);
+		destroy.call(this, pcb.cb);
+		return pcb.ret;
+	}
+
+	run(script, cb) {
+		const args = Array.from(arguments).slice(1);
+		const argType = args.length > 0 ? typeof args[args.length - 1] : null;
+		if (argType == "function") cb = args.pop();
+		else cb = null;
+		const pcb = promet(this, cb);
+		runcb.call(this, script, args, pcb.cb);
+		return pcb.ret;
+	}
+
+	runev(script, cb) {
+		const args = Array.from(arguments).slice(1);
+		const argType = args.length > 0 ? typeof args[args.length - 1] : null;
+		if (argType == "function") cb = args.pop();
+		else cb = null;
+		const pcb = promet(this, cb);
+		run.call(this, script, null, args, pcb.cb);
+		return pcb.ret;
+	}
+
+	png(obj, cb) {
+		let wstream;
+		const pcb = promet(this, cb);
+		if (typeof obj == "string") {
+			wstream = fs.createWriteStream(obj);
+			wstream.on('error', (err) => {
+				fs.unlink(obj, () => {
+					pcb.cb(err);
+				});
+			});
+		} else if (obj instanceof stream.Writable || obj instanceof stream.Duplex) {
+			wstream = obj;
+		} else {
+			return pcb.cb(new Error("png() first arg must be either a writableStream or a file path"));
+		}
+		png.call(this, wstream, pcb.cb);
+		return pcb.ret;
+	}
+
+	html(cb) {
+		debug('output html');
+		const pcb = promet(this, cb);
+		this.run(() => {
+			const dtd = document.doctype;
+			let html = "";
+			if (dtd) {
+				html = "<!DOCTYPE "	+ dtd.name
+				+ (dtd.publicId ? ' PUBLIC "' + dtd.publicId + '"' : '')
+				+ (!dtd.publicId && dtd.systemId ? ' SYSTEM' : '')
+				+ (dtd.systemId ? ' "' + dtd.systemId + '"' : '')
+				+ '>\n';
+			}
+			html += document.documentElement.outerHTML;
+			return html;
+		}, (err, str) => {
+			debug('output html done');
+			pcb.cb(err, str);
+		});
+		return pcb.ret;
+	}
+
+	pdf(filepath, opts, cb) {
+		if (!cb && typeof opts == "function") {
+			cb = opts;
+			opts = null;
+		}
+		if (!opts) opts = {};
+		const pcb = promet(this, cb);
+		pdf.call(this, filepath, opts, pcb.cb);
+		return pcb.ret;
+	}
+}
 
 function initialPriv() {
 	return {
@@ -344,43 +625,6 @@ function logError(msg, file, line, col, err) {
 	debugError("webkitgtk ", msg);
 }
 
-Object.defineProperty(WebKit.prototype, "uri", {
-	get: function() {
-		if (this.webview) {
-			let uri = this.webview.uri;
-			if (uri == "about:blank") uri = "";
-			return uri;
-		}	else {
-			return undefined;
-		}
-	}
-});
-
-function defineCachedGet(proto, prop, name) {
-	const hname = '_' + name;
-	Object.defineProperty(proto, name, {
-		get: function() {
-			if (this[hname] == undefined) this[hname] = this[prop][name];
-			return this[hname];
-		}
-	});
-}
-
-function Response(view, binding) {
-	this.binding = binding;
-	this.view = view;
-}
-
-Response.prototype.data = function(cb) {
-	if (!cb) throw new Error("Missing callback");
-	this.binding.data(cb);
-	return this;
-};
-
-"uri status mime headers length filename stall".split(' ').forEach(
-	defineCachedGet.bind(null, Response.prototype, "binding")
-);
-
 function requestDispatcher(req) {
 	const priv = this.priv;
 	if (!priv.uris) return;
@@ -571,81 +815,6 @@ function errorLoad(state) {
 	return error;
 }
 
-WebKit.prototype.rawload = function(uri, opts, cb) {
-	const priv = this.priv;
-	priv.state = LOADING;
-	if (opts.content != null && !opts.content || !uri) opts.content = "<html></html>";
-	let cookies = opts.cookies;
-	const pcb = promet(this, cb);
-	let p = Promise.resolve();
-	let clearCookies = true;
-	if (cookies) {
-		debug('load cookies');
-		if (!Array.isArray(cookies)) cookies = [cookies];
-		const script = cookies.map((cookie) => {
-			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
-		}).concat(['']).join(";\n");
-		if (!opts.content) { // blank load to be able to set cookies before real one
-			clearCookies = false;
-			p = p.then(() => {
-				const content = `<html><head>
-					<script type="text/javascript">${script}</script>
-					</head></html>`;
-				return new Promise((resolve, reject) => {
-					this.webview.load(uri, priv.stamp, {
-						content: content,
-						clearCookies: true
-					}, (err) => {
-						if (err) reject(err);
-						else resolve();
-					});
-				});
-			}).catch((err) => {
-				pcb.cb(err);
-			});
-		} else { // no main document loading, just set in user script
-			if (!opts.script) opts.script = "";
-			opts.script = script + opts.script;
-		}
-	} else if (!opts.preload) {
-		if (!opts.script) opts.script = "";
-	}
-	p.then(() => {
-		const deprecations = {
-			ua: "user-agent",
-			charset: "default-charset",
-			private: "enable-private-browsing",
-			images: "auto-load-images",
-			localAccess: "allow-file-access-from-file-urls"
-		};
-		for (const key in deprecations) {
-			if (opts[key] == null) continue;
-			const newkey = deprecations[key];
-			// eslint-disable-next-line
-			console.warn(key, "option is deprecated, please use", newkey);
-			opts[newkey] = opts[key];
-		}
-		if (!opts['default-charset']) opts['default-charset'] = "utf-8";
-		opts.clearCookies = clearCookies;
-		this.webview.load(uri, this.priv.stamp, opts, (err, inst) => {
-			priv.state = INITIALIZED;
-			pcb.cb(err, inst);
-		});
-	});
-	return pcb.ret;
-};
-
-WebKit.prototype.load = function(uri, opts, cb) {
-	if (!cb && typeof opts == "function") {
-		cb = opts;
-		opts = null;
-	}
-	if (!opts) opts = {};
-	const pcb = promet(this, cb);
-	load.call(this, uri, opts, pcb.cb);
-	return pcb.ret;
-};
-
 function initPromise(ev) {
 	let prev = null;
 	if (ev == "idle") prev = this.promises.load;
@@ -693,29 +862,6 @@ function initWhen() {
 		}
 	});
 }
-
-WebKit.prototype.when = function(ev, fn) {
-	const self = this;
-	if (!this.promises) initWhen.call(this);
-	const holder = this.promises[ev];
-	if (!fn) return holder.promise;
-	const isThen = fn.length == 0;
-	const thenable = isThen ? fn : function() {
-		return new Promise((resolve, reject) => {
-			fn.call(self, (err) => {
-				if (err) reject(err);
-				else resolve();
-			});
-		});
-	};
-	holder.promise = holder.promise.then(thenable);
-	if (isThen) return holder.promise;
-	else return this;
-};
-
-WebKit.prototype.prepare = function() {
-	this.promises = null;
-};
 
 function load(uri, opts, cb) {
 	opts = Object.assign({}, opts);
@@ -910,65 +1056,6 @@ function prepareFilters(cstamp, filters) {
 	};
 }
 
-WebKit.prototype.preload = function(uri, opts, cb) {
-	if (!cb && typeof opts == "function") {
-		cb = opts;
-		opts = null;
-	}
-	if (!opts) opts = {};
-	const pcb = promet(this, cb);
-	const nopts = {};
-	for (const key in opts) nopts[key] = opts[key];
-	nopts.allow = "none";
-	nopts.preload = true;
-	load.call(this, uri, nopts, pcb.cb);
-	return pcb.ret;
-};
-
-WebKit.prototype.stop = function(cb) {
-	debug("stop");
-	const priv = this.priv;
-	const pcb = promet(this, cb);
-	if (priv.state < INITIALIZED) return pcb.cb(errorLoad(priv.state));
-	let wasLoading = false;
-	const fincb = function(wasLoading) {
-		debug("stop done", wasLoading);
-		pcb.cb(null, wasLoading);
-	}.bind(this);
-	this.readyState = "stop";
-	wasLoading = this.webview && this.webview.stop && this.webview.stop(fincb);
-	debug("was loading", wasLoading);
-	return pcb.ret;
-};
-
-WebKit.prototype.clearCache = function() {
-	if (this.priv.state < INITIALIZED) throw errorLoad(this.priv.state);
-	this.webview && this.webview.clearCache();
-};
-
-WebKit.prototype.reset = function(cb) {
-	const pcb = promet(this, cb);
-	let p = Promise.resolve();
-	const priv = this.priv;
-	if (priv.state == LOADING) {
-		p = p.then(() => {
-			return this.stop();
-		}).catch((err) => {
-			// eslint-disable-next-line
-			console.error(err);
-		});
-	}
-	p.then(() => {
-		this.removeAllListeners();
-		this.promises = null;
-		this.readyState = null;
-		privReset(priv);
-		this.status = null;
-		setImmediate(pcb.cb);
-	});
-	return pcb.ret;
-};
-
 function privReset(priv) {
 	if (priv.responseInterval) {
 		clearInterval(priv.responseInterval);
@@ -983,50 +1070,6 @@ function privReset(priv) {
 	priv.tickets = cleanTickets(priv.tickets);
 }
 
-WebKit.prototype.unload = function(cb) {
-	const priv = this.priv;
-	this.readyState = "unloading";
-	privReset(priv);
-	const pcb = promet(this, cb);
-
-	this.removeAllListeners('ready');
-	this.removeAllListeners('load');
-	this.removeAllListeners('idle');
-	this.removeAllListeners('unload');
-	this.removeAllListeners('busy');
-	this.promises = null;
-
-	let p = Promise.resolve();
-
-	if (priv.state == LOADING) {
-		p = p.then(() => {
-			return this.stop();
-		}).catch((err) => {
-			// eslint-disable-next-line
-			console.error(err);
-		});
-	}
-	p.then(() => {
-		delete priv.stamp;
-		debug('unload');
-		return this.rawload('about:blank', {
-			content:'<html></html>'
-		});
-	}).catch((err) => {
-		// eslint-disable-next-line
-		console.error(err);
-	}).then(() => {
-		debug('unload done');
-		this.readyState = null;
-		this.status = null;
-		priv.tickets = cleanTickets(priv.tickets);
-		this.emit('unload');
-		this.removeAllListeners();
-		this.promises = null;
-		setImmediate(pcb.cb);
-	});
-	return pcb.ret;
-};
 
 function cleanTickets(tickets) {
 	for (const key in tickets) {
@@ -1056,31 +1099,6 @@ function destroy(cb) {
 	}
 }
 
-WebKit.prototype.destroy = function(cb) {
-	const pcb = promet(this, cb);
-	destroy.call(this, pcb.cb);
-	return pcb.ret;
-};
-
-WebKit.prototype.run = function(script, cb) {
-	const args = Array.from(arguments).slice(1);
-	const argType = args.length > 0 ? typeof args[args.length - 1] : null;
-	if (argType == "function") cb = args.pop();
-	else cb = null;
-	const pcb = promet(this, cb);
-	runcb.call(this, script, args, pcb.cb);
-	return pcb.ret;
-};
-
-WebKit.prototype.runev = function(script, cb) {
-	const args = Array.from(arguments).slice(1);
-	const argType = args.length > 0 ? typeof args[args.length - 1] : null;
-	if (argType == "function") cb = args.pop();
-	else cb = null;
-	const pcb = promet(this, cb);
-	run.call(this, script, null, args, pcb.cb);
-	return pcb.ret;
-};
 
 function runcb(script, args, cb) {
 	const ticket = (++this.priv.ticket).toString();
@@ -1262,25 +1280,6 @@ function prepareRun(script, ticket, args, priv) {
 	return obj;
 }
 
-WebKit.prototype.png = function(obj, cb) {
-	let wstream;
-	const pcb = promet(this, cb);
-	if (typeof obj == "string") {
-		wstream = fs.createWriteStream(obj);
-		wstream.on('error', (err) => {
-			fs.unlink(obj, () => {
-				pcb.cb(err);
-			});
-		});
-	} else if (obj instanceof stream.Writable || obj instanceof stream.Duplex) {
-		wstream = obj;
-	} else {
-		return pcb.cb(new Error("png() first arg must be either a writableStream or a file path"));
-	}
-	png.call(this, wstream, pcb.cb);
-	return pcb.ret;
-};
-
 function png(wstream, cb) {
 	this.webview.png((err, buf) => {
 		if (err) {
@@ -1297,39 +1296,6 @@ function png(wstream, cb) {
 		}
 	});
 }
-
-WebKit.prototype.html = function(cb) {
-	debug('output html');
-	const pcb = promet(this, cb);
-	this.run(() => {
-		const dtd = document.doctype;
-		let html = "";
-		if (dtd) {
-			html = "<!DOCTYPE "	+ dtd.name
-			+ (dtd.publicId ? ' PUBLIC "' + dtd.publicId + '"' : '')
-			+ (!dtd.publicId && dtd.systemId ? ' SYSTEM' : '')
-			+ (dtd.systemId ? ' "' + dtd.systemId + '"' : '')
-			+ '>\n';
-		}
-		html += document.documentElement.outerHTML;
-		return html;
-	}, (err, str) => {
-		debug('output html done');
-		pcb.cb(err, str);
-	});
-	return pcb.ret;
-};
-
-WebKit.prototype.pdf = function(filepath, opts, cb) {
-	if (!cb && typeof opts == "function") {
-		cb = opts;
-		opts = null;
-	}
-	if (!opts) opts = {};
-	const pcb = promet(this, cb);
-	pdf.call(this, filepath, opts, pcb.cb);
-	return pcb.ret;
-};
 
 function pdf(filepath, opts, cb) {
 	let margins = opts.margins;
