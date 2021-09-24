@@ -35,7 +35,9 @@ const hasRunEvent = '(' + function(name, event) {
 }.toString() + ')("%name", "%event")';
 
 class WebKit extends EventEmitter {
-	static navigator = require(path.join(__dirname, '../navigator.json'));
+	static get navigator() {
+		return require(path.join(__dirname, '../navigator.json'));
+	}
 
 	constructor() {
 		super();
