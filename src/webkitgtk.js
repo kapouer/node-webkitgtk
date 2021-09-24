@@ -1351,6 +1351,14 @@ WebKit.promet = promet;
 
 
 
+function WebKitCaller(opts, cb) {
+	const inst = new WebKit();
+	if (this instanceof WebKitCaller) {
+		return inst;
+	} else {
+		return inst.init(opts, cb);
+	}
+}
+WebKitCaller.load = WebKit.load;
 
-
-module.exports = WebKit;
+module.exports = WebKitCaller;
