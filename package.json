@@ -16,34 +16,38 @@
     "webkitgtk": "./bin/webkitgtk.js"
   },
   "dependencies": {
-    "dashdash": "^1.10.1",
-    "debug": "^2.2.0",
-    "nan": "^2.14.1",
-    "tosource": "^1.0.0",
-    "whatwg-fetch": "^3.0.0"
+    "chalk": "^4.1.2",
+    "dashdash": "^2.0.0",
+    "debug": "^4.3.2",
+    "headless": "^1.2.0",
+    "jsdom": "^17.0.0",
+    "nan": "^2.15.0",
     "promise-polyfill": "^8.2.0",
+    "request": "^2.88.2",
+    "tosource": "2.0.0-alpha.3",
+    "whatwg-fetch": "^3.6.2"
   },
   "engines": {
     "node": ">=8"
   },
   "optionalDependencies": {
-    "chalk": "^3.0.0",
+    "chalk": "^4.1.2",
     "headless": "^1.2.0",
-    "request": "^2.88.0"
     "jsdom": "^17.0.0",
+    "request": "^2.88.2"
   },
   "devDependencies": {
-    "engine.io": "^1.4.2",
-    "engine.io-client": "^1.4.2",
     "@kapouer/eslint-config": "^1.6.0",
+    "engine.io": "^5.2.0",
+    "engine.io-client": "^5.2.0",
     "expect.js": "^0.3.1",
-    "glob": "^7.1.1",
-    "headless": "^1.0.0",
+    "glob": "^7.2.0",
+    "headless": "^1.2.0",
     "http-digest-auth": "^0.1.3",
-    "mocha": "^6.2.2",
+    "mocha": "^9.1.1",
     "pdfinfo": "0.0.3",
-    "rimraf": "^2.5.4"
     "postinstall-patch": "^0.7.2",
+    "rimraf": "^3.0.2"
   },
   "scripts": {
     "prepare": "postinstall",
