@@ -14,7 +14,7 @@ describe("long polling", function suite() {
 		const server = require('http').createServer((req, res) => {
 			res.statusCode = 200;
 			if (req.url == "/engine.io.js") {
-				fs.readFile(join(__dirname, '../node_modules/engine.io-client/engine.io.js'), (err, buf) => {
+				fs.readFile(join(__dirname, '../node_modules/engine.io-client/dist/engine.io.js'), (err, buf) => {
 					if (err) console.error(err);
 					res.end(buf);
 				});
