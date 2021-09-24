@@ -39,7 +39,7 @@ describe("pdf method", () => {
 					expect(err).to.not.be.ok();
 					pdf(pdfpath).info((err, meta) => {
 						expect(err).to.not.be.ok();
-						expect(meta.page_size).to.be('841.89 x 1190.55 pts');
+						expect(meta.page_size).to.be('841.89 x 1190.55 pts (A3)');
 						done();
 					});
 				});

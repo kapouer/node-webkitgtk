@@ -37,7 +37,7 @@ describe("clear cache method", () => {
 			}).then(() => {
 				return w.unload().then(() => {
 					return new Promise((resolve, reject) => {
-						glob("cache/test4/**/*", {nodir: true}, (err, list) => {
+						glob("cache/test4/**/Blobs/*", {nodir: true}, (err, list) => {
 							if (err) return reject(err);
 							if (!list.length) return reject(new Error("no blob in cache"));
 							fs.stat(list[0], (err, stat) => {
