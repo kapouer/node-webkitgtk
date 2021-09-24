@@ -1,15 +1,14 @@
---- dist/polyfill.js	1985-10-26 09:15:00.000000000 +0100
-+++ dist/polyfill.js.new	2019-12-09 12:28:31.719684230 +0100
-@@ -259,7 +259,11 @@
- 
+--- polyfill.js	2021-09-24 09:18:20.919285676 +0200
++++ polyfill.js	2021-09-24 09:20:16.311451537 +0200
+@@ -310,6 +310,11 @@
  // Use polyfill for setImmediate for performance gains
  Promise._immediateFn =
--  // @ts-ignore
-+	// @ts-ignore
-+	(typeof queueMicrotask == 'function' &&
-+		function(fn) {
-+			queueMicrotask(fn);
-+		}) ||
+   // @ts-ignore
++  (typeof queueMicrotask == 'function' &&
++    function (fn) {
++      // @ts-ignore
++      queueMicrotask(fn);
++    }) ||
    (typeof setImmediate === 'function' &&
      function(fn) {
        // @ts-ignore
