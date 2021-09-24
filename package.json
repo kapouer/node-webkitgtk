@@ -61,6 +61,9 @@
   "repository": "git@github.com:kapouer/node-webkitgtk.git",
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
+  "mocha": {
+    "exit": true
+  },
   "eslintConfig": {
     "extends": "@kapouer/eslint-config",
     "overrides": [
