@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 const toSource = require('tosource');
+const Constants = require('constants');
 const clientConsole = require('./client-console');
 const clientError = require('./client-error');
 const clientTracker = require('./client-tracker');
@@ -105,6 +106,9 @@ class WebKit extends EventEmitter {
 			// compositing mode has huge performance impact on initialization,
 			// and it is useless in offscreen mode
 			process.env.WEBKIT_DISABLE_COMPOSITING_MODE = "1";
+		}
+		if (!process.env.JSC_SIGNAL_FOR_GC) {
+			process.env.JSC_SIGNAL_FOR_GC = Constants.SIGUSR2;
 		}
 
 		debug('init');
