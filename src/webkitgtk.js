@@ -1365,8 +1365,11 @@ function WebKitCaller(opts, cb) {
 		return inst.init(opts, cb);
 	}
 }
-
-WebKitCaller.navigator = WebKit.navigator;
+Object.defineProperty(WebKitCaller, "navigator", {
+	get: function() {
+		return WebKit.navigator;
+	}
+});
 WebKitCaller.load = WebKit.load;
 WebKitCaller.promet = WebKit.promet;
 
