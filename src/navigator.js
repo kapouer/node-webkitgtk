@@ -1,10 +1,10 @@
-var W = require('..');
+const W = require('..');
 
-W.load("", function(err, w) {
-	w.run(function() {
+W.load("", (err, w) => {
+	w.run(() => {
 		function ser(s, d) {
-			for (var k in d) {
-				var val = d[k];
+			for (const k in d) {
+				const val = d[k];
 				if (typeof val == "function") continue;
 				else if (typeof val == "object") {
 					s[k] = {};
@@ -14,12 +14,13 @@ W.load("", function(err, w) {
 				}
 			}
 		}
-		var obj = {};
+		const obj = {};
 		ser(obj, navigator);
 		return obj;
-	}, function(err, ua) {
+	}, (err, ua) => {
+		// eslint-disable-next-line no-console
 		console.log(JSON.stringify(ua, null, "  "));
-		w.destroy(function(err) {
+		w.destroy((err) => {
 			process.exit();
 		});
 	});

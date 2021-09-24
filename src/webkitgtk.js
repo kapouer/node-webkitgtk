@@ -1,33 +1,33 @@
-var debug = require('debug')('webkitgtk');
-var util = require('util');
-var EventEmitter = require('events').EventEmitter;
-var stream = require('stream');
-var fs = require('fs');
-var path = require('path');
-var url = require('url');
-var toSource = require('tosource');
-var clientConsole = require('./client-console');
-var clientError = require('./client-error');
-var clientTracker = require('./client-tracker');
-var clientPromise = fs.readFileSync(path.join(__dirname, '../lib/promise.js'));
+const debug = require('debug')('webkitgtk');
+const util = require('util');
+const EventEmitter = require('events').EventEmitter;
+const stream = require('stream');
+const fs = require('fs');
+const path = require('path');
+const url = require('url');
+const toSource = require('tosource');
+const clientConsole = require('./client-console');
+const clientError = require('./client-error');
+const clientTracker = require('./client-tracker');
+const clientPromise = fs.readFileSync(path.join(__dirname, '../lib/promise.js'));
 
 // available after init
-var debugStall;
-var debugWarn;
-var debugError;
+let debugStall;
+let debugWarn;
+let debugError;
 
 // internal state, does not match readyState
-var CREATED = 0;
-var INITIALIZING = 1;
-var INITIALIZED = 2;
-var LOADING = 3;
+const CREATED = 0;
+const INITIALIZING = 1;
+const INITIALIZED = 2;
+const LOADING = 3;
 
-var availableDisplays = {};
-var instances = 0;
+const availableDisplays = {};
+let instances = 0;
 
-var hasRunEvent = '(' + function(name, event) {
+const hasRunEvent = '(' + function(name, event) {
 	try {
-		var func = window && window['hasRunEvent_' + name];
+		const func = window && window['hasRunEvent_' + name];
 		if (func) func(event);
 	} catch (ex) {
 		// ignore
@@ -36,7 +36,7 @@ var hasRunEvent = '(' + function(name, event) {
 
 function WebKit(opts, cb) {
 	if (!(this instanceof WebKit)) {
-		var inst = new WebKit();
+		const inst = new WebKit();
 		if (arguments.length) return inst.init(opts, cb);
 		return inst;
 	}
@@ -57,9 +57,9 @@ WebKit.load = function(uri, opts, cb) {
 		cb = opts;
 		opts = null;
 	}
-	var inst = new WebKit();
-	var pcb = promet(inst, cb);
-	inst.init(opts, function(err, w) {
+	const inst = new WebKit();
+	const pcb = promet(inst, cb);
+	inst.init(opts, (err, w) => {
 		if (err) return pcb.cb(err, w);
 		inst.load(uri, opts, pcb.cb);
 	});
@@ -74,7 +74,7 @@ WebKit.prototype.init = function(opts, cb) {
 	if (opts == null) opts = {};
 	else if (typeof opts != "object") opts = {display: opts};
 
-	var pcb = promet(this, cb);
+	const pcb = promet(this, cb);
 
 	if (opts.verbose) {
 		debugStall = console.warn; // eslint-disable-line
@@ -86,7 +86,7 @@ WebKit.prototype.init = function(opts, cb) {
 		debugError = require('debug')('webkitgtk:error');
 	}
 
-	var priv = this.priv;
+	const priv = this.priv;
 	if (priv.state >= INITIALIZING) return pcb.cb(new Error("init must not be called twice"), this);
 	priv.state = INITIALIZING;
 
@@ -120,27 +120,27 @@ WebKit.prototype.init = function(opts, cb) {
 		offscreen: opts.offscreen,
 		resizing: opts.resizing,
 		inspector: opts.inspector
-	}, function(err) {
+	}, (err) => {
 		priv.state = INITIALIZED;
 		pcb.cb(err, this);
-	}.bind(this));
+	});
 	return pcb.ret;
 };
 
 WebKit.prototype.binding = function(opts, cfg, cb) {
-	display.call(this, opts, function(err, child, newDisplay) {
+	display.call(this, opts, (err, child, newDisplay) => {
 		if (err) return cb(err);
 		debug('display found', newDisplay);
-		var priv = this.priv;
+		const priv = this.priv;
 		if (child) priv.xvfb = child;
 		process.env.DISPLAY = ":" + newDisplay;
-		var Bindings = require(path.join(__dirname, '../lib/webkitgtk.node'));
+		const Bindings = require(path.join(__dirname, '../lib/webkitgtk.node'));
 		cfg.webextension = path.join(__dirname, '../lib/ext');
 		this.webview = new Bindings(cfg);
 		instances++;
 		debug('new instance created');
 		cb();
-	}.bind(this));
+	});
 };
 
 function initialPriv() {
@@ -156,8 +156,8 @@ function initialPriv() {
 }
 
 function done(ev, cb) {
-	var priv = this.priv;
-	var emitted = priv.emittedEvents;
+	const priv = this.priv;
+	const emitted = priv.emittedEvents;
 	if (emitted[ev] || priv.state == LOADING || ev != 'ready' && this.readyState == null) return cb();
 	emitted[ev] = true;
 	debug("let tracker process event after", ev);
@@ -168,26 +168,26 @@ function done(ev, cb) {
 }
 
 function closedListener(what) {
-	var priv = this.priv;
+	const priv = this.priv;
 	switch (what) {
-	case "inspector":
-		priv.inspecting = false;
-		return;
-	case "window":
-		delete this.webview;
-		destroy.call(this, priv.destroyCb);
-		priv.tickets = cleanTickets(priv.tickets);
-		this.priv = initialPriv();
-		break;
-	case "crash":
-		this.emit('crash');
-		break;
+		case "inspector":
+			priv.inspecting = false;
+			return;
+		case "window":
+			delete this.webview;
+			destroy.call(this, priv.destroyCb);
+			priv.tickets = cleanTickets(priv.tickets);
+			this.priv = initialPriv();
+			break;
+		case "crash":
+			this.emit('crash');
+			break;
 	}
 }
 
 function receiveDataDispatcher(curstamp, binding, length) {
-	var priv = this.priv;
-	var res = new Response(this, binding);
+	const priv = this.priv;
+	const res = new Response(this, binding);
 	res.clength = length;
 	if (!res.uri) {
 		return;
@@ -196,7 +196,7 @@ function receiveDataDispatcher(curstamp, binding, length) {
 		debug("stamp mismatch - ignore data dispatch", curstamp, priv.stamp, res.uri);
 		return;
 	}
-	var info = priv.uris && priv.uris[res.uri];
+	const info = priv.uris && priv.uris[res.uri];
 	if (info) {
 		if (!info.mtime || info.mtime == Infinity) return;
 		info.mtime = Date.now();
@@ -228,7 +228,7 @@ function policyDispatcher(type, uri) {
 }
 
 function checkIdle() {
-	var priv = this.priv;
+	const priv = this.priv;
 	if (priv.pendingRequests == 0) {
 		if (priv.idling) {
 			this.readyState = "idling";
@@ -240,9 +240,9 @@ function checkIdle() {
 
 function errorReviver(key, val) {
 	if (!val || typeof val != "object") return val;
-	var name = val.name;
+	const name = val.name;
 	if (!name || /Error$/.test(name) == false || !global[name]) return val;
-	var err = new (global[name])();
+	const err = new (global[name])();
 	if (!val.stack) delete err.stack;
 	err.stack = val.stack;
 	err.toString = function() {
@@ -257,7 +257,7 @@ function errorReviver(key, val) {
 }
 
 function eventsDispatcher(err, json) {
-	var priv = this.priv;
+	const priv = this.priv;
 	if (err) {
 		debugError("Error in event dispatcher", err, json);
 		if (priv.debug) {
@@ -269,7 +269,7 @@ function eventsDispatcher(err, json) {
 		// no stamp means nothing is expected
 		return;
 	}
-	var obj, parseError;
+	let obj, parseError;
 	try {
 		obj = JSON.parse(json, errorReviver);
 	} catch(e) {
@@ -284,11 +284,11 @@ function eventsDispatcher(err, json) {
 		// typically happens when a page was stopped / unloaded
 		return;
 	}
-	var args = obj.args || [];
+	const args = obj.args || [];
 	if (obj.event) {
-		var from = args[0];
-		var url = args[1];
-		var debugArgs = ['event from dom', obj.event];
+		const from = args[0];
+		const url = args[1];
+		const debugArgs = ['event from dom', obj.event];
 		if (from) debugArgs.push('from', from);
 		if (url) debugArgs.push(url);
 		debug.apply(this, debugArgs);
@@ -312,7 +312,7 @@ function eventsDispatcher(err, json) {
 			this.emit.apply(this, args);
 		}
 	} else if (obj.ticket) {
-		var cbObj = priv.tickets[obj.ticket];
+		const cbObj = priv.tickets[obj.ticket];
 		if (cbObj) {
 			delete priv.tickets[obj.ticket];
 			if (cbObj.timeout) {
@@ -324,7 +324,7 @@ function eventsDispatcher(err, json) {
 			try {
 				cbObj.cb.apply(this, args);
 			} catch(e) {
-				setImmediate(function(ex) {throw ex;}.bind(null, e));
+				setImmediate(((ex) => {throw ex;}).bind(null, e));
 			}
 		} else {
 			// could be reached by dropped events
@@ -347,7 +347,7 @@ function logError(msg, file, line, col, err) {
 Object.defineProperty(WebKit.prototype, "uri", {
 	get: function() {
 		if (this.webview) {
-			var uri = this.webview.uri;
+			let uri = this.webview.uri;
 			if (uri == "about:blank") uri = "";
 			return uri;
 		}	else {
@@ -357,7 +357,7 @@ Object.defineProperty(WebKit.prototype, "uri", {
 });
 
 function defineCachedGet(proto, prop, name) {
-	var hname = '_' + name;
+	const hname = '_' + name;
 	Object.defineProperty(proto, name, {
 		get: function() {
 			if (this[hname] == undefined) this[hname] = this[prop][name];
@@ -382,19 +382,19 @@ Response.prototype.data = function(cb) {
 );
 
 function requestDispatcher(req) {
-	var priv = this.priv;
+	const priv = this.priv;
 	if (!priv.uris) return;
-	var mainUri = this.uri || "about:blank";
+	let mainUri = this.uri || "about:blank";
 	if (mainUri == "about:blank") return;
-	var uri = req.uri;
+	const uri = req.uri;
 	if (!uri) return;
 
 	debug('request', uri.substring(0, 255));
 
-	var info = priv.uris[uri];
+	let info = priv.uris[uri];
 
-	var from = req.from;
-	var rinfo;
+	const from = req.from;
+	let rinfo;
 	if (from != null) {
 		rinfo = priv.uris[from];
 		if (rinfo) {
@@ -429,14 +429,14 @@ function requestDispatcher(req) {
 }
 
 function responseDispatcher(curstamp, binding) {
-	var priv = this.priv;
+	const priv = this.priv;
 	if (!priv.uris) return;
-	var mainUri = this.uri || "about:blank";
+	const mainUri = this.uri || "about:blank";
 	if (mainUri == "about:blank") return;
-	var res = new Response(this, binding);
-	var uri = res.uri;
+	const res = new Response(this, binding);
+	let uri = res.uri;
 	if (!uri) return;
-	var status = res.status;
+	const status = res.status;
 	if (uri[0] == '#') {
 		// came from webextension, this uri is cancelled
 		uri = res._uri = uri.substring(1);
@@ -454,7 +454,7 @@ function responseDispatcher(curstamp, binding) {
 
 	debug('response', uri.substring(0, 255));
 
-	var info = priv.uris[uri];
+	let info = priv.uris[uri];
 
 	if (!info) {
 		if (status == 0) {
@@ -475,8 +475,8 @@ function responseDispatcher(curstamp, binding) {
 		}
 	}
 
-	var stalled = false;
-	var decrease = 0;
+	let stalled = false;
+	let decrease = 0;
 	if (info.main || !info.remote || info.ignore) {
 		// pass
 	} else if (info.mtime == Infinity) {
@@ -503,7 +503,7 @@ function responseDispatcher(curstamp, binding) {
 }
 
 function isNetworkProtocol(uri) {
-	var p = uri.split(':', 1).pop();
+	const p = uri.split(':', 1).pop();
 	if (p == 'http' || p == 'https' || p == 'file') {
 		return true;
 	} else {
@@ -518,9 +518,9 @@ function noop(err) {
 }
 
 function display(opts, cb) {
-	var display = opts.display != null ? opts.display : process.env.DISPLAY;
+	let display = opts.display != null ? opts.display : process.env.DISPLAY;
 	if (typeof display == "string") {
-		var match = /^(?:(\d+)x(\d+)x(\d+))?:(\d+)$/.exec(display);
+		const match = /^(?:(\d+)x(\d+)x(\d+))?:(\d+)$/.exec(display);
 		if (match) {
 			if (match[1] != null) opts.width = match[1];
 			if (match[2] != null) opts.height = match[2];
@@ -534,7 +534,7 @@ function display(opts, cb) {
 	if (availableDisplays[display]) {
 		return setImmediate(cb.bind(this, null, null, display));
 	}
-	fs.exists('/tmp/.X11-unix/X' + display, function(exists) {
+	fs.exists('/tmp/.X11-unix/X' + display, (exists) => {
 		if (exists) {
 			availableDisplays[display] = true;
 			return cb(null, null, display);
@@ -545,12 +545,12 @@ function display(opts, cb) {
 				height: opts.height || 768,
 				depth: opts.depth || 32
 			}
-		}, display - 1, function(err, child, display) {
+		}, display - 1, (err, child, display) => {
 			if (err) cb(err);
 			else {
 				debugWarn("Spawned xvfb on DISPLAY=:" + display);
 				cb(null, child, display);
-				process.on('exit', function() {
+				process.on('exit', () => {
 					child.kill();
 				});
 			}
@@ -559,48 +559,48 @@ function display(opts, cb) {
 }
 
 function errorLoad(state) {
-	var msg;
+	let msg;
 	if (state == INITIALIZED) return;
 	if (state < INITIALIZED) {
 		msg = "cannot call method before init";
 	} else if (state > INITIALIZED) {
 		msg = "cannot call method during loading";
 	}
-	var error = new Error(msg);
+	const error = new Error(msg);
 	console.trace(error); // eslint-disable-line
 	return error;
 }
 
 WebKit.prototype.rawload = function(uri, opts, cb) {
-	var priv = this.priv;
+	const priv = this.priv;
 	priv.state = LOADING;
 	if (opts.content != null && !opts.content || !uri) opts.content = "<html></html>";
-	var cookies = opts.cookies;
-	var pcb = promet(this, cb);
-	var p = Promise.resolve();
-	var clearCookies = true;
+	let cookies = opts.cookies;
+	const pcb = promet(this, cb);
+	let p = Promise.resolve();
+	let clearCookies = true;
 	if (cookies) {
 		debug('load cookies');
 		if (!Array.isArray(cookies)) cookies = [cookies];
-		var script = cookies.map(function(cookie) {
+		const script = cookies.map((cookie) => {
 			return 'document.cookie = "' + cookie.replace(/"/g, '\\"') + '"';
 		}).concat(['']).join(";\n");
 		if (!opts.content) { // blank load to be able to set cookies before real one
 			clearCookies = false;
-			p = p.then(function() {
-				var content = `<html><head>
+			p = p.then(() => {
+				const content = `<html><head>
 					<script type="text/javascript">${script}</script>
 					</head></html>`;
-				return new Promise(function(resolve, reject) {
+				return new Promise((resolve, reject) => {
 					this.webview.load(uri, priv.stamp, {
 						content: content,
 						clearCookies: true
-					}, function(err) {
+					}, (err) => {
 						if (err) reject(err);
 						else resolve();
 					});
-				}.bind(this));
-			}.bind(this)).catch(function(err) {
+				});
+			}).catch((err) => {
 				pcb.cb(err);
 			});
 		} else { // no main document loading, just set in user script
@@ -610,28 +610,28 @@ WebKit.prototype.rawload = function(uri, opts, cb) {
 	} else if (!opts.preload) {
 		if (!opts.script) opts.script = "";
 	}
-	p.then(function() {
-		var deprecations = {
+	p.then(() => {
+		const deprecations = {
 			ua: "user-agent",
 			charset: "default-charset",
 			private: "enable-private-browsing",
 			images: "auto-load-images",
 			localAccess: "allow-file-access-from-file-urls"
 		};
-		for (var key in deprecations) {
+		for (const key in deprecations) {
 			if (opts[key] == null) continue;
-			var newkey = deprecations[key];
+			const newkey = deprecations[key];
 			// eslint-disable-next-line
 			console.warn(key, "option is deprecated, please use", newkey);
 			opts[newkey] = opts[key];
 		}
 		if (!opts['default-charset']) opts['default-charset'] = "utf-8";
 		opts.clearCookies = clearCookies;
-		this.webview.load(uri, this.priv.stamp, opts, function(err, inst) {
+		this.webview.load(uri, this.priv.stamp, opts, (err, inst) => {
 			priv.state = INITIALIZED;
 			pcb.cb(err, inst);
 		});
-	}.bind(this));
+	});
 	return pcb.ret;
 };
 
@@ -641,42 +641,42 @@ WebKit.prototype.load = function(uri, opts, cb) {
 		opts = null;
 	}
 	if (!opts) opts = {};
-	var pcb = promet(this, cb);
+	const pcb = promet(this, cb);
 	load.call(this, uri, opts, pcb.cb);
 	return pcb.ret;
 };
 
 function initPromise(ev) {
-	var prev = null;
+	let prev = null;
 	if (ev == "idle") prev = this.promises.load;
 	if (ev == "load") prev = this.promises.ready;
 
-	var holder = {
+	const holder = {
 		pending: true
 	};
-	var initialPromise = holder.promise = new Promise(function(resolve) {
+	const initialPromise = holder.promise = new Promise((resolve) => {
 		holder.resolve = resolve;
 	});
 	this.promises[ev] = holder;
-	if (prev) holder.promise = prev.promise.then(function() {
+	if (prev) holder.promise = prev.promise.then(() => {
 		return initialPromise;
 	});
 
 	this.once(ev, function() {
-		var stamp = this.priv.stamp;
-		holder.promise.catch(function(err) {
+		const stamp = this.priv.stamp;
+		holder.promise.catch((err) => {
 			// not logged - it's up to the client to catch its own errors
 			// using .when(ev).catch()
-		}).then(function() {
+		}).then(() => {
 			if (stamp == this.priv.stamp) {
-				done.call(this, ev, function(err) {
+				done.call(this, ev, (err) => {
 					// eslint-disable-next-line
 					if (err) console.error(err);
 				});
 			} else {
 				// typically when a queued listener calls unload/load right away
 			}
-		}.bind(this));
+		});
 		holder.pending = false;
 		holder.resolve();
 	});
@@ -686,23 +686,23 @@ function initWhen() {
 	if (!this.promises) {
 		this.promises = {};
 	}
-	['ready', 'load', 'idle'].forEach(function(ev) {
-		var holder = this.promises[ev];
+	['ready', 'load', 'idle'].forEach((ev) => {
+		const holder = this.promises[ev];
 		if (!holder || !holder.pending) {
 			initPromise.call(this, ev);
 		}
-	}.bind(this));
+	});
 }
 
 WebKit.prototype.when = function(ev, fn) {
-	var self = this;
+	const self = this;
 	if (!this.promises) initWhen.call(this);
-	var holder = this.promises[ev];
+	const holder = this.promises[ev];
 	if (!fn) return holder.promise;
-	var isThen = fn.length == 0;
-	var thenable = isThen ? fn : function() {
-		return new Promise(function(resolve, reject) {
-			fn.call(self, function(err) {
+	const isThen = fn.length == 0;
+	const thenable = isThen ? fn : function() {
+		return new Promise((resolve, reject) => {
+			fn.call(self, (err) => {
 				if (err) reject(err);
 				else resolve();
 			});
@@ -721,8 +721,8 @@ function load(uri, opts, cb) {
 	opts = Object.assign({}, opts);
 	if (uri && !url.parse(uri).protocol) uri = 'http://' + uri;
 
-	var priv = this.priv;
-	var stateErr = errorLoad(priv.state);
+	const priv = this.priv;
+	const stateErr = errorLoad(priv.state);
 	if (stateErr) return cb(stateErr, this);
 
 	this.readyState = "loading";
@@ -735,10 +735,10 @@ function load(uri, opts, cb) {
 	priv.runTimeout = opts.runTimeout != null ? opts.runTimeout : 10000;
 	priv.stamp = uran();
 	privReset(priv);
-	priv.responseInterval = setInterval(function() {
-		var now = Date.now();
-		var info;
-		for (var uri in priv.uris) {
+	priv.responseInterval = setInterval(() => {
+		const now = Date.now();
+		let info;
+		for (const uri in priv.uris) {
 			info = priv.uris[uri];
 			if (!info) {
 				continue;
@@ -749,13 +749,13 @@ function load(uri, opts, cb) {
 				responseDispatcher.call(this, priv.stamp, {uri: uri, status: 0});
 			}
 		}
-	}.bind(this), 100); // let dom client cancel stalled xhr first
+	}, 100); // let dom client cancel stalled xhr first
 	priv.responseInterval.unref();
 	priv.navigation = opts.navigation || false;
-	priv.timeout = setTimeout(function() {
+	priv.timeout = setTimeout(() => {
 		debugStall("%s ms - %s", opts.timeout || 30000, uri);
 		this.stop();
-	}.bind(this), opts.timeout || 30000);
+	}, opts.timeout || 30000);
 	priv.timeout.unref();
 
 	priv.uris = {};
@@ -770,7 +770,7 @@ function load(uri, opts, cb) {
 	if (opts.console && this.listeners('console').length == 0) {
 		this.on('console', function(level) {
 			if (this.listeners('console').length <= 1) {
-				var args = Array.from(arguments).slice(1).map(function(arg) {
+				const args = Array.from(arguments).slice(1).map((arg) => {
 					if (arg && arg.stack && arg.name) {
 						return arg.name + ': ' + (arg.message ? arg.message + '\n ' : '')
 							+ arg.stack.replace(/\n/g, '\n ');
@@ -785,11 +785,11 @@ function load(uri, opts, cb) {
 			}
 		});
 	}
-	var scripts = [];
+	let scripts = [];
 	if (!priv.jsdom) scripts.push(clientError);
 	if (opts.console && !priv.jsdom) scripts.push(clientConsole);
 
-	var filters = opts.filters || [];
+	const filters = opts.filters || [];
 	if (opts.filter) filters.push(opts.filter);
 	if (opts.allow) filters.push([allowFilter, opts.allow]);
 	scripts.push(prepareFilters(priv.cstamp, filters));
@@ -828,14 +828,14 @@ function load(uri, opts, cb) {
 		console.warn("scripts option should be an array");
 	}
 
-	opts.script = scripts.map(function(fn) {
+	opts.script = scripts.map((fn) => {
 		return prepareRun(fn.fn || fn, null, fn.args || null, priv).script;
 	}).join(';\n');
 
 	debug('load', uri);
 	priv.uris[uri] = {mtime: Date.now(), main: true};
 
-	this.rawload(uri, opts, function(err, status) {
+	this.rawload(uri, opts, (err, status) => {
 		debug('load done %s', uri, status);
 		if (priv.timeout) {
 			clearTimeout(priv.timeout);
@@ -850,7 +850,7 @@ function load(uri, opts, cb) {
 		if (!err && priv.inspecting && this.webview.inspect) {
 			this.webview.inspect();
 		}
-	}.bind(this));
+	});
 }
 
 function allowFilter(allow) {
@@ -858,7 +858,7 @@ function allowFilter(allow) {
 	if (allow == "none") {
 		this.cancel = true;
 	} else if (allow == "same-origin") {
-		var obj = new URL(this.uri);
+		const obj = new URL(this.uri);
 		if (obj.protocol != "data:" && obj.host != document.location.host) this.cancel = true;
 	} else if (allow instanceof RegExp) {
 		if (!allow.test(this.uri)) this.cancel = true;
@@ -869,7 +869,7 @@ function prepareFilters(cstamp, filters) {
 	return {
 		fn: function(cstamp, filters, emit) {
 			window["request_" + cstamp] = function(uri, from, headers) {
-				var msg = {
+				const msg = {
 					uri: uri,
 					cancel: false,
 					ignore: false,
@@ -877,9 +877,9 @@ function prepareFilters(cstamp, filters) {
 				};
 				if (from) msg.from = from;
 
-				filters.forEach(function(filter) {
+				filters.forEach((filter) => {
 					if (!Array.isArray(filter)) filter = [filter];
-					var func = filter[0];
+					const func = filter[0];
 					try {
 						func.apply(msg, filter.slice(1));
 					} catch(ex) {
@@ -890,13 +890,13 @@ function prepareFilters(cstamp, filters) {
 				if (!msg.cancel) {
 					delete msg.cancel;
 				} else {
-					var trackFunc = window['cancel_' + cstamp];
+					const trackFunc = window['cancel_' + cstamp];
 					if (trackFunc) trackFunc(uri);
 				}
 				if (!msg.ignore) {
 					delete msg.ignore;
 				} else {
-					var ignFunc = window['ignore_' + cstamp];
+					const ignFunc = window['ignore_' + cstamp];
 					if (ignFunc) ignFunc(uri);
 				}
 				emit("request", msg);
@@ -916,9 +916,9 @@ WebKit.prototype.preload = function(uri, opts, cb) {
 		opts = null;
 	}
 	if (!opts) opts = {};
-	var pcb = promet(this, cb);
-	var nopts = {};
-	for (var key in opts) nopts[key] = opts[key];
+	const pcb = promet(this, cb);
+	const nopts = {};
+	for (const key in opts) nopts[key] = opts[key];
 	nopts.allow = "none";
 	nopts.preload = true;
 	load.call(this, uri, nopts, pcb.cb);
@@ -927,11 +927,11 @@ WebKit.prototype.preload = function(uri, opts, cb) {
 
 WebKit.prototype.stop = function(cb) {
 	debug("stop");
-	var priv = this.priv;
-	var pcb = promet(this, cb);
+	const priv = this.priv;
+	const pcb = promet(this, cb);
 	if (priv.state < INITIALIZED) return pcb.cb(errorLoad(priv.state));
-	var wasLoading = false;
-	var fincb = function(wasLoading) {
+	let wasLoading = false;
+	const fincb = function(wasLoading) {
 		debug("stop done", wasLoading);
 		pcb.cb(null, wasLoading);
 	}.bind(this);
@@ -947,25 +947,25 @@ WebKit.prototype.clearCache = function() {
 };
 
 WebKit.prototype.reset = function(cb) {
-	var pcb = promet(this, cb);
-	var p = Promise.resolve();
-	var priv = this.priv;
+	const pcb = promet(this, cb);
+	let p = Promise.resolve();
+	const priv = this.priv;
 	if (priv.state == LOADING) {
-		p = p.then(function() {
+		p = p.then(() => {
 			return this.stop();
-		}.bind(this)).catch(function(err) {
+		}).catch((err) => {
 			// eslint-disable-next-line
 			console.error(err);
 		});
 	}
-	p.then(function() {
+	p.then(() => {
 		this.removeAllListeners();
 		this.promises = null;
 		this.readyState = null;
 		privReset(priv);
 		this.status = null;
 		setImmediate(pcb.cb);
-	}.bind(this));
+	});
 	return pcb.ret;
 };
 
@@ -984,10 +984,10 @@ function privReset(priv) {
 }
 
 WebKit.prototype.unload = function(cb) {
-	var priv = this.priv;
+	const priv = this.priv;
 	this.readyState = "unloading";
 	privReset(priv);
-	var pcb = promet(this, cb);
+	const pcb = promet(this, cb);
 
 	this.removeAllListeners('ready');
 	this.removeAllListeners('load');
@@ -996,26 +996,26 @@ WebKit.prototype.unload = function(cb) {
 	this.removeAllListeners('busy');
 	this.promises = null;
 
-	var p = Promise.resolve();
+	let p = Promise.resolve();
 
 	if (priv.state == LOADING) {
-		p = p.then(function() {
+		p = p.then(() => {
 			return this.stop();
-		}.bind(this)).catch(function(err) {
+		}).catch((err) => {
 			// eslint-disable-next-line
 			console.error(err);
 		});
 	}
-	p.then(function() {
+	p.then(() => {
 		delete priv.stamp;
 		debug('unload');
 		return this.rawload('about:blank', {
 			content:'<html></html>'
 		});
-	}.bind(this)).catch(function(err) {
+	}).catch((err) => {
 		// eslint-disable-next-line
 		console.error(err);
-	}).then(function() {
+	}).then(() => {
 		debug('unload done');
 		this.readyState = null;
 		this.status = null;
@@ -1024,13 +1024,13 @@ WebKit.prototype.unload = function(cb) {
 		this.removeAllListeners();
 		this.promises = null;
 		setImmediate(pcb.cb);
-	}.bind(this));
+	});
 	return pcb.ret;
 };
 
 function cleanTickets(tickets) {
-	for (var key in tickets) {
-		var obj = tickets[key];
+	for (const key in tickets) {
+		const obj = tickets[key];
 		if (!obj) continue;
 		if (obj.timeout) {
 			clearTimeout(obj.timeout);
@@ -1050,53 +1050,51 @@ function destroy(cb) {
 		}	else {
 			setImmediate(closedListener.bind(this, 'window'));
 		}
-	} else {
-		if (cb) setImmediate(cb);
-	}
+	} else if (cb) setImmediate(cb);
 	if (this.priv.xvfb && instances == 0) {
 		this.priv.xvfb.kill();
 	}
 }
 
 WebKit.prototype.destroy = function(cb) {
-	var pcb = promet(this, cb);
+	const pcb = promet(this, cb);
 	destroy.call(this, pcb.cb);
 	return pcb.ret;
 };
 
 WebKit.prototype.run = function(script, cb) {
-	var args = Array.from(arguments).slice(1);
-	var argType = args.length > 0 ? typeof args[args.length - 1] : null;
+	const args = Array.from(arguments).slice(1);
+	const argType = args.length > 0 ? typeof args[args.length - 1] : null;
 	if (argType == "function") cb = args.pop();
 	else cb = null;
-	var pcb = promet(this, cb);
+	const pcb = promet(this, cb);
 	runcb.call(this, script, args, pcb.cb);
 	return pcb.ret;
 };
 
 WebKit.prototype.runev = function(script, cb) {
-	var args = Array.from(arguments).slice(1);
-	var argType = args.length > 0 ? typeof args[args.length - 1] : null;
+	const args = Array.from(arguments).slice(1);
+	const argType = args.length > 0 ? typeof args[args.length - 1] : null;
 	if (argType == "function") cb = args.pop();
 	else cb = null;
-	var pcb = promet(this, cb);
+	const pcb = promet(this, cb);
 	run.call(this, script, null, args, pcb.cb);
 	return pcb.ret;
 };
 
 function runcb(script, args, cb) {
-	var ticket = (++this.priv.ticket).toString();
+	const ticket = (++this.priv.ticket).toString();
 	this.priv.tickets[ticket] = {cb: cb};
 	run.call(this, script, ticket, args, cb);
 }
 
 function run(script, ticket, args, cb) {
-	var priv = this.priv;
+	const priv = this.priv;
 	cb = cb || noop;
 	if (priv.state == LOADING) {
 		return cb(new Error("running a script during loading is not a good idea\n" + script));
 	}
-	var obj;
+	let obj;
 	try {
 		obj = prepareRun(script, ticket, args, this.priv);
 	} catch(e) {
@@ -1104,7 +1102,7 @@ function run(script, ticket, args, cb) {
 	}
 
 	// run on next loop so one can setup event listeners before
-	setImmediate(function() {
+	setImmediate(() => {
 		if (!this.webview) return cb(new Error("WebKit uninitialized"));
 		if (!this.webview.run) {
 			return cb(new Error("webview not available yet"));
@@ -1114,17 +1112,17 @@ function run(script, ticket, args, cb) {
 		} else {
 			this.webview.run(obj.script, obj.ticket);
 		}
-	}.bind(this));
+	});
 
 	if (!obj.ticket) {
 		// the script is an event emitter, so we do not expect a reply
 		setImmediate(cb);
 	} else if (priv.runTimeout && !obj.sync) {
 		priv.tickets[obj.ticket].stamp = priv.stamp;
-		priv.tickets[obj.ticket].timeout = setTimeout(function() {
-			var cbObj = priv.tickets[obj.ticket];
+		priv.tickets[obj.ticket].timeout = setTimeout(() => {
+			const cbObj = priv.tickets[obj.ticket];
 			if (!cbObj) return; // view unloaded before
-			var cb = cbObj.cb;
+			const cb = cbObj.cb;
 			if (!cb) {
 				// this should never happen
 				// eslint-disable-next-line
@@ -1133,26 +1131,26 @@ function run(script, ticket, args, cb) {
 			delete cbObj.cb;
 			if (cbObj.stamp != this.priv.stamp) return;
 			cb.call(this, new Error("script timed out\n" + obj.inscript));
-		}.bind(this), priv.runTimeout);
+		}, priv.runTimeout);
 		priv.tickets[obj.ticket].timeout.unref();
 	}
 }
 
 function prepareRun(script, ticket, args, priv) {
 	args = args || [];
-	var argc = args.length;
-	args = args.map(function(arg) {return toSource(arg);});
+	const argc = args.length;
+	args = args.map((arg) => {return toSource(arg);});
 
-	var arity = 0;
-	var isfunction = false;
-	var isUserScript = false;
+	let arity = 0;
+	let isfunction = false;
+	let isUserScript = false;
 	if (Buffer.isBuffer(script)) script = script.toString();
 	if (typeof script == "function") {
 		arity = script.length;
 		isfunction = true;
 	} else if (typeof script == "string") {
 		if (ticket) {
-			var match = /^\s*function(\s+\w+)?\s*\(((?:\s*\w+\s*,)*(?:\s*\w+\s*))\)/.exec(script);
+			const match = /^\s*function(\s+\w+)?\s*\(((?:\s*\w+\s*,)*(?:\s*\w+\s*))\)/.exec(script);
 			if (match && match.length == 3) {
 				isfunction = true;
 				arity = match[2].split(',').length;
@@ -1161,7 +1159,7 @@ function prepareRun(script, ticket, args, priv) {
 			isUserScript = true;
 		}
 	}
-	var async;
+	let async;
 	if (arity == argc) {
 		async = false;
 	} else if (arity == argc + 1) {
@@ -1173,11 +1171,11 @@ function prepareRun(script, ticket, args, priv) {
 	if (typeof script == "function") script = script.toString();
 
 	if (!async && isfunction && !ticket) {
-		args.push(toSource(function(s) {}));
+		args.push(toSource((s) => {}));
 		async = true;
 	}
 
-	var obj = {
+	const obj = {
 		sync: !async,
 		ticket: ticket
 	};
@@ -1186,17 +1184,20 @@ function prepareRun(script, ticket, args, priv) {
 	} else if (!async) {
 		if (isfunction) script = '(' + script + ')(' + args.join(', ') + ')';
 		else script = '(function() { return ' + script + '; })()';
-		var wrapSync = function() {
-			var ticket = TICKET;
-			var stamp = STAMP;
-			var message = {stamp: stamp};
+		const wrapSync = function () {
+			// eslint-disable-next-line no-undef
+			const ticket = TICKET;
+			// eslint-disable-next-line no-undef
+			const stamp = STAMP;
+			const message = {stamp: stamp};
 			if (ticket) message.ticket = ticket;
 			try {
+				// eslint-disable-next-line no-undef
 				message.args = [ SCRIPT ];
 			} catch(err) {
 				message.error = err;
 			}
-			var msg;
+			let msg;
 			try {
 				msg = JSON.stringify(message);
 			} catch (ex) {
@@ -1206,25 +1207,27 @@ function prepareRun(script, ticket, args, priv) {
 			}
 			return msg;
 		}.toString()
-		.replace('TICKET', JSON.stringify(ticket))
-		.replace('SCRIPT', script)
-		.replace('STAMP', JSON.stringify(priv.stamp));
+			.replace('TICKET', JSON.stringify(ticket))
+			.replace('SCRIPT', script)
+			.replace('STAMP', JSON.stringify(priv.stamp));
 		obj.script = '(' + wrapSync + ')()';
 	} else {
 		obj.inscript = script.substring(0, 255); // useful for debugging timeouts
-		var wrapAsync = function(err) {
-			var ticket = TICKET;
-			var stamp = STAMP;
-			var message = {stamp: stamp};
+		const wrapAsync = function (err) {
+			// eslint-disable-next-line no-undef
+			const ticket = TICKET;
+			// eslint-disable-next-line no-undef
+			const stamp = STAMP;
+			const message = {stamp: stamp};
 			if (!ticket) {
 				message.event = err;
 			} else {
 				message.ticket = ticket;
 				if (err) message.error = err;
 			}
-			message.args = Array.from(arguments).slice(1).map(function(arg) {
+			message.args = Array.from(arguments).slice(1).map((arg) => {
 				if (arg instanceof window.Node) {
-					var cont = arg.ownerDocument.createElement('div');
+					const cont = arg.ownerDocument.createElement('div');
 					cont.appendChild(arg.cloneNode(true));
 					return cont.innerHTML;
 				}
@@ -1235,7 +1238,7 @@ function prepareRun(script, ticket, args, priv) {
 				}
 				return arg;
 			});
-			var msg;
+			let msg;
 			try {
 				msg = JSON.stringify(message);
 			} catch (ex) {
@@ -1243,7 +1246,7 @@ function prepareRun(script, ticket, args, priv) {
 				message.error = ex;
 				msg = JSON.stringify(message);
 			}
-			var ww = window && window.webkit;
+			let ww = window && window.webkit;
 			ww = ww && ww.messageHandlers && ww.messageHandlers.events;
 			if (ww && ww.postMessage) try {
 				ww.postMessage(msg);
@@ -1251,8 +1254,8 @@ function prepareRun(script, ticket, args, priv) {
 				/* pass */
 			}
 		}.toString()
-		.replace('TICKET', JSON.stringify(ticket))
-		.replace('STAMP', JSON.stringify(priv.stamp));
+			.replace('TICKET', JSON.stringify(ticket))
+			.replace('STAMP', JSON.stringify(priv.stamp));
 		args.push(wrapAsync);
 		obj.script = '(' + script + ')(' + args.join(', ') + ');';
 	}
@@ -1260,12 +1263,12 @@ function prepareRun(script, ticket, args, priv) {
 }
 
 WebKit.prototype.png = function(obj, cb) {
-	var wstream;
-	var pcb = promet(this, cb);
+	let wstream;
+	const pcb = promet(this, cb);
 	if (typeof obj == "string") {
 		wstream = fs.createWriteStream(obj);
-		wstream.on('error', function(err) {
-			fs.unlink(obj, function() {
+		wstream.on('error', (err) => {
+			fs.unlink(obj, () => {
 				pcb.cb(err);
 			});
 		});
@@ -1279,7 +1282,7 @@ WebKit.prototype.png = function(obj, cb) {
 };
 
 function png(wstream, cb) {
-	this.webview.png(function(err, buf) {
+	this.webview.png((err, buf) => {
 		if (err) {
 			wstream.emit('error', err);
 		} else if (buf == null) {
@@ -1292,15 +1295,15 @@ function png(wstream, cb) {
 		} else {
 			wstream.write(buf);
 		}
-	}.bind(this));
+	});
 }
 
 WebKit.prototype.html = function(cb) {
 	debug('output html');
-	var pcb = promet(this, cb);
-	this.run(function() {
-		var dtd = document.doctype;
-		var html = "";
+	const pcb = promet(this, cb);
+	this.run(() => {
+		const dtd = document.doctype;
+		let html = "";
 		if (dtd) {
 			html = "<!DOCTYPE "	+ dtd.name
 			+ (dtd.publicId ? ' PUBLIC "' + dtd.publicId + '"' : '')
@@ -1310,7 +1313,7 @@ WebKit.prototype.html = function(cb) {
 		}
 		html += document.documentElement.outerHTML;
 		return html;
-	}, function(err, str) {
+	}, (err, str) => {
 		debug('output html done');
 		pcb.cb(err, str);
 	});
@@ -1323,16 +1326,16 @@ WebKit.prototype.pdf = function(filepath, opts, cb) {
 		opts = null;
 	}
 	if (!opts) opts = {};
-	var pcb = promet(this, cb);
+	const pcb = promet(this, cb);
 	pdf.call(this, filepath, opts, pcb.cb);
 	return pcb.ret;
 };
 
 function pdf(filepath, opts, cb) {
-	var margins = opts.margins;
+	let margins = opts.margins;
 	if (margins == null) margins = 0;
 	if (typeof margins == "string" || typeof margins == "number") {
-		var num = parseFloat(margins);
+		const num = parseFloat(margins);
 		margins = {
 			top: num,
 			left: num,
@@ -1343,9 +1346,9 @@ function pdf(filepath, opts, cb) {
 	}
 	opts.margins = margins;
 
-	this.webview.pdf("file://" + path.resolve(filepath), opts, function(err) {
+	this.webview.pdf("file://" + path.resolve(filepath), opts, (err) => {
 		cb(err);
-	}.bind(this));
+	});
 }
 
 function uran() {
@@ -1353,13 +1356,13 @@ function uran() {
 }
 
 function promet(self, cb) {
-	var def = {};
-	def.promise = new Promise(function(resolve, reject) {
+	const def = {};
+	def.promise = new Promise((resolve, reject) => {
 		def.resolve = resolve;
 		def.reject = reject;
 	});
 	def.cb = function(err) {
-		var args = Array.from(arguments);
+		const args = Array.from(arguments);
 		if (cb) cb.apply(this, args);
 		else if (err) def.reject(err);
 		else def.resolve.apply(null, args.slice(1));

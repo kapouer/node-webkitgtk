@@ -1,5 +1,5 @@
 module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stallInterval, stallFrame, emit) {
-	var EV = {
+	const EV = {
 		init: 0,
 		ready: 1,
 		load: 2,
@@ -7,22 +7,22 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		busy: 4,
 		unload: 5
 	};
-	var lastEvent = EV.init;
-	var lastRunEvent = EV.init;
-	var hasLoaded = false;
-	var hasReady = false;
-	var missedEvent;
-	var preloadList = [];
-	var observer;
+	let lastEvent = EV.init;
+	let lastRunEvent = EV.init;
+	let hasLoaded = false;
+	let hasReady = false;
+	let missedEvent;
+	let preloadList = [];
+	let observer;
 
-	var intervals = {len: 0, stall: 0, inc: 1};
-	var timeouts = {len: 0, stall: 0, inc: 1};
-	var immediates = {len: 0, inc: 1};
-	var tasks = {len: 0, inc: 1};
-	var frames = {len: 0, stall: 0, ignore: !stallFrame};
-	var requests = {len: 0, stall: 0};
-	var tracks = {len: 0, stall: 0};
-	var fetchs = {len: 0};
+	const intervals = {len: 0, stall: 0, inc: 1};
+	const timeouts = {len: 0, stall: 0, inc: 1};
+	const immediates = {len: 0, inc: 1};
+	const tasks = {len: 0, inc: 1};
+	const frames = {len: 0, stall: 0, ignore: !stallFrame};
+	const requests = {len: 0, stall: 0};
+	const tracks = {len: 0, stall: 0};
+	const fetchs = {len: 0};
 
 	if (preload) disableExternalResources();
 	else trackExternalResources();
@@ -30,13 +30,13 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	if (!window.setImmediate) window.setImmediate = window.setTimeout;
 	if (!window.clearImmediate) window.clearImmediate = window.clearTimeout;
 
-	var w = {};
+	const w = {};
 	['setImmediate', 'clearImmediate',
-	'queueMicrotask',
-	'setTimeout', 'clearTimeout',
-	'setInterval', 'clearInterval',
-	'XMLHttpRequest', 'WebSocket', 'fetch',
-	'requestAnimationFrame', 'cancelAnimationFrame'].forEach(function(meth) {
+		'queueMicrotask',
+		'setTimeout', 'clearTimeout',
+		'setInterval', 'clearInterval',
+		'XMLHttpRequest', 'WebSocket', 'fetch',
+		'requestAnimationFrame', 'cancelAnimationFrame'].forEach((meth) => {
 		if (window[meth]) w[meth] = window[meth].bind(window);
 	});
 	window['hasRunEvent_' + cstamp] = function(event) {
@@ -58,25 +58,25 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 
 	function disableExternalResources() {
 		function jumpAuto(node) {
-			var tag = node.nodeName.toLowerCase();
-			var params = {
+			const tag = node.nodeName.toLowerCase();
+			const params = {
 				body: ["onload", null],
 				script: ["type", "text/plain"]
 			}[tag];
 			if (!params) return;
-			var att = params[0];
-			var val = node.hasAttribute(att) ? node[att] : undefined;
+			const att = params[0];
+			const val = node.hasAttribute(att) ? node[att] : undefined;
 			if (lastEvent == EV.init) {
 				node[att] = params[1];
 				preloadList.push({node: node, val: val, att: att});
 			}
 		}
-		observer = new MutationObserver(function(mutations) {
-			var node, list;
-			for (var m=0; m < mutations.length; m++) {
+		observer = new MutationObserver((mutations) => {
+			let node, list;
+			for (let m = 0; m < mutations.length; m++) {
 				list = mutations[m].addedNodes;
 				if (!list) continue;
-				for (var i=0; i < list.length; i++) {
+				for (let i = 0; i < list.length; i++) {
 					node = list[i];
 					if (node.nodeType != 1) continue;
 					jumpAuto(node);
@@ -90,12 +90,12 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	}
 
 	function trackExternalResources() {
-		observer = new MutationObserver(function(mutations) {
-			var node, list;
-			for (var m=0; m < mutations.length; m++) {
+		observer = new MutationObserver((mutations) => {
+			let node, list;
+			for (let m = 0; m < mutations.length; m++) {
 				list = mutations[m].addedNodes;
 				if (!list) continue;
-				for (var i=0; i < list.length; i++) {
+				for (let i = 0; i < list.length; i++) {
 					node = list[i];
 					if (node.nodeType != 1) continue;
 					trackNode(node);
@@ -116,33 +116,33 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 
 	function ignoreListener(uri) {
 		if (!uri || uri.slice(0, 5) == "data:") return;
-		var req = requests[uri];
+		let req = requests[uri];
 		if (!req) req = requests[uri] = {count: 0};
 		req.stall = true;
-		var tra = tracks[uri];
+		let tra = tracks[uri];
 		if (!tra) tra = tracks[uri] = {count: 0};
 		tra.ignore = true;
 	}
 
 	function cancelListener(uri) {
 		if (!uri || uri.slice(0, 5) == "data:") return;
-		var obj = tracks[uri];
+		let obj = tracks[uri];
 		if (!obj) obj = tracks[uri] = {count:0};
 		if (obj.cancel) return;
 		obj.cancel = true;
-		var count = obj.count;
+		const count = obj.count;
 		tracks.stall += count;
 		obj.count = 0;
 		if (tracks.len <= tracks.stall) check('tracks');
 	}
 
 	function trackNodeDone() {
-		var uri = this.src || this.href;
+		const uri = this.src || this.href;
 		if (!uri) {
 			console.error("trackNodeDone called on a node without uri");
 			return;
 		}
-		var obj = tracks[uri];
+		const obj = tracks[uri];
 		if (!obj) {
 			console.error("trackNodeDone called on untracked uri", uri);
 			return;
@@ -167,9 +167,9 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		} else {
 			return;
 		}
-		var uri = node.src || node.href;
+		const uri = node.src || node.href;
 		if (!uri || uri.slice(0, 5) == "data:") return;
-		var obj = tracks[uri];
+		let obj = tracks[uri];
 		if (!obj) obj = tracks[uri] = {count: 0};
 		if (obj.cancel) {
 			node.dispatchEvent(new CustomEvent('error', {bubbles: false}));
@@ -201,7 +201,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		if (preloadList.length) {
 			closeObserver();
 			w.setTimeout(function() {
-				preloadList.forEach(function(obj) {
+				preloadList.forEach((obj) => {
 					if (obj.val === undefined) obj.node.removeAttribute(obj.att);
 					else obj.node[obj.att] = obj.val;
 				});
@@ -224,7 +224,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	}
 
 	function doneImmediate(id) {
-		var t = id !== null && immediates[id];
+		let t = id !== null && immediates[id];
 		if (t) {
 			delete immediates[id];
 			immediates.len--;
@@ -238,12 +238,12 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	}
 	window.setImmediate = function setImmediate(fn) {
 		immediates.len++;
-		var obj = {
+		const obj = {
 			fn: fn
 		};
-		var fnobj = function(obj) {
+		const fnobj = function(obj) {
 			doneImmediate(obj.id);
-			var err;
+			let err;
 			try {
 				obj.fn.apply(null, Array.from(arguments).slice(1));
 			} catch (e) {
@@ -251,22 +251,22 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			}
 			if (err) throw err; // rethrow
 		}.bind(null, obj);
-		var t = w.setImmediate(fnobj);
-		var id = ++immediates.inc;
+		const t = w.setImmediate(fnobj);
+		const id = ++immediates.inc;
 		immediates[id] = t;
 		obj.id = id;
 		return id;
 	};
 
 	window.clearImmediate = function(id) {
-		var t = doneImmediate(id);
+		const t = doneImmediate(id);
 		return w.clearImmediate(t);
 	};
 
 	window.queueMicrotask = function(fn) {
 		tasks.len++;
-		return w.queueMicrotask(function() {
-			var err;
+		return w.queueMicrotask(() => {
+			let err;
 			try {
 				fn();
 			} catch(ex) {
@@ -287,8 +287,8 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	}
 
 	function doneTimeout(id) {
-		var t;
-		var obj = id != null && timeouts[id];
+		let t;
+		const obj = id != null && timeouts[id];
 		if (obj) {
 			if (obj.stall) timeouts.stall--;
 			delete timeouts[id];
@@ -303,18 +303,18 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		return t;
 	}
 	window.setTimeout = function setTimeout(fn, timeout) {
-		var stall = false;
+		let stall = false;
 		timeout = timeout || 0;
 		if (timeout >= stallTimeout || timeouts.ignore && timeout > 0) {
 			stall = true;
 			timeouts.stall++;
 		}
 		timeouts.len++;
-		var obj = {
+		const obj = {
 			fn: fn
 		};
-		var fnobj = function(obj) {
-			var err;
+		const fnobj = function(obj) {
+			let err;
 			try {
 				obj.fn.apply(null, Array.from(arguments).slice(1));
 			} catch (e) {
@@ -323,14 +323,14 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			doneTimeout(obj.id);
 			if (err) throw err; // rethrow
 		}.bind(null, obj);
-		var t = w.setTimeout(fnobj, timeout);
-		var id = ++timeouts.inc;
+		const t = w.setTimeout(fnobj, timeout);
+		const id = ++timeouts.inc;
 		timeouts[id] = {stall: stall, t: t};
 		obj.id = id;
 		return id;
 	};
 	window.clearTimeout = function(id) {
-		var t = doneTimeout(id);
+		const t = doneTimeout(id);
 		return w.clearTimeout(t);
 	};
 
@@ -342,20 +342,20 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 
 	window.setInterval = function(fn, interval) {
 		interval = interval || 0;
-		var stall = false;
+		let stall = false;
 		if (interval >= stallInterval) {
 			stall = true;
 			intervals.stall++;
 		}
 		intervals.len++;
-		var t = w.setInterval(fn, interval);
-		var id = ++intervals.inc;
+		const t = w.setInterval(fn, interval);
+		const id = ++intervals.inc;
 		intervals[id] = {stall: stall, t: t};
 		return id;
 	};
 	window.clearInterval = function(id) {
-		var t;
-		var obj = id != null && intervals[id];
+		let t;
+		const obj = id != null && intervals[id];
 		if (obj) {
 			if (obj.stall) intervals.stall--;
 			delete intervals[id];
@@ -380,8 +380,8 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		}
 	}
 	if (w.requestAnimationFrame) window.requestAnimationFrame = function(fn) {
-		var id = w.requestAnimationFrame(function(ts) {
-			var err;
+		const id = w.requestAnimationFrame((ts) => {
+			let err;
 			doneFrame(id);
 			try {
 				fn(ts);
@@ -395,7 +395,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			frames[id] = true;
 		}
 		if (!frames.timeout && !frames.ignore) {
-			frames.timeout = w.setTimeout(function() {
+			frames.timeout = w.setTimeout(() => {
 				frames.ignore = true;
 				check('frame');
 			}, stallFrame);
@@ -408,7 +408,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	};
 
 	if (w.WebSocket) window.WebSocket = function() {
-		var ws = new w.WebSocket(Array.from(arguments));
+		const ws = new w.WebSocket(Array.from(arguments));
 		function checkws() {
 			check('websocket');
 		}
@@ -423,21 +423,21 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 
 	if (w.fetch) window.fetch = function(url, obj) {
 		requests.len++;
-		var req = {
+		const req = {
 			done: false,
 			url: url
 		};
-		req.timeout = w.setTimeout(function() {
+		req.timeout = w.setTimeout(() => {
 			req.stalled = true;
 			cleanFetch(req);
 		}, stallXhr);
 
-		return new Promise(function(resolve, reject) {
+		return new Promise((resolve, reject) => {
 			fetchs.len++;
-			w.fetch(url, obj).catch(function(ex) {
+			w.fetch(url, obj).catch((ex) => {
 				reject(ex);
 				cleanFetch(req);
-			}).then(function(res) {
+			}).then((res) => {
 				resolve(res);
 				cleanFetch(req);
 			});
@@ -457,12 +457,12 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			requests.len--;
 		}
 		check('fetch');
-		w.setTimeout(function() {
+		w.setTimeout(() => {
 			fetchs.len--;
 		});
 	}
 
-	var wopen = window.XMLHttpRequest.prototype.open;
+	const wopen = window.XMLHttpRequest.prototype.open;
 	window.XMLHttpRequest.prototype.open = function(method, url) {
 		if (this._private) xhrClean.call(this);
 		this.addEventListener("progress", xhrProgress);
@@ -471,12 +471,12 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		this.addEventListener("abort", xhrClean);
 		this.addEventListener("timeout", xhrClean);
 		this._private = {url: absolute(url)};
-		var ret = wopen.apply(this, Array.from(arguments));
+		const ret = wopen.apply(this, Array.from(arguments));
 		return ret;
 	};
-	var wsend = window.XMLHttpRequest.prototype.send;
+	const wsend = window.XMLHttpRequest.prototype.send;
 	window.XMLHttpRequest.prototype.send = function() {
-		var priv = this._private;
+		const priv = this._private;
 		if (!priv) return;
 		requests.len++;
 		try {
@@ -485,7 +485,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 			xhrClean.call(this);
 			return;
 		}
-		var req = requests[priv.url];
+		let req = requests[priv.url];
 		if (req) {
 			if (req.stall) requests.stall++;
 		} else {
@@ -495,8 +495,8 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		priv.timeout = xhrTimeout(priv.url);
 	};
 	function xhrTimeout(url) {
-		return w.setTimeout(function() {
-			var req = requests[url];
+		return w.setTimeout(() => {
+			const req = requests[url];
 			if (req) {
 				if (!req.stall) requests.stall++;
 				req.count--;
@@ -505,7 +505,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		}, stallXhr);
 	}
 	function xhrProgress(e) {
-		var priv = this._private;
+		const priv = this._private;
 		if (!priv) return;
 		if (e.totalSize > 0 && priv.timeout) {
 			// set a new timeout
@@ -518,7 +518,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		xhrClean.call(this);
 	}
 	function xhrClean() {
-		var priv = this._private;
+		const priv = this._private;
 		if (!priv) return;
 		delete this._private;
 		this.removeEventListener("progress", xhrProgress);
@@ -527,7 +527,7 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 		this.removeEventListener("error", xhrClean);
 		this.removeEventListener("timeout", xhrClean);
 		if (priv.timeout) w.clearTimeout(priv.timeout);
-		var req = requests[priv.url];
+		const req = requests[priv.url];
 		if (req) {
 			req.count--;
 			if (req.stall) requests.stall--;
@@ -537,13 +537,13 @@ module.exports = function tracker(preload, cstamp, stallXhr, stallTimeout, stall
 	}
 
 	function check(from, url) {
-		w.queueMicrotask(function() {
+		w.queueMicrotask(() => {
 			checkNow(from, url);
 		});
 	}
 
 	function checkNow(from, url) {
-		var info = {
+		const info = {
 			immediates: immediates.len == 0,
 			tasks: tasks.len == 0,
 			fetchs: fetchs.len == 0,

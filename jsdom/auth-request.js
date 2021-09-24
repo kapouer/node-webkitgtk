@@ -1,21 +1,18 @@
-module.exports = AuthRequest;
-
-function AuthRequest(req, res) {
-	this.req = req;
-	this.host = req.uri.hostname;
-	this.port = parseInt(req.uri.port);
-	var header = res.headers['www-authenticate'];
-	if (header) {
-		var realMatch = /realm="(\w+)"/.exec(header);
+module.exports = class AuthRequest {
+	constructor(req, res) {
+		this.req = req;
+		this.host = req.uri.hostname;
+		this.port = parseInt(req.uri.port);
+		const header = res.headers['www-authenticate'];
+		const realMatch = header ? /realm="(\w+)"/.exec(header) : null;
+		this.realm = realMatch && realMatch[1] || null;
 	}
-	this.realm = realMatch && realMatch[1] || null;
-}
 
-AuthRequest.prototype.use = function(user, pass, realm) {
-	this.req.auth(user, pass, false, realm);
+	use(user, pass, realm) {
+		this.req.auth(user, pass, false, realm);
+	}
+
+	ignore() {
+		// this is the default behavior anyway
+	}
 };
-
-AuthRequest.prototype.ignore = function() {
-	// this is the default behavior anyway
-};
-
