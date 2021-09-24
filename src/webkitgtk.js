@@ -266,9 +266,13 @@ class WebKit extends EventEmitter {
 			debug("stop done", wasLoading);
 			pcb.cb(null, wasLoading);
 		}.bind(this);
-		this.readyState = "stop";
-		wasLoading = this.webview && this.webview.stop && this.webview.stop(fincb);
-		debug("was loading", wasLoading);
+		if (this.readyState != "stop") {
+			this.readyState = "stop";
+			wasLoading = this.webview && this.webview.stop && this.webview.stop(fincb);
+			debug("was loading", wasLoading);
+		} else {
+			debug("was already stopped");
+		}
 		return pcb.ret;
 	}
 
