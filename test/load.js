@@ -78,31 +78,14 @@ describe("load method", () => {
 
 	it("should stop after a stop call", function(done) {
 		this.timeout(10000);
-
-		WebKit((err, w) => {
-			w.load('http://google.com');
-			setImmediate(() => {
-				w.stop((err, wasLoading) => {
-					expect(w.readyState).to.be('stop');
-					expect(err).to.not.be.ok();
-					expect(wasLoading).to.be(true);
-					done();
-				});
+		WebKit.load('http://google.com', (err, w) => {
+			w.stop((err, wasLoading) => {
+				expect(w.readyState).to.be('stop');
+				expect(err).to.not.be.ok();
+				expect(wasLoading).to.be(true);
+				done();
 			});
 		});
-
-		// meaning of this ?
-		/*
-		w.once('idle', function() {
-			setTimeout(function() {
-				w.stop(function(err, wasLoading) {
-					expect(err).to.not.be.ok();
-					expect(wasLoading).to.be(false);
-					done();
-				});
-			}, 1000);
-		});
-		*/
 	});
 
 	it("should fail gracefully", (done) => {
