@@ -33,9 +33,9 @@
     "request": "^2.88.0"
   },
   "devDependencies": {
-    "@kapouer/eslint-config": "^1.0.0",
     "engine.io": "^1.4.2",
     "engine.io-client": "^1.4.2",
+    "@kapouer/eslint-config": "^1.6.0",
     "expect.js": "^0.3.1",
     "glob": "^7.1.1",
     "headless": "^1.0.0",
