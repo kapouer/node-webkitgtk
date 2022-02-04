@@ -26,7 +26,7 @@ void WebRequest::Init(Local<Object> target) {
 	ATTR(tpl, "uri", get_prop, NULL);
 	ATTR(tpl, "headers", get_prop, NULL);
 
-	target->Set(Nan::New("WebRequest").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
+	Nan::Set(target, Nan::New("WebRequest").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
 	constructor.Reset(tpl);
 }
 

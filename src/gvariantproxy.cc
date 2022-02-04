@@ -109,7 +109,7 @@ void GVariantProxy::Init(Local<Object> target) {
 		EnumerateNamedProperties
 	);
 	tpl->SetClassName(Nan::New("GVariantProxy").ToLocalChecked());
-	target->Set(Nan::New("GVariantProxy").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
+	Nan::Set(target, Nan::New("GVariantProxy").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
 	constructor.Reset(tpl);
 }
 
