@@ -28,7 +28,7 @@
     "whatwg-fetch": "^3.6.2"
   },
   "engines": {
-    "node": ">=10"
+    "node": ">=12"
   },
   "optionalDependencies": {
     "chalk": "^4.1.2",
