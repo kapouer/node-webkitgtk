@@ -32,7 +32,6 @@
   },
   "optionalDependencies": {
     "chalk": "^4.1.2",
-    "headless": "^1.2.0",
     "jsdom": "^17.0.0",
     "request": "^2.88.2"
   },
