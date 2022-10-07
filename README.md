@@ -1,6 +1,6 @@
 # node-webkitgtk
 
-:warning: deprecated - another solution is coming soon
+:warning: deprecated - see [express-dom](https://github.com/kapouer/express-dom) version >= 6 to prerender web pages using playwright.
 
 Pilot webkitgtk from Node.js with a simple API.
 
